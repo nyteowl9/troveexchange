@@ -19,14 +19,14 @@
   --filter-active:rgba(201,168,76,0.1);
 }
 [data-theme="light"]{
-  --gold:#9B6E1A;--gold-light:#B8851F;
+  --gold:#C9A84C;--gold-light:#E8C97A;
   --bg:#F5F2EC;--bg-2:#EDEAE3;--bg-3:#E4E0D8;--bg-4:#D8D4CC;--bg-5:#CCC8C0;
   --text-primary:#1A1814;--text-secondary:#4A4640;--text-muted:#8A8680;
-  --accent-green:#2A8A54;--accent-red:#B83C2C;--accent-blue:#1A5EA0;
-  --border:#C8C4BC;--border-gold:rgba(155,110,26,0.3);
+  --accent-green:#1A6B3A;--accent-red:#B83C2C;--accent-blue:#1A5EA0;
+  --border:#C8C4BC;--border-gold:rgba(13,110,110,0.25);
   --nav-bg:rgba(245,242,236,0.96);--sidebar-bg:#E8E4DC;
   --card-bg:#EDEAE3;--card-hover:#E4E0D8;--search-bg:#E4E0D8;
-  --filter-active:rgba(155,110,26,0.1);
+  --filter-active:rgba(13,110,110,0.08);
 }
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-weight:400;overflow-x:hidden;line-height:1.6;transition:background 0.3s,color 0.3s;padding-top:64px}
@@ -236,6 +236,44 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);bac
   .sort-bar{gap:8px}
   .view-btns{display:none}
 }
+
+/* ===== LIGHT MODE TEAL OVERRIDES ===== */
+[data-theme="light"] .btn-gold{background:#0D6E6E;color:#fff}
+[data-theme="light"] .btn-gold:hover{background:#0A5A5A}
+[data-theme="light"] .btn-ghost:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .btn-primary:hover,[data-theme="light"] .btn-primary{background:#0D6E6E}
+[data-theme="light"] .theme-toggle:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .nav-search:focus-within{border-color:#0D6E6E}
+[data-theme="light"] .search-btn{background:#0D6E6E}
+[data-theme="light"] .search-btn:hover{background:#0A5A5A}
+[data-theme="light"] .search-filter:hover{color:#0D6E6E}
+[data-theme="light"] .filter-item.active{background:rgba(13,110,110,0.08);border-color:rgba(13,110,110,0.3)}
+[data-theme="light"] .filter-item.active .filter-check{background:#0D6E6E;border-color:#0D6E6E}
+[data-theme="light"] .filter-item.active .filter-label{color:#0D6E6E}
+[data-theme="light"] .filter-item:hover{background:rgba(13,110,110,0.05)}
+[data-theme="light"] .grade-btn.active{background:rgba(13,110,110,0.08);border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .grade-btn:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .price-input:focus{border-color:#0D6E6E}
+[data-theme="light"] .sidebar-clear{color:#0D6E6E}
+[data-theme="light"] .sort-select:focus{border-color:#0D6E6E}
+[data-theme="light"] .view-btn.active{color:#0D6E6E}
+[data-theme="light"] .filter-toggle-btn:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .page-btn.active{background:#0D6E6E;border-color:#0D6E6E;color:#fff}
+[data-theme="light"] .page-btn:hover:not(.active){border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .active-tag{background:rgba(13,110,110,0.1);border-color:rgba(13,110,110,0.3);color:#0D6E6E}
+[data-theme="light"] .listing-card:hover{border-color:rgba(13,110,110,0.4)}
+[data-theme="light"] .card-buy-btn{background:#0D6E6E}
+[data-theme="light"] .card-buy-btn:hover{background:#0A5A5A}
+[data-theme="light"] .card-wishlist:hover,[data-theme="light"] .card-wishlist.active{border-color:#B83C2C;color:#B83C2C;background:rgba(184,60,44,0.08)}
+[data-theme="light"] .badge-psa{background:rgba(26,94,160,0.1);border-color:rgba(26,94,160,0.35);color:#1A5EA0}
+[data-theme="light"] .badge-bgs{background:rgba(13,110,110,0.1);border-color:rgba(13,110,110,0.3);color:#0D6E6E}
+[data-theme="light"] .badge-cgc{background:rgba(26,107,58,0.1);border-color:rgba(26,107,58,0.3);color:#1A6B3A}
+[data-theme="light"] .card-comp span{color:#1A6B3A}
+/* Gold stays on prices only */
+[data-theme="light"] .card-price{color:var(--gold)}
+[data-theme="light"] .results-count span{color:var(--text-primary)}
+[data-theme="light"] .filter-close:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .price-slider::-webkit-slider-thumb{background:#0D6E6E}
 </style>
 </head>
 <body>
