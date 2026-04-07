@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trove Exchange — Blockchain-Secured TCG Marketplace</title>
+<meta name="description" content="The premium blockchain-secured marketplace for rare trading cards. Every card authenticated. Every transaction protected by USDC escrow. Sellers keep 97%.">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--gold:#C9A84C;--gold-light:#E8C97A;--gold-dark:#8B6914;
+--obsidian:#0A0A0B;--obsidian-2:#111114;--obsidian-3:#18181C;--obsidian-4:#222228;
+--text-primary:#F0EDE6;--text-secondary:#9B9890;--text-muted:#5C5A56;
+--accent-red:#C84B3C;--accent-green:#4CAF7C;--accent-blue:#3C7DC8;
+--border:#2A2A32;--border-gold:rgba(201,168,76,0.25);
+}
+html{scroll-behavior:smooth}
+body{background:var(--obsidian);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-weight:300;overflow-x:hidden;line-height:1.6}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,11,0.92);backdrop-filter:blur(24px);border-bottom:0.5px solid var(--border);padding:0 2.5rem;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:0.1em;color:var(--gold);display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-icon{width:26px;height:26px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
+.nav-links{display:flex;align-items:center;gap:2rem}
+.nav-links a{font-size:12px;font-weight:400;color:var(--text-secondary);text-decoration:none;letter-spacing:0.06em;text-transform:uppercase;transition:color 0.2s}
+.nav-links a:hover{color:var(--text-primary)}
+.nav-actions{display:flex;align-items:center;gap:10px}
+.btn-ghost{background:transparent;border:0.5px solid var(--border);color:var(--text-secondary);padding:8px 18px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;letter-spacing:0.06em;transition:all 0.2s;border-radius:2px}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn-gold{background:var(--gold);border:none;color:var(--obsidian);padding:8px 20px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;letter-spacing:0.06em;border-radius:2px;transition:all 0.2s}
+.btn-gold:hover{background:var(--gold-light)}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 2rem 80px;position:relative;overflow:hidden;text-align:center}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(201,168,76,0.05) 0%,transparent 70%);pointer-events:none}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:60px 60px;opacity:0.25;pointer-events:none}
+.hero-eyebrow{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:1.5rem;display:flex;align-items:center;justify-content:center;gap:12px;animation:fadeUp 0.6s ease both}
+.hero-eyebrow::before,.hero-eyebrow::after{content:'';width:32px;height:0.5px;background:var(--gold);opacity:0.5}
+.hero-title{font-family:'Cormorant Garamond',serif;font-size:clamp(48px,8vw,96px);font-weight:300;line-height:1.0;letter-spacing:-0.01em;margin-bottom:1.5rem;max-width:900px;animation:fadeUp 0.7s ease 0.1s both}
+.hero-title em{font-style:italic;color:var(--gold)}
+.hero-subtitle{font-size:16px;font-weight:300;color:var(--text-secondary);max-width:520px;line-height:1.8;margin-bottom:2.5rem;animation:fadeUp 0.7s ease 0.2s both}
+.hero-actions{display:flex;gap:14px;align-items:center;justify-content:center;margin-bottom:5rem;animation:fadeUp 0.7s ease 0.3s both}
+.btn-large{padding:14px 36px;font-size:13px;letter-spacing:0.08em}
+.hero-stats{display:flex;gap:3.5rem;align-items:center;animation:fadeUp 0.7s ease 0.4s both}
+.hero-stat-num{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:600;color:var(--gold);line-height:1}
+.hero-stat-label{font-size:10px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-top:4px;font-family:'DM Mono',monospace}
+.hero-stat-divider{width:0.5px;height:36px;background:var(--border)}
+
+/* TICKER */
+.ticker-wrap{background:var(--obsidian-3);border-top:0.5px solid var(--border-gold);border-bottom:0.5px solid var(--border-gold);padding:10px 0;overflow:hidden;position:relative}
+.ticker{display:flex;white-space:nowrap;animation:ticker 35s linear infinite}
+.ticker-item{display:inline-flex;align-items:center;gap:10px;padding:0 2.5rem;font-family:'DM Mono',monospace;font-size:11px}
+.ticker-name{color:var(--text-secondary)}
+.ticker-price{color:var(--text-primary);font-weight:500}
+.ticker-up{color:var(--accent-green)}
+.ticker-down{color:var(--accent-red)}
+.ticker-sep{color:var(--border);margin:0 0.5rem}
+@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* SEARCH */
+.search-section{padding:48px 2.5rem 0}
+.search-inner{max-width:1300px;margin:0 auto}
+.search-bar{background:var(--obsidian-3);border:0.5px solid var(--border);display:flex;align-items:center;padding:0 0 0 20px;gap:12px;border-radius:2px;transition:border-color 0.2s}
+.search-bar:focus-within{border-color:var(--border-gold)}
+.search-icon{color:var(--text-muted);font-size:18px;line-height:1}
+.search-bar input{flex:1;background:transparent;border:none;outline:none;color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:300;padding:16px 0}
+.search-bar input::placeholder{color:var(--text-muted)}
+.search-filters{display:flex;border-left:0.5px solid var(--border)}
+.search-filter{background:transparent;border:none;border-right:0.5px solid var(--border);color:var(--text-secondary);font-family:'DM Sans',sans-serif;font-size:12px;padding:0 16px;cursor:pointer;letter-spacing:0.04em;transition:color 0.2s;white-space:nowrap}
+.search-filter:hover{color:var(--text-primary)}
+.search-btn{background:var(--gold);border:none;color:var(--obsidian);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:16px 28px;cursor:pointer;letter-spacing:0.08em;transition:background 0.2s;border-radius:0 2px 2px 0;white-space:nowrap}
+.search-btn:hover{background:var(--gold-light)}
+
+/* CATEGORIES */
+.cat-section{padding:1px 2.5rem 0}
+.cat-inner{max-width:1300px;margin:0 auto}
+.categories{display:flex;gap:1px;background:var(--border);margin-top:12px}
+.cat-btn{background:var(--obsidian-2);flex:1;padding:14px 12px;text-align:center;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:background 0.2s}
+.cat-btn:hover,.cat-btn.active{background:var(--obsidian-4)}
+.cat-btn .icon{font-size:16px;display:block;margin-bottom:4px}
+.cat-btn .label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-secondary);display:block;transition:color 0.2s}
+.cat-btn.active .label{color:var(--gold)}
+
+/* SECTION */
+.section{padding:72px 2.5rem}
+.section-inner{max-width:1300px;margin:0 auto}
+.section-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2rem}
+.section-title{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:300}
+.section-title em{font-style:italic;color:var(--gold)}
+.section-link{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);text-decoration:none;display:flex;align-items:center;gap:6px;transition:opacity 0.2s}
+.section-link:hover{opacity:0.7}
+.section-link::after{content:'→'}
+
+/* CARD GRID */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px;background:var(--border)}
+.listing-card{background:var(--obsidian-2);overflow:hidden;cursor:pointer;transition:all 0.25s;position:relative}
+.listing-card:hover{background:var(--obsidian-3);transform:translateY(-3px);z-index:2;box-shadow:0 24px 60px rgba(0,0,0,0.6)}
+.card-img-wrap{aspect-ratio:3/4;background:var(--obsidian-3);position:relative;display:flex;align-items:center;justify-content:center}
+.card-img-placeholder{width:72%;aspect-ratio:2.5/3.5;border-radius:4px;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.card-shine{position:absolute;inset:0;background:linear-gradient(135deg,rgba(201,168,76,0.12) 0%,transparent 40%,rgba(201,168,76,0.06) 100%);pointer-events:none}
+.card-badge{position:absolute;top:10px;left:10px;font-family:'DM Mono',monospace;font-size:10px;padding:3px 8px;letter-spacing:0.08em;border-radius:1px}
+.badge-psa{background:rgba(60,125,200,0.15);border:0.5px solid rgba(60,125,200,0.4);color:#7BB4E8}
+.badge-bgs{background:rgba(201,168,76,0.1);border:0.5px solid var(--border-gold);color:var(--gold)}
+.card-grade{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600}
+.grade-gem{background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold)}
+.grade-mint{background:rgba(76,175,124,0.1);border:1px solid rgba(76,175,124,0.4);color:var(--accent-green)}
+.card-info{padding:14px 16px}
+.card-game{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px}
+.card-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;line-height:1.2;margin-bottom:2px}
+.card-set{font-size:11px;color:var(--text-secondary);margin-bottom:12px}
+.card-footer{display:flex;align-items:center;justify-content:space-between}
+.card-price{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--gold)}
+.card-price-sub{font-size:10px;color:var(--text-muted);margin-top:1px}
+.card-arrow{width:30px;height:30px;border:0.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;transition:all 0.2s}
+.listing-card:hover .card-arrow{border-color:var(--gold);color:var(--gold)}
+
+/* CARD VISUALS */
+.poke-wrap{background:linear-gradient(145deg,#1a3a5c,#0d2035);border:2px solid rgba(255,215,0,0.2);width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.poke-icon{width:48px;height:48px;border-radius:50%;background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);display:flex;align-items:center;justify-content:center;font-size:20px}
+.card-bars{display:flex;flex-direction:column;gap:4px;width:65%}
+.card-bar{height:3px;border-radius:2px}
+
+.mtg-wrap{background:linear-gradient(160deg,#1c2a1c,#0d1a0d);border:2px solid rgba(76,175,124,0.25);width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.mtg-icon{font-size:26px;opacity:0.65}
+
+.op-wrap{background:linear-gradient(160deg,#2a1c1c,#1a0d0d);border:2px solid rgba(200,75,60,0.25);width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.op-icon{font-size:26px;opacity:0.65}
+
+/* TRUST STRIP */
+.trust-strip{background:var(--obsidian-3);border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:28px 2.5rem}
+.trust-inner{max-width:1300px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:28px}
+.trust-item{display:flex;align-items:center;gap:14px}
+.trust-icon{width:38px;height:38px;border:0.5px solid var(--border-gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--gold);flex-shrink:0}
+.trust-text strong{display:block;font-size:13px;font-weight:500}
+.trust-text span{font-size:11px;color:var(--text-muted)}
+
+/* SALES TABLE */
+.sales-table{width:100%;border-collapse:collapse}
+.sales-table thead tr{border-bottom:0.5px solid var(--border)}
+.sales-table th{text-align:left;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);font-weight:400;padding:0 16px 12px;font-family:'DM Mono',monospace}
+.sales-table tbody tr{border-bottom:0.5px solid var(--border);cursor:pointer;transition:background 0.15s}
+.sales-table tbody tr:hover{background:var(--obsidian-3)}
+.sales-table td{padding:14px 16px;font-size:13px}
+.td-card{display:flex;align-items:center;gap:12px}
+.td-swatch{width:30px;height:42px;border-radius:2px;flex-shrink:0}
+.swatch-poke{background:linear-gradient(135deg,#1a3a5c,#0d2035);border:1px solid rgba(255,215,0,0.15)}
+.swatch-mtg{background:linear-gradient(135deg,#1c2a1c,#0d1a0d);border:1px solid rgba(76,175,124,0.15)}
+.swatch-op{background:linear-gradient(135deg,#2a1c1c,#1a0d0d);border:1px solid rgba(200,75,60,0.15)}
+.td-name{font-family:'Cormorant Garamond',serif;font-size:16px;line-height:1.2}
+.td-set{font-size:10px;color:var(--text-muted);margin-top:2px;font-family:'DM Mono',monospace}
+.grade-pill{font-family:'DM Mono',monospace;font-size:10px;padding:3px 8px;border-radius:1px}
+.td-price{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold)}
+.td-up{color:var(--accent-green);font-family:'DM Mono',monospace;font-size:11px}
+.td-down{color:var(--accent-red);font-family:'DM Mono',monospace;font-size:11px}
+.td-time{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace}
+
+/* HOW IT WORKS */
+.how-section{background:var(--obsidian-2);border-top:0.5px solid var(--border);padding:80px 2.5rem}
+.how-inner{max-width:1300px;margin:0 auto}
+.how-header{text-align:center;margin-bottom:4rem}
+.how-title{font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:300;margin-bottom:12px}
+.how-title em{font-style:italic;color:var(--gold)}
+.how-sub{font-size:15px;color:var(--text-secondary);max-width:460px;margin:0 auto}
+.how-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border)}
+.how-step{background:var(--obsidian-2);padding:32px 24px;position:relative;overflow:hidden}
+.step-bg-num{position:absolute;top:12px;right:16px;font-family:'Cormorant Garamond',serif;font-size:80px;font-weight:300;color:var(--border);line-height:1;user-select:none}
+.step-icon{width:42px;height:42px;border:0.5px solid var(--border-gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:16px;position:relative;z-index:1}
+.step-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;margin-bottom:8px;position:relative;z-index:1}
+.step-desc{font-size:13px;color:var(--text-secondary);line-height:1.65;position:relative;z-index:1}
+
+/* SELLER CTA */
+.cta-section{padding:80px 2.5rem;background:var(--obsidian)}
+.cta-inner{max-width:1300px;margin:0 auto}
+.cta-box{background:var(--obsidian-2);border:0.5px solid var(--border-gold);padding:56px 64px;display:flex;align-items:center;justify-content:space-between;gap:40px}
+.cta-left{}
+.cta-eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.cta-title{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;line-height:1.1;margin-bottom:12px}
+.cta-title em{font-style:italic;color:var(--gold)}
+.cta-sub{font-size:15px;color:var(--text-secondary);max-width:480px;line-height:1.7}
+.cta-right{flex-shrink:0;text-align:center}
+.cta-stat{font-family:'Cormorant Garamond',serif;font-size:80px;font-weight:300;color:var(--gold);line-height:1}
+.cta-stat-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:20px}
+.cta-actions{display:flex;gap:10px;margin-top:24px}
+
+/* FOOTER */
+footer{background:var(--obsidian);border-top:0.5px solid var(--border);padding:40px 2.5rem 32px}
+.footer-inner{max-width:1300px;margin:0 auto}
+.footer-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;flex-wrap:wrap;gap:32px}
+.footer-logo{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold);letter-spacing:0.08em;margin-bottom:8px}
+.footer-tagline{font-size:12px;color:var(--text-muted);max-width:240px;line-height:1.6}
+.footer-col-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px}
+.footer-links{display:flex;flex-direction:column;gap:8px}
+.footer-links a{font-size:13px;color:var(--text-secondary);text-decoration:none;transition:color 0.2s}
+.footer-links a:hover{color:var(--text-primary)}
+.footer-bottom{border-top:0.5px solid var(--border);padding-top:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.footer-copy{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace}
+.footer-chain{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;display:flex;align-items:center;gap:6px}
+.chain-dot{width:6px;height:6px;border-radius:50%;background:var(--accent-green);animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:768px){
+  .nav-links{display:none}
+  .how-steps{grid-template-columns:1fr 1fr}
+  .cta-box{flex-direction:column;padding:36px 28px;text-align:center}
+  .cta-sub{max-width:100%}
+  .hero-stats{gap:1.5rem}
+  .search-filters{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-icon"></div>
+    TROVE EXCHANGE
+  </a>
+  <div class="nav-links">
+    <a href="#">Marketplace</a>
+    <a href="#">Recent Sales</a>
+    <a href="#">Price Guide</a>
+    <a href="#">How It Works</a>
+  </div>
+  <div class="nav-actions">
+    <button class="btn-ghost">Sign In</button>
+    <button class="btn-gold">List a Card</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-eyebrow">Blockchain-Secured TCG Marketplace</div>
+  <h1 class="hero-title">Where <em>Rare Cards</em><br>Meet Trustless Trade</h1>
+  <p class="hero-subtitle">Every card authenticated by experts. Every USDC locked in escrow. Every seller keeps 97% — more than any marketplace on earth.</p>
+  <div class="hero-actions">
+    <button class="btn-gold btn-large">Explore Listings</button>
+    <button class="btn-ghost btn-large">How It Works</button>
+  </div>
+  <div class="hero-stats">
+    <div>
+      <div class="hero-stat-num">97%</div>
+      <div class="hero-stat-label">Seller Take Rate</div>
+    </div>
+    <div class="hero-stat-divider"></div>
+    <div>
+      <div class="hero-stat-num">$100</div>
+      <div class="hero-stat-label">Min. Listing</div>
+    </div>
+    <div class="hero-stat-divider"></div>
+    <div>
+      <div class="hero-stat-num">0%</div>
+      <div class="hero-stat-label">Fraud Rate</div>
+    </div>
+    <div class="hero-stat-divider"></div>
+    <div>
+      <div class="hero-stat-num">Base</div>
+      <div class="hero-stat-label">Blockchain</div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker">
+    <div class="ticker-item"><span class="ticker-name">Charizard Base Holo</span>&nbsp;<span class="ticker-price">PSA 9 · $487</span>&nbsp;<span class="ticker-up">+2.4%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">Black Lotus</span>&nbsp;<span class="ticker-price">BGS 8.5 · $28,400</span>&nbsp;<span class="ticker-down">-1.2%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">Pikachu Illustrator</span>&nbsp;<span class="ticker-price">PSA 7 · $4,200</span>&nbsp;<span class="ticker-up">+5.1%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">Mox Sapphire</span>&nbsp;<span class="ticker-price">PSA 9 · $6,800</span>&nbsp;<span class="ticker-up">+0.8%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">1st Ed Shadowless Charizard</span>&nbsp;<span class="ticker-price">PSA 10 · $36,000</span>&nbsp;<span class="ticker-down">-0.5%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">Ancestral Recall</span>&nbsp;<span class="ticker-price">BGS 9 · $9,200</span>&nbsp;<span class="ticker-up">+3.2%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">Monkey D. Luffy Alt Art</span>&nbsp;<span class="ticker-price">PSA 10 · $890</span>&nbsp;<span class="ticker-up">+1.8%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">Charizard Base Holo</span>&nbsp;<span class="ticker-price">PSA 9 · $487</span>&nbsp;<span class="ticker-up">+2.4%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">Black Lotus</span>&nbsp;<span class="ticker-price">BGS 8.5 · $28,400</span>&nbsp;<span class="ticker-down">-1.2%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">Pikachu Illustrator</span>&nbsp;<span class="ticker-price">PSA 7 · $4,200</span>&nbsp;<span class="ticker-up">+5.1%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">Mox Sapphire</span>&nbsp;<span class="ticker-price">PSA 9 · $6,800</span>&nbsp;<span class="ticker-up">+0.8%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">1st Ed Shadowless Charizard</span>&nbsp;<span class="ticker-price">PSA 10 · $36,000</span>&nbsp;<span class="ticker-down">-0.5%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">Ancestral Recall</span>&nbsp;<span class="ticker-price">BGS 9 · $9,200</span>&nbsp;<span class="ticker-up">+3.2%</span></div>
+    <span class="ticker-sep">·</span>
+    <div class="ticker-item"><span class="ticker-name">Monkey D. Luffy Alt Art</span>&nbsp;<span class="ticker-price">PSA 10 · $890</span>&nbsp;<span class="ticker-up">+1.8%</span></div>
+    <span class="ticker-sep">·</span>
+  </div>
+</div>
+
+<!-- SEARCH -->
+<section class="search-section">
+  <div class="search-inner">
+    <div class="search-bar">
+      <span class="search-icon">⌕</span>
+      <input type="text" placeholder="Search cards, sets, grades, games...">
+      <div class="search-filters">
+        <button class="search-filter">Pokémon ▾</button>
+        <button class="search-filter">MTG ▾</button>
+        <button class="search-filter">Grade ▾</button>
+        <button class="search-filter">Price ▾</button>
+      </div>
+      <button class="search-btn">Search</button>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="cat-section">
+  <div class="cat-inner">
+    <div class="categories">
+      <button class="cat-btn active"><span class="icon">⬡</span><span class="label">All</span></button>
+      <button class="cat-btn"><span class="icon">⚡</span><span class="label">Pokémon</span></button>
+      <button class="cat-btn"><span class="icon">✦</span><span class="label">Magic</span></button>
+      <button class="cat-btn"><span class="icon">☠</span><span class="label">One Piece</span></button>
+      <button class="cat-btn"><span class="icon">◈</span><span class="label">Yu-Gi-Oh</span></button>
+      <button class="cat-btn"><span class="icon">◉</span><span class="label">Sports</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURED LISTINGS -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2 class="section-title">Featured <em>Listings</em></h2>
+      <a href="#" class="section-link">View all</a>
+    </div>
+    <div class="card-grid">
+
+      <div class="listing-card">
+        <div class="card-img-wrap">
+          <div class="card-img-placeholder">
+            <div class="poke-wrap">
+              <div class="poke-icon">⚡</div>
+              <div class="card-bars">
+                <div class="card-bar" style="background:rgba(255,215,0,0.4);width:100%"></div>
+                <div class="card-bar" style="background:rgba(255,215,0,0.2);width:70%"></div>
+                <div class="card-bar" style="background:rgba(255,215,0,0.1);width:50%"></div>
+              </div>
+            </div>
+            <div class="card-shine"></div>
+          </div>
+          <span class="card-badge badge-psa">PSA</span>
+          <div class="card-grade grade-gem">9</div>
+        </div>
+        <div class="card-info">
+          <div class="card-game">Pokémon · Base Set</div>
+          <div class="card-name">Charizard Holo</div>
+          <div class="card-set">1999 Shadowless · #4/102</div>
+          <div class="card-footer">
+            <div><div class="card-price">$487</div><div class="card-price-sub">USDC · Escrow protected</div></div>
+            <div class="card-arrow">→</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="listing-card">
+        <div class="card-img-wrap">
+          <div class="card-img-placeholder">
+            <div class="mtg-wrap">
+              <div class="mtg-icon">✦</div>
+              <div class="card-bars">
+                <div class="card-bar" style="background:rgba(76,175,124,0.5);width:100%"></div>
+                <div class="card-bar" style="background:rgba(76,175,124,0.25);width:60%"></div>
+                <div class="card-bar" style="background:rgba(76,175,124,0.15);width:80%"></div>
+              </div>
+            </div>
+            <div class="card-shine"></div>
+          </div>
+          <span class="card-badge badge-bgs">BGS</span>
+          <div class="card-grade grade-gem" style="font-size:13px">9.5</div>
+        </div>
+        <div class="card-info">
+          <div class="card-game">MTG · Alpha</div>
+          <div class="card-name">Black Lotus</div>
+          <div class="card-set">1993 Limited Edition · Rare</div>
+          <div class="card-footer">
+            <div><div class="card-price">$28,400</div><div class="card-price-sub">USDC · Escrow protected</div></div>
+            <div class="card-arrow">→</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="listing-card">
+        <div class="card-img-wrap">
+          <div class="card-img-placeholder">
+            <div class="poke-wrap" style="background:linear-gradient(145deg,#2a1a3e,#1a0d2a);border-color:rgba(180,100,255,0.2)">
+              <div class="poke-icon" style="border-color:rgba(180,100,255,0.3);background:rgba(180,100,255,0.08)">★</div>
+              <div class="card-bars">
+                <div class="card-bar" style="background:rgba(180,100,255,0.4);width:100%"></div>
+                <div class="card-bar" style="background:rgba(180,100,255,0.2);width:75%"></div>
+                <div class="card-bar" style="background:rgba(180,100,255,0.1);width:50%"></div>
+              </div>
+            </div>
+            <div class="card-shine"></div>
+          </div>
+          <span class="card-badge badge-psa">PSA</span>
+          <div class="card-grade grade-mint">7</div>
+        </div>
+        <div class="card-info">
+          <div class="card-game">Pokémon · Promo</div>
+          <div class="card-name">Pikachu Illustrator</div>
+          <div class="card-set">1998 CoroCoro · Trophy Card</div>
+          <div class="card-footer">
+            <div><div class="card-price">$4,200</div><div class="card-price-sub">USDC · Escrow protected</div></div>
+            <div class="card-arrow">→</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="listing-card">
+        <div class="card-img-wrap">
+          <div class="card-img-placeholder">
+            <div class="op-wrap">
+              <div class="op-icon">☠</div>
+              <div class="card-bars">
+                <div class="card-bar" style="background:rgba(200,75,60,0.5);width:100%"></div>
+                <div class="card-bar" style="background:rgba(200,75,60,0.25);width:75%"></div>
+                <div class="card-bar" style="background:rgba(200,75,60,0.15);width:45%"></div>
+              </div>
+            </div>
+            <div class="card-shine"></div>
+          </div>
+          <span class="card-badge badge-psa">PSA</span>
+          <div class="card-grade grade-gem">10</div>
+        </div>
+        <div class="card-info">
+          <div class="card-game">One Piece · OP-01</div>
+          <div class="card-name">Monkey D. Luffy</div>
+          <div class="card-set">Romance Dawn · SEC Alt Art</div>
+          <div class="card-footer">
+            <div><div class="card-price">$890</div><div class="card-price-sub">USDC · Escrow protected</div></div>
+            <div class="card-arrow">→</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="listing-card">
+        <div class="card-img-wrap">
+          <div class="card-img-placeholder">
+            <div class="mtg-wrap" style="background:linear-gradient(160deg,#2a1c2a,#1a0d1a);border-color:rgba(180,100,255,0.25)">
+              <div class="mtg-icon" style="color:rgba(180,100,255,0.8)">⬟</div>
+              <div class="card-bars">
+                <div class="card-bar" style="background:rgba(180,100,255,0.4);width:100%"></div>
+                <div class="card-bar" style="background:rgba(180,100,255,0.2);width:55%"></div>
+                <div class="card-bar" style="background:rgba(180,100,255,0.12);width:75%"></div>
+              </div>
+            </div>
+            <div class="card-shine"></div>
+          </div>
+          <span class="card-badge badge-bgs">BGS</span>
+          <div class="card-grade grade-gem" style="font-size:13px">9.0</div>
+        </div>
+        <div class="card-info">
+          <div class="card-game">MTG · Unlimited</div>
+          <div class="card-name">Mox Sapphire</div>
+          <div class="card-set">1993 Unlimited Edition · Rare</div>
+          <div class="card-footer">
+            <div><div class="card-price">$6,800</div><div class="card-price-sub">USDC · Escrow protected</div></div>
+            <div class="card-arrow">→</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="listing-card">
+        <div class="card-img-wrap">
+          <div class="card-img-placeholder">
+            <div class="poke-wrap" style="background:linear-gradient(145deg,#1a2a3a,#0d1a2a);border-color:rgba(100,180,255,0.2)">
+              <div class="poke-icon" style="border-color:rgba(100,180,255,0.3);background:rgba(100,180,255,0.08)">💧</div>
+              <div class="card-bars">
+                <div class="card-bar" style="background:rgba(100,180,255,0.4);width:100%"></div>
+                <div class="card-bar" style="background:rgba(100,180,255,0.2);width:80%"></div>
+                <div class="card-bar" style="background:rgba(100,180,255,0.1);width:55%"></div>
+              </div>
+            </div>
+            <div class="card-shine"></div>
+          </div>
+          <span class="card-badge badge-psa">PSA</span>
+          <div class="card-grade grade-gem">10</div>
+        </div>
+        <div class="card-info">
+          <div class="card-game">Pokémon · Base Set</div>
+          <div class="card-name">Blastoise Holo</div>
+          <div class="card-set">1999 Base Set · #2/102</div>
+          <div class="card-footer">
+            <div><div class="card-price">$3,800</div><div class="card-price-sub">USDC · Escrow protected</div></div>
+            <div class="card-arrow">→</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- TRUST STRIP -->
+<div class="trust-strip">
+  <div class="trust-inner">
+    <div class="trust-item">
+      <div class="trust-icon">⬡</div>
+      <div class="trust-text"><strong>Dual Escrow Protection</strong><span>USDC locked until delivery confirmed</span></div>
+    </div>
+    <div class="trust-item">
+      <div class="trust-icon">✓</div>
+      <div class="trust-text"><strong>Human Authentication</strong><span>Every card verified by certified experts</span></div>
+    </div>
+    <div class="trust-item">
+      <div class="trust-icon">⇄</div>
+      <div class="trust-text"><strong>Tracked Shipping</strong><span>Dual label, full visibility both parties</span></div>
+    </div>
+    <div class="trust-item">
+      <div class="trust-icon">◈</div>
+      <div class="trust-text"><strong>On-Chain Reputation</strong><span>Immutable seller &amp; buyer history</span></div>
+    </div>
+    <div class="trust-item">
+      <div class="trust-icon">◆</div>
+      <div class="trust-text"><strong>Built on Base</strong><span>Ethereum L2 · pennies per transaction</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- RECENT SALES -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2 class="section-title">Recent <em>Sales</em></h2>
+      <a href="#" class="section-link">Full price guide</a>
+    </div>
+    <table class="sales-table">
+      <thead>
+        <tr>
+          <th>Card</th>
+          <th>Grade</th>
+          <th>Sale Price</th>
+          <th>30d Change</th>
+          <th>Sold</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="td-card"><div class="td-swatch swatch-poke"></div><div><div class="td-name">Charizard Holo</div><div class="td-set">Pokémon · Base Set 1999 Shadowless</div></div></div></td>
+          <td><span class="grade-pill badge-psa">PSA 9</span></td>
+          <td class="td-price">$487</td>
+          <td class="td-up">+2.4%</td>
+          <td class="td-time">2h ago</td>
+        </tr>
+        <tr>
+          <td><div class="td-card"><div class="td-swatch swatch-mtg"></div><div><div class="td-name">Ancestral Recall</div><div class="td-set">MTG · Alpha · Power Nine</div></div></div></td>
+          <td><span class="grade-pill badge-bgs">BGS 9</span></td>
+          <td class="td-price">$9,200</td>
+          <td class="td-up">+3.2%</td>
+          <td class="td-time">5h ago</td>
+        </tr>
+        <tr>
+          <td><div class="td-card"><div class="td-swatch swatch-op"></div><div><div class="td-name">Monkey D. Luffy</div><div class="td-set">One Piece · OP-01 Alt Art SEC</div></div></div></td>
+          <td><span class="grade-pill badge-psa">PSA 10</span></td>
+          <td class="td-price">$890</td>
+          <td class="td-down">-0.8%</td>
+          <td class="td-time">8h ago</td>
+        </tr>
+        <tr>
+          <td><div class="td-card"><div class="td-swatch swatch-poke"></div><div><div class="td-name">Blastoise Holo</div><div class="td-set">Pokémon · Base Set 1999 · #2/102</div></div></div></td>
+          <td><span class="grade-pill badge-psa">PSA 10</span></td>
+          <td class="td-price">$3,800</td>
+          <td class="td-up">+6.1%</td>
+          <td class="td-time">12h ago</td>
+        </tr>
+        <tr>
+          <td><div class="td-card"><div class="td-swatch swatch-mtg"></div><div><div class="td-name">Mox Ruby</div><div class="td-set">MTG · Unlimited · Power Nine</div></div></div></td>
+          <td><span class="grade-pill badge-bgs">BGS 8.5</span></td>
+          <td class="td-price">$4,100</td>
+          <td class="td-down">-1.5%</td>
+          <td class="td-time">Yesterday</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section">
+  <div class="how-inner">
+    <div class="how-header">
+      <h2 class="how-title">Built for <em>Trust</em></h2>
+      <p class="how-sub">The first TCG marketplace where neither party can get burned. Every single time.</p>
+    </div>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="step-bg-num">01</div>
+        <div class="step-icon">⬡</div>
+        <div class="step-title">Buyer Funds Escrow</div>
+        <p class="step-desc">USDC locked in a smart contract on Base. Neither party can touch it until the card is verified and delivered to the buyer.</p>
+      </div>
+      <div class="how-step">
+        <div class="step-bg-num">02</div>
+        <div class="step-icon">⇄</div>
+        <div class="step-title">Seller Ships to Trove</div>
+        <p class="step-desc">A pre-paid label routes the card to our authentication center. Seller posts a collateral bond — returned in full on completion.</p>
+      </div>
+      <div class="how-step">
+        <div class="step-bg-num">03</div>
+        <div class="step-icon">✓</div>
+        <div class="step-title">Expert Authentication</div>
+        <p class="step-desc">A certified human authenticator verifies the card matches the listing. Grade, condition, and identity all confirmed on record.</p>
+      </div>
+      <div class="how-step">
+        <div class="step-bg-num">04</div>
+        <div class="step-icon">◉</div>
+        <div class="step-title">Delivery & Settlement</div>
+        <p class="step-desc">Card ships to buyer with a 72-hour inspection window. On confirmation, USDC releases to seller. Immutable. On-chain. Final.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SELLER CTA -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <div class="cta-box">
+      <div class="cta-left">
+        <div class="cta-eyebrow">For Sellers</div>
+        <h2 class="cta-title">Keep More of<br><em>Every Sale</em></h2>
+        <p class="cta-sub">eBay takes 13%. TCGPlayer takes 10%. Trove Exchange sellers keep 97% of every card sale — with full authentication, escrow protection, and zero fraud risk built in.</p>
+        <div class="cta-actions">
+          <button class="btn-gold btn-large">Start Selling</button>
+          <button class="btn-ghost btn-large">Learn More</button>
+        </div>
+      </div>
+      <div class="cta-right">
+        <div class="cta-stat">97%</div>
+        <div class="cta-stat-label">Seller take rate</div>
+        <div style="font-size:13px;color:var(--text-muted)">vs. 87% on eBay</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">TROVE EXCHANGE</div>
+        <div class="footer-tagline">The blockchain-secured marketplace for rare trading card collectibles.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Marketplace</div>
+        <div class="footer-links">
+          <a href="#">Browse All</a>
+          <a href="#">Pokémon</a>
+          <a href="#">Magic: The Gathering</a>
+          <a href="#">One Piece</a>
+          <a href="#">Price Guide</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">Platform</div>
+        <div class="footer-links">
+          <a href="#">How It Works</a>
+          <a href="#">Authentication</a>
+          <a href="#">Fee Schedule</a>
+          <a href="#">Sell a Card</a>
+          <a href="#">About</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">Legal</div>
+        <div class="footer-links">
+          <a href="#">Terms of Service</a>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Cookie Policy</a>
+          <a href="#">Contact</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2025 Trove Exchange · All rights reserved · troveexchange.com</div>
+      <div class="footer-chain"><span class="chain-dot"></span>Live on Base · Ethereum L2</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.cat-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
