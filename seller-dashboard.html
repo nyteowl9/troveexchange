@@ -364,7 +364,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);bac
         <div class="seller-tier-label">Seller Tier</div>
         <div class="seller-tier-name">Elite</div>
         <div class="seller-tier-progress"><div class="seller-tier-fill"></div></div>
-        <div class="seller-tier-sub">847 / 1,000 sales · 10% bond</div>
+        <div class="seller-tier-sub">847 / 1,000 sales · 10% bond · 0 strikes</div>
       </div>
     </div>
   </aside>
@@ -377,7 +377,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);bac
       <div class="page-header">
         <div>
           <div class="page-title">Good morning, <em>CardKing_88</em></div>
-          <div class="page-subtitle">Tuesday, April 7, 2025 · Elite Seller · 847 completed sales</div>
+          <div class="page-subtitle">Tuesday, April 7, 2025 · Elite Seller · 847 sales · 0 strikes · Ship within 48hrs of sale</div>
         </div>
         <div class="page-actions">
           <button class="btn-ghost">Download Report</button>
@@ -400,7 +400,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);bac
         <div class="metric-card">
           <div class="metric-label">Bond Locked</div>
           <div class="metric-value gold">$1,240</div>
-          <div class="metric-change neutral">Across 4 active orders</div>
+          <div class="metric-change neutral">Returns within 5–7 days per order</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Seller Rating</div>
@@ -532,7 +532,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);bac
       <div class="page-header">
         <div>
           <div class="page-title">Active <em>Orders</em></div>
-          <div class="page-subtitle">4 orders in progress · $11,977 in escrow · 1 auto-releasing in 18hrs</div>
+          <div class="page-subtitle">4 orders in progress · $11,977 in escrow · Ship within 48hrs or buyer is auto-refunded</div>
         </div>
         <div class="page-actions">
           <div class="dash-section-tabs">
@@ -566,7 +566,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);bac
                 <div class="track-step"></div><div class="track-line"></div>
                 <div class="track-step"></div>
               </div>
-              <div style="font-size:10px;color:var(--text-muted);margin-top:3px;font-family:'DM Mono',monospace">Escrow funded · Print label to proceed</div>
+              <div style="font-size:10px;color:var(--accent-amber);margin-top:3px;font-family:'DM Mono',monospace">⚠ Ship within 48hrs · Buyer auto-refunded if no carrier scan by Apr 8 12:00pm</div>
             </td>
             <td><div class="order-price">$487</div><div class="order-net">Net $472</div></td>
             <td><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-amber)">$48.70 locked</span></td>
@@ -854,12 +854,18 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);bac
           <div class="fee-preview-title">Your Payout Preview</div>
           <div class="fee-row"><span class="fee-row-label">Asking price</span><span class="fee-row-val" id="fp-price">—</span></div>
           <div class="fee-row"><span class="fee-row-label">Seller shipping fee</span><span class="fee-row-val muted">− $15.00</span></div>
-          <div class="fee-row"><span class="fee-row-label">Collateral bond (10%)</span><span class="fee-row-val muted" id="fp-bond">— (returned on completion)</span></div>
+          <div class="fee-row"><span class="fee-row-label">Collateral bond (10%) <span style="color:var(--accent-green);font-size:10px">↩ returned</span></span><span class="fee-row-val muted" id="fp-bond">— posted when buyer purchases</span></div>
           <div class="fee-divider"></div>
-          <div class="fee-row total"><span class="fee-row-label">You receive</span><span class="fee-row-val green" id="fp-net">Enter price above</span></div>
+          <div class="fee-row total"><span class="fee-row-label">You receive on settlement</span><span class="fee-row-val green" id="fp-net">Enter price above</span></div>
         </div>
 
-        <div class="form-actions">
+        <div style="background:rgba(76,175,124,0.06);border:1px solid rgba(76,175,124,0.2);border-radius:8px;padding:12px 16px;margin-top:4px;font-size:12px;color:var(--text-secondary);line-height:1.6">
+  <strong style="color:var(--accent-green);font-weight:600">About the bond:</strong> The collateral bond is only required when a buyer actually purchases your card — not when you list it. It is held in the smart contract during the transaction and returned in full within 5–7 days on successful completion. Think of it as a security deposit that cycles with each sale.
+</div>
+<div style="background:rgba(200,75,60,0.05);border:1px solid rgba(200,75,60,0.2);border-radius:8px;padding:12px 16px;margin-top:8px;font-size:12px;color:var(--text-secondary);line-height:1.6">
+  <strong style="color:var(--accent-red);font-weight:600">Ship within 48hrs of sale:</strong> When a buyer purchases your card, you have 48 hours to get it to a carrier and have it scanned. If no carrier scan is detected by the deadline, the buyer is automatically refunded in full and you receive a strike on your account. Three strikes result in a permanent ban.
+</div>
+<div class="form-actions">
           <button class="btn-primary btn-large">Publish Listing</button>
           <button class="btn-ghost btn-large">Save as Draft</button>
           <button class="btn-ghost btn-large" onclick="showSection('overview')">Cancel</button>
@@ -872,7 +878,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);bac
       <div class="page-header">
         <div>
           <div class="page-title">Bond <em>Wallet</em></div>
-          <div class="page-subtitle">Your collateral bonds — locked during sales, returned on completion</div>
+          <div class="page-subtitle">Bonds post per transaction when a buyer purchases — not when you list. All bonds return within 5–7 days on completion.</div>
         </div>
       </div>
       <div class="bond-grid">
@@ -885,7 +891,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);bac
         <div class="bond-card">
           <div class="bond-label">Currently Locked</div>
           <div class="bond-value gold">$1,240</div>
-          <div class="bond-sub">Across 4 active orders</div>
+          <div class="bond-sub">Across 4 active orders · Returns within 5–7 days each</div>
           <div class="bond-history">
             <div class="bond-row">
               <div><div class="bond-row-label">Charizard PSA 9</div><div class="bond-row-order">Order #4821</div></div>
@@ -940,7 +946,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);bac
         <div class="notif-item unread">
           <div class="notif-dot amber"></div>
           <div style="flex:1">
-            <div class="notif-text"><strong>Print your shipping label</strong> — Order #4821 (Charizard PSA 9) — buyer has funded escrow. You have 48hrs to ship.</div>
+            <div class="notif-text"><strong>Action required — ship within 48hrs</strong> — Order #4821 (Charizard PSA 9). Buyer has funded escrow. If no carrier scan by Apr 8 12:00pm, buyer is automatically refunded and you receive Strike 1.</div>
             <div class="notif-time">2 hours ago</div>
           </div>
           <button class="order-action-btn label">Print Label</button>
