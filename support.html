@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Support — Trove Exchange Staff</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+[data-theme="dark"]{
+  --gold:#C9A84C;--teal:#C9A84C;--teal-bg:rgba(201,168,76,0.1);--teal-border:rgba(201,168,76,0.28);
+  --bg:#0A0A0B;--bg-2:#111114;--bg-3:#18181C;--bg-4:#222228;
+  --text-primary:#F0EDE6;--text-secondary:#B8B4AC;--text-muted:#6C6A66;
+  --accent-green:#4CAF7C;--accent-red:#C84B3C;--accent-blue:#3C7DC8;--accent-amber:#E8A838;
+  --border:#2A2A32;--nav-bg:rgba(10,10,11,0.97);--sidebar-bg:#0E0E11;--card-bg:#111114;--input-bg:#18181C;
+}
+[data-theme="light"]{
+  --gold:#C9A84C;--teal:#0D6E6E;--teal-bg:rgba(13,110,110,0.08);--teal-border:rgba(13,110,110,0.28);
+  --bg:#F5F2EC;--bg-2:#EDEAE3;--bg-3:#E4E0D8;--bg-4:#D8D4CC;
+  --text-primary:#1A1814;--text-secondary:#4A4640;--text-muted:#8A8680;
+  --accent-green:#1A6B3A;--accent-red:#B83C2C;--accent-blue:#1A5EA0;--accent-amber:#9B6E1A;
+  --border:#C8C4BC;--nav-bg:rgba(245,242,236,0.98);--sidebar-bg:#E4E0D8;--card-bg:#EDEAE3;--input-bg:#E4E0D8;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-weight:400;overflow-x:hidden;line-height:1.6;transition:background 0.3s,color 0.3s}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);backdrop-filter:blur(24px);border-bottom:1px solid rgba(60,125,200,0.4);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;letter-spacing:0.1em;color:var(--gold);display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-logo-icon{width:22px;height:22px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0}
+.nav-badge{font-family:'DM Mono',monospace;font-size:10px;padding:4px 12px;border-radius:20px;background:rgba(60,125,200,0.12);border:1px solid rgba(60,125,200,0.4);color:var(--accent-blue);font-weight:600;letter-spacing:0.06em}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-user{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1.5px solid var(--border);border-radius:10px}
+.nav-avatar{width:28px;height:28px;border-radius:50%;background:rgba(60,125,200,0.1);border:1.5px solid rgba(60,125,200,0.3);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:600;color:var(--accent-blue)}
+.nav-username{font-size:12px;font-weight:500;color:var(--text-secondary)}
+.theme-toggle{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:14px;transition:all 0.2s}
+.theme-toggle:hover{border-color:var(--teal);color:var(--teal)}
+
+.layout{display:flex;padding-top:64px;min-height:100vh}
+.sidebar{width:220px;flex-shrink:0;background:var(--sidebar-bg);border-right:0.5px solid var(--border);position:fixed;top:64px;left:0;height:calc(100vh - 64px);overflow-y:auto;padding:16px 0;display:flex;flex-direction:column}
+.nav-section-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);padding:12px 16px 4px;font-weight:500}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;transition:all 0.15s;border-left:2px solid transparent;text-decoration:none;color:var(--text-secondary);font-size:13px;font-weight:500}
+.nav-item:hover{color:var(--text-primary);background:var(--bg-3)}
+.nav-item.active{color:var(--teal);background:var(--teal-bg);border-left-color:var(--teal)}
+.nav-icon{width:16px;text-align:center;font-size:14px;flex-shrink:0}
+.nav-badge-count{margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:8px;color:#fff;font-weight:600}
+.nb-red{background:var(--accent-red)}
+.nb-amber{background:var(--accent-amber)}
+.nb-blue{background:var(--accent-blue)}
+.sidebar-stats{margin:16px;background:var(--teal-bg);border:1px solid var(--teal-border);border-radius:10px;padding:12px}
+.ss-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:10px;font-weight:500}
+.ss-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
+.ss-key{color:var(--text-muted);font-family:'DM Mono',monospace;font-size:10px}
+.ss-val{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:300;color:var(--text-primary)}
+
+.dash-main{margin-left:220px;flex:1;padding:24px 24px 60px;min-width:0}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:300;color:var(--text-primary)}
+.page-title em{font-style:italic;color:var(--gold)}
+.page-subtitle{font-size:12px;color:var(--text-muted);margin-top:2px;font-family:'DM Mono',monospace}
+.page-actions{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
+
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary);padding:7px 14px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;transition:all 0.2s;border-radius:8px}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal)}
+.btn-primary{background:var(--teal);border:none;color:#fff;padding:7px 16px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s}
+.btn-primary:hover{opacity:0.88}
+[data-theme="dark"] .btn-primary{color:#0A0A0B}
+.btn-amber{background:transparent;border:1.5px solid rgba(232,168,56,0.4);color:var(--accent-amber);padding:7px 14px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s}
+.btn-amber:hover{background:var(--accent-amber);color:#0A0A0B}
+.btn-red{background:transparent;border:1.5px solid rgba(200,75,60,0.4);color:var(--accent-red);padding:7px 14px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s}
+.btn-red:hover{background:var(--accent-red);color:#fff}
+
+.pill{font-family:'DM Mono',monospace;font-size:9px;padding:3px 9px;border-radius:20px;font-weight:500;white-space:nowrap;display:inline-block}
+.pill-red{background:rgba(200,75,60,0.1);border:1px solid rgba(200,75,60,0.3);color:var(--accent-red)}
+.pill-amber{background:rgba(232,168,56,0.1);border:1px solid rgba(232,168,56,0.3);color:var(--accent-amber)}
+.pill-green{background:rgba(76,175,124,0.1);border:1px solid rgba(76,175,124,0.3);color:var(--accent-green)}
+.pill-blue{background:rgba(60,125,200,0.1);border:1px solid rgba(60,125,200,0.3);color:var(--accent-blue)}
+.pill-gold{background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.28);color:var(--gold)}
+.pill-muted{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-muted)}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.metric-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px}
+.metric-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;font-weight:500}
+.metric-value{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;line-height:1;color:var(--text-primary)}
+.metric-value.red{color:var(--accent-red)}
+.metric-value.amber{color:var(--accent-amber)}
+.metric-value.green{color:var(--accent-green)}
+.metric-value.blue{color:var(--accent-blue)}
+.metric-sub{font-size:10px;color:var(--text-muted);margin-top:4px;font-family:'DM Mono',monospace}
+
+/* TICKET LAYOUT */
+.ticket-layout{display:grid;grid-template-columns:340px 1fr;gap:16px;height:calc(100vh - 220px)}
+.ticket-list{overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.ticket-list::-webkit-scrollbar{width:3px}
+.ticket-list::-webkit-scrollbar-thumb{background:var(--border)}
+.ticket-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all 0.2s}
+.ticket-card:hover{border-color:var(--teal-border)}
+.ticket-card.selected{border-color:var(--teal);background:var(--bg-2)}
+.ticket-card.urgent{border-left:3px solid var(--accent-red)}
+.ticket-card.normal{border-left:3px solid var(--accent-amber)}
+.ticket-card.low{border-left:3px solid var(--border)}
+.tc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px}
+.tc-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+.tc-status{font-family:'DM Mono',monospace;font-size:9px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tc-user{font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px}
+.tc-subject{font-size:12px;color:var(--text-secondary);line-height:1.4;margin-bottom:6px}
+.tc-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between}
+
+/* TICKET DETAIL */
+.ticket-detail{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.td-header{padding:16px 20px;border-bottom:0.5px solid var(--border);background:var(--bg-3)}
+.td-title{font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px}
+.td-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.td-body{flex:1;overflow-y:auto;padding:0}
+.td-body::-webkit-scrollbar{width:3px}
+.td-body::-webkit-scrollbar-thumb{background:var(--border)}
+.td-footer{padding:16px 20px;border-top:0.5px solid var(--border);background:var(--bg-3)}
+
+/* MESSAGES */
+.msg-thread{display:flex;flex-direction:column;gap:0}
+.msg-item{padding:16px 20px;border-bottom:0.5px solid var(--border)}
+.msg-item:last-child{border-bottom:none}
+.msg-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.msg-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:600;flex-shrink:0}
+.avatar-user{background:rgba(60,125,200,0.1);border:1.5px solid rgba(60,125,200,0.3);color:var(--accent-blue)}
+.avatar-staff{background:var(--teal-bg);border:1.5px solid var(--teal-border);color:var(--teal)}
+.avatar-system{background:rgba(76,175,124,0.1);border:1.5px solid rgba(76,175,124,0.3);color:var(--accent-green)}
+.msg-who{font-size:13px;font-weight:600;color:var(--text-primary)}
+.msg-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+.msg-type{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:500}
+.mt-user{background:rgba(60,125,200,0.08);border:1px solid rgba(60,125,200,0.25);color:var(--accent-blue)}
+.mt-staff{background:var(--teal-bg);border:1px solid var(--teal-border);color:var(--teal)}
+.mt-system{background:rgba(76,175,124,0.08);border:1px solid rgba(76,175,124,0.2);color:var(--accent-green)}
+.mt-internal{background:rgba(232,168,56,0.08);border:1px solid rgba(232,168,56,0.2);color:var(--accent-amber)}
+.msg-body{font-size:13px;color:var(--text-secondary);line-height:1.65;padding-left:40px}
+.msg-internal{background:rgba(232,168,56,0.05);border:1px solid rgba(232,168,56,0.15);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--accent-amber);line-height:1.6;margin-left:40px;margin-top:6px;font-style:italic}
+
+/* COMPOSE */
+.compose-tabs{display:flex;gap:4px;margin-bottom:10px}
+.compose-tab{font-family:'DM Mono',monospace;font-size:10px;padding:5px 12px;border-radius:6px;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all 0.15s;font-weight:500}
+.compose-tab.active{background:var(--teal-bg);border-color:var(--teal-border);color:var(--teal)}
+.compose-textarea{width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-primary);outline:none;resize:none;height:80px;line-height:1.6;transition:border-color 0.2s;margin-bottom:10px}
+.compose-textarea:focus{border-color:var(--teal)}
+.compose-textarea::placeholder{color:var(--text-muted)}
+.compose-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* USER SIDEBAR */
+.user-panel{display:grid;grid-template-columns:1fr 260px;gap:16px}
+.user-side{}
+.user-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px}
+.uc-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;font-weight:500}
+.uc-row{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:0.5px solid var(--border)}
+.uc-row:last-child{border-bottom:none}
+.uc-label{color:var(--text-secondary)}
+.uc-val{font-weight:500;color:var(--text-primary);font-family:'DM Mono',monospace;font-size:11px;text-align:right}
+.uc-val.green{color:var(--accent-green)}
+.uc-val.red{color:var(--accent-red)}
+.uc-val.gold{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--gold)}
+
+/* ORDER STATUS */
+.order-status-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background 0.15s}
+.order-status-row:last-child{border-bottom:none}
+.order-status-row:hover{background:var(--bg-3);margin:0 -18px;padding:10px 18px}
+.osr-swatch{width:24px;height:34px;border-radius:3px;flex-shrink:0}
+.sw-poke{background:linear-gradient(135deg,#1a3a5c,#0d2035);border:1px solid rgba(255,215,0,0.2)}
+.sw-mtg{background:linear-gradient(135deg,#1c2a1c,#0d1a0d);border:1px solid rgba(76,175,124,0.2)}
+.osr-info{flex:1}
+.osr-name{font-size:12px;font-weight:500;color:var(--text-primary)}
+.osr-meta{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace}
+.osr-status{flex-shrink:0}
+
+/* QUICK ACTIONS */
+.quick-actions{display:flex;flex-direction:column;gap:8px}
+.qa-btn{width:100%;background:var(--bg-3);border:1.5px solid var(--border);color:var(--text-secondary);padding:10px 14px;font-size:12px;font-weight:500;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;text-align:left;display:flex;align-items:center;gap:8px}
+.qa-btn:hover{border-color:var(--teal-border);color:var(--teal)}
+.qa-btn.amber:hover{border-color:rgba(232,168,56,0.4);color:var(--accent-amber)}
+.qa-btn.red:hover{border-color:rgba(200,75,60,0.4);color:var(--accent-red)}
+.qa-btn .qa-icon{font-size:14px;flex-shrink:0}
+.qa-btn .qa-label{flex:1;font-size:12px}
+.qa-btn .qa-note{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace}
+
+/* SEARCH */
+.search-wrap{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.search-input{flex:1;background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:9px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-primary);outline:none;transition:border-color 0.2s;min-width:200px}
+.search-input:focus{border-color:var(--teal)}
+.search-input::placeholder{color:var(--text-muted)}
+.filter-select{background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:9px 14px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-primary);outline:none;cursor:pointer}
+
+.panel-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.panel-header{padding:13px 18px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);font-weight:500}
+.panel-body{padding:16px 18px}
+
+@media(max-width:1200px){.ticket-layout{grid-template-columns:1fr}.ticket-detail{min-height:500px}.user-panel{grid-template-columns:1fr}}
+@media(max-width:900px){.sidebar{display:none}.dash-main{margin-left:0}.metrics{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.dash-main{padding:14px 10px 40px}.metrics{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"></div>
+    TROVE
+  </a>
+  <span class="nav-badge">💬 Customer Support Portal</span>
+  <div class="nav-right">
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+    <div class="nav-user">
+      <div class="nav-avatar">SM</div>
+      <span class="nav-username">S. Morris · Support Staff</span>
+    </div>
+  </div>
+</nav>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="nav-section-label">Tickets</div>
+    <a class="nav-item active" onclick="show('tickets')" href="#">
+      <span class="nav-icon">💬</span>All Tickets
+      <span class="nav-badge-count nb-red">12</span>
+    </a>
+    <a class="nav-item" onclick="show('tickets')" href="#">
+      <span class="nav-icon">⚡</span>Urgent
+      <span class="nav-badge-count nb-red">3</span>
+    </a>
+    <a class="nav-item" onclick="show('tickets')" href="#">
+      <span class="nav-icon">◎</span>My Open
+      <span class="nav-badge-count nb-amber">7</span>
+    </a>
+    <a class="nav-item" onclick="show('tickets')" href="#">
+      <span class="nav-icon">✓</span>Resolved Today
+    </a>
+
+    <div class="nav-section-label">Tools</div>
+    <a class="nav-item" onclick="show('user-lookup')" href="#">
+      <span class="nav-icon">◑</span>User Lookup
+    </a>
+    <a class="nav-item" onclick="show('order-lookup')" href="#">
+      <span class="nav-icon">⇄</span>Order Lookup
+    </a>
+    <a class="nav-item" onclick="show('canned')" href="#">
+      <span class="nav-icon">◻</span>Canned Responses
+    </a>
+    <a class="nav-item" onclick="show('escalate')" href="#">
+      <span class="nav-icon">⬆</span>Escalation Guide
+    </a>
+
+    <div class="sidebar-stats">
+      <div class="ss-label">My Stats Today</div>
+      <div class="ss-row"><span class="ss-key">Resolved</span><span class="ss-val" style="color:var(--accent-green)">14</span></div>
+      <div class="ss-row"><span class="ss-key">Open</span><span class="ss-val" style="color:var(--accent-red)">7</span></div>
+      <div class="ss-row"><span class="ss-key">Avg Reply</span><span class="ss-val">18m</span></div>
+      <div class="ss-row"><span class="ss-key">CSAT</span><span class="ss-val" style="color:var(--accent-green)">4.8★</span></div>
+    </div>
+  </aside>
+
+  <main class="dash-main">
+
+    <!-- ===== TICKETS ===== -->
+    <div id="s-tickets">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Support <em>Tickets</em></div>
+          <div class="page-subtitle">12 open · 3 urgent · Cannot modify financial data — escalate when needed</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-primary">New Ticket</button>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric-card"><div class="metric-label">Open Tickets</div><div class="metric-value red">12</div><div class="metric-sub">3 urgent</div></div>
+        <div class="metric-card"><div class="metric-label">Resolved Today</div><div class="metric-value green">14</div><div class="metric-sub">Avg 22min</div></div>
+        <div class="metric-card"><div class="metric-label">Escalated</div><div class="metric-value amber">3</div><div class="metric-sub">Awaiting owner</div></div>
+        <div class="metric-card"><div class="metric-label">CSAT Score</div><div class="metric-value blue">4.8</div><div class="metric-sub">Last 30 days</div></div>
+      </div>
+
+      <div class="search-wrap">
+        <input class="search-input" placeholder="Search tickets, users, order numbers...">
+        <select class="filter-select"><option>All Status</option><option>Open</option><option>Pending</option><option>Resolved</option><option>Escalated</option></select>
+        <select class="filter-select"><option>All Types</option><option>Order Issue</option><option>Account</option><option>Payment</option><option>Shipping</option><option>Dispute Help</option></select>
+      </div>
+
+      <div class="ticket-layout">
+        <!-- TICKET LIST -->
+        <div class="ticket-list">
+
+          <div class="ticket-card urgent selected" onclick="show('ticket-detail')">
+            <div class="tc-header">
+              <span class="tc-id">#T-2841</span>
+              <span class="tc-status pill pill-red">Urgent</span>
+            </div>
+            <div class="tc-user">RareVault_99</div>
+            <div class="tc-subject">My $36,000 order was rejected by authenticator — what happens to my money?</div>
+            <div class="tc-meta"><span>Order Issue · 2hrs ago</span><span class="pill pill-red">Unread</span></div>
+          </div>
+
+          <div class="ticket-card urgent" onclick="show('ticket-detail')">
+            <div class="tc-header">
+              <span class="tc-id">#T-2839</span>
+              <span class="tc-status pill pill-red">Urgent</span>
+            </div>
+            <div class="tc-user">GhostSeller_22</div>
+            <div class="tc-subject">My account was suspended — I did ship the card, I have proof</div>
+            <div class="tc-meta"><span>Account · 4hrs ago</span><span class="pill pill-red">Unread</span></div>
+          </div>
+
+          <div class="ticket-card normal" onclick="show('ticket-detail')">
+            <div class="tc-header">
+              <span class="tc-id">#T-2837</span>
+              <span class="tc-status pill pill-amber">Open</span>
+            </div>
+            <div class="tc-user">NewCollector_07</div>
+            <div class="tc-subject">How do I get USDC on Base? I'm new to crypto</div>
+            <div class="tc-meta"><span>Onboarding · 5hrs ago</span><span class="pill pill-blue">Assigned</span></div>
+          </div>
+
+          <div class="ticket-card normal" onclick="show('ticket-detail')">
+            <div class="tc-header">
+              <span class="tc-id">#T-2835</span>
+              <span class="tc-status pill pill-amber">Open</span>
+            </div>
+            <div class="tc-user">CardKing_88</div>
+            <div class="tc-subject">Can I get a fee waiver for a large dealer account? I sell 100+ cards/month</div>
+            <div class="tc-meta"><span>Dealer Inquiry · 6hrs ago</span><span class="pill pill-blue">Assigned</span></div>
+          </div>
+
+          <div class="ticket-card normal" onclick="show('ticket-detail')">
+            <div class="tc-header">
+              <span class="tc-id">#T-2833</span>
+              <span class="tc-status pill pill-amber">Open</span>
+            </div>
+            <div class="tc-user">SlabHunter_X</div>
+            <div class="tc-subject">Tracking shows delivered but I haven't received anything</div>
+            <div class="tc-meta"><span>Shipping · 8hrs ago</span><span class="pill pill-blue">Assigned</span></div>
+          </div>
+
+          <div class="ticket-card low" onclick="show('ticket-detail')">
+            <div class="tc-header">
+              <span class="tc-id">#T-2830</span>
+              <span class="tc-status pill pill-muted">Low</span>
+            </div>
+            <div class="tc-user">MTGLegacy</div>
+            <div class="tc-subject">How do I update my shipping address?</div>
+            <div class="tc-meta"><span>Account · Yesterday</span><span class="pill pill-green">Replied</span></div>
+          </div>
+
+          <div class="ticket-card low" onclick="show('ticket-detail')">
+            <div class="tc-header">
+              <span class="tc-id">#T-2828</span>
+              <span class="tc-status pill pill-muted">Low</span>
+            </div>
+            <div class="tc-user">PokeFan_2024</div>
+            <div class="tc-subject">Is there a mobile app?</div>
+            <div class="tc-meta"><span>General · Yesterday</span><span class="pill pill-green">Replied</span></div>
+          </div>
+
+        </div>
+
+        <!-- TICKET DETAIL -->
+        <div class="ticket-detail">
+          <div class="td-header">
+            <div class="td-title">#T-2841 — My $36,000 order was rejected by authenticator — what happens to my money?</div>
+            <div class="td-meta">
+              <span class="pill pill-red">Urgent</span>
+              <span class="pill pill-blue">Order Issue</span>
+              <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)">RareVault_99 · 2hrs ago</span>
+            </div>
+          </div>
+
+          <div class="td-body">
+            <div class="msg-thread">
+
+              <div class="msg-item">
+                <div class="msg-header">
+                  <div class="msg-avatar avatar-user">RV</div>
+                  <div class="msg-who">RareVault_99</div>
+                  <div class="msg-time">Apr 6 · 7:32am</div>
+                  <span class="msg-type mt-user">User</span>
+                </div>
+                <div class="msg-body">Hi, I purchased a Black Lotus BGS 9.5 for $28,400 and my authenticator rejected it. I'm really worried — where is my $30,847 USDC right now? Is it safe? What happens next? I've never been through a dispute before and I'm very stressed about this amount of money.</div>
+              </div>
+
+              <div class="msg-item" style="background:rgba(76,175,124,0.03)">
+                <div class="msg-header">
+                  <div class="msg-avatar avatar-system">⬡</div>
+                  <div class="msg-who">System</div>
+                  <div class="msg-time">Apr 6 · 7:32am</div>
+                  <span class="msg-type mt-system">Auto</span>
+                </div>
+                <div class="msg-body">Ticket #T-2841 created. Order #4819 linked. Escrow status: $30,847 USDC held in smart contract. Dispute #D-041 is open and under review by resolution staff.</div>
+              </div>
+
+              <div class="msg-item">
+                <div class="msg-header">
+                  <div class="msg-avatar avatar-staff">SM</div>
+                  <div class="msg-who">S. Morris · Support</div>
+                  <div class="msg-time">Apr 6 · 8:14am</div>
+                  <span class="msg-type mt-staff">Staff</span>
+                </div>
+                <div class="msg-body">Hi RareVault_99, thank you for reaching out — I completely understand your concern about a transaction this size, and I want to reassure you right away.<br><br>Your $30,847 USDC is completely safe. It is locked in a smart contract on the Base blockchain and cannot be moved by anyone — not by the seller, not by us — until your dispute is formally resolved. Think of it as a digital vault that only opens under specific conditions.<br><br>Here is what is happening right now: Our dispute resolution team is reviewing the authenticator's rejection decision. The seller has submitted evidence and our team is comparing it against the authenticator's inspection photos. You will receive an update within 24 hours.<br><br>You don't need to do anything right now. I'm keeping your ticket as priority.</div>
+                <div class="msg-internal">Internal note: High-value buyer, first dispute. Confirmed with dispute team (#D-041 assigned to D. Roberts). Likely auth error based on initial review. Set priority to urgent. Will follow up in 4hrs.</div>
+              </div>
+
+              <div class="msg-item">
+                <div class="msg-header">
+                  <div class="msg-avatar avatar-user">RV</div>
+                  <div class="msg-who">RareVault_99</div>
+                  <div class="msg-time">Apr 6 · 8:28am</div>
+                  <span class="msg-type mt-user">User</span>
+                </div>
+                <div class="msg-body">Thank you so much, that's very reassuring. One more question — if the dispute resolves in the seller's favor (card ships to me), how long does that take? And if it resolves in my favor (refund), how long until I get my USDC back?</div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="td-footer">
+            <div class="compose-tabs">
+              <button class="compose-tab active">Reply to User</button>
+              <button class="compose-tab" onclick="switchTab(this)">Internal Note</button>
+              <button class="compose-tab" onclick="switchTab(this)">Canned Response</button>
+            </div>
+            <textarea class="compose-textarea" placeholder="Reply to RareVault_99...">If the dispute resolves in the seller's favor, the card will ship to you within 24-48 hours of the decision. Your 72-hour inspection window then begins on delivery.
+
+If the dispute resolves in your favor, your full $30,847 USDC will be refunded to your wallet within 1-2 hours of the decision — blockchain transactions settle very quickly on Base.
+
+Either way, you'll receive an email notification the moment a decision is made.</textarea>
+            <div class="compose-actions">
+              <button class="btn-primary">Send Reply</button>
+              <button class="btn-ghost">Save Draft</button>
+              <button class="btn-amber">Escalate to Dispute Team</button>
+              <button class="btn-ghost" style="margin-left:auto">Close Ticket</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== USER LOOKUP ===== -->
+    <div id="s-user-lookup" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">User <em>Lookup</em></div><div class="page-subtitle">View account status and order history · No wallet addresses shown · Cannot modify financial data</div></div>
+      </div>
+      <div class="search-wrap" style="margin-bottom:20px">
+        <input class="search-input" placeholder="Username or email address...">
+        <button class="btn-primary">Look Up</button>
+      </div>
+      <div class="user-panel">
+        <div>
+          <div class="user-card">
+            <div class="uc-title">Account Details — RareVault_99</div>
+            <div class="uc-row"><span class="uc-label">Status</span><span class="uc-val green">Active</span></div>
+            <div class="uc-row"><span class="uc-label">Tier</span><span class="uc-val">Trusted Buyer</span></div>
+            <div class="uc-row"><span class="uc-label">Member Since</span><span class="uc-val">Jun 2024</span></div>
+            <div class="uc-row"><span class="uc-label">Purchases</span><span class="uc-val">38</span></div>
+            <div class="uc-row"><span class="uc-label">Disputes Filed</span><span class="uc-val green">1 (current)</span></div>
+            <div class="uc-row"><span class="uc-label">Strikes</span><span class="uc-val green">0</span></div>
+            <div class="uc-row"><span class="uc-label">Buyer Rating</span><span class="uc-val green">4.92 ★</span></div>
+            <div class="uc-row"><span class="uc-label">Email Verified</span><span class="uc-val green">Yes</span></div>
+            <div class="uc-row"><span class="uc-label">Wallet Connected</span><span class="uc-val green">Yes</span></div>
+            <div class="uc-row"><span class="uc-label">Total Spent (Lifetime)</span><span class="uc-val gold">$48,200</span></div>
+          </div>
+          <div class="user-card">
+            <div class="uc-title">Active Orders</div>
+            <div class="order-status-row">
+              <div class="osr-swatch sw-poke"></div>
+              <div class="osr-info"><div class="osr-name">Charizard Holo PSA 9</div><div class="osr-meta">Order #4821 · $553 escrowed</div></div>
+              <span class="pill pill-amber">Awaiting Ship</span>
+            </div>
+            <div class="order-status-row">
+              <div class="osr-swatch sw-mtg"></div>
+              <div class="osr-info"><div class="osr-name">Black Lotus BGS 9.5</div><div class="osr-meta">Order #4819 · $30,847 escrowed</div></div>
+              <span class="pill pill-red">Disputed</span>
+            </div>
+          </div>
+          <div class="user-card">
+            <div class="uc-title">Support History</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:0.5px solid var(--border)"><span style="color:var(--text-secondary)">#T-2841 · Order Issue</span><span class="pill pill-red">Open · Urgent</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0"><span style="color:var(--text-secondary)">#T-2614 · How to add funds</span><span class="pill pill-green">Resolved</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="user-card">
+            <div class="uc-title">Quick Actions</div>
+            <div class="quick-actions">
+              <button class="qa-btn"><span class="qa-icon">💬</span><div><div class="qa-label">Create Support Ticket</div><div class="qa-note">Open a ticket on behalf of user</div></div></button>
+              <button class="qa-btn"><span class="qa-icon">📝</span><div><div class="qa-label">Add Account Note</div><div class="qa-note">Internal note — user cannot see</div></div></button>
+              <button class="qa-btn amber"><span class="qa-icon">⏱</span><div><div class="qa-label">Request Deadline Extension</div><div class="qa-note">Flags to owner for approval</div></div></button>
+              <button class="qa-btn amber"><span class="qa-icon">⚖</span><div><div class="qa-label">Initiate Dispute on Behalf</div><div class="qa-note">Opens dispute flow for user</div></div></button>
+              <button class="qa-btn amber"><span class="qa-icon">⬆</span><div><div class="qa-label">Escalate to Dispute Team</div><div class="qa-note">Sends to D. Roberts queue</div></div></button>
+              <button class="qa-btn red"><span class="qa-icon">⚠</span><div><div class="qa-label">Flag Account for Review</div><div class="qa-note">Notifies operations manager</div></div></button>
+            </div>
+          </div>
+          <div class="user-card" style="background:rgba(200,75,60,0.04);border-color:rgba(200,75,60,0.2)">
+            <div class="uc-title" style="color:var(--accent-red)">Cannot Do — Escalate Instead</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--text-muted);line-height:1.6">
+              <div>✗ Issue or remove strikes</div>
+              <div>✗ Suspend or ban accounts</div>
+              <div>✗ Modify any financial data</div>
+              <div>✗ View wallet addresses</div>
+              <div>✗ Execute USDC refunds</div>
+              <div>✗ Change fee settings</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ORDER LOOKUP ===== -->
+    <div id="s-order-lookup" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Order <em>Lookup</em></div><div class="page-subtitle">View order status · Cannot modify · Escalate financial issues to owner</div></div>
+      </div>
+      <div class="search-wrap" style="margin-bottom:20px">
+        <input class="search-input" placeholder="Order number (e.g. #4821)...">
+        <button class="btn-primary">Look Up</button>
+      </div>
+      <div class="panel-card">
+        <div class="panel-header"><div class="panel-title">Order #4821 · Charizard Holo PSA 9</div><span class="pill pill-amber">Awaiting Ship</span></div>
+        <div class="panel-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+            <div style="background:var(--bg-3);border:1.5px solid var(--border);border-radius:8px;padding:12px">
+              <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;font-weight:500">Order Details</div>
+              <div style="display:flex;flex-direction:column;gap:5px;font-size:12px">
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-secondary)">Card</span><span style="color:var(--text-primary);font-weight:500">Charizard Holo PSA 9</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-secondary)">Buyer</span><span style="color:var(--teal)">RareVault_99</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-secondary)">Seller</span><span style="color:var(--teal)">CardKing_88</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-secondary)">Ordered</span><span style="color:var(--text-primary)">Apr 6, 2025</span></div>
+              </div>
+            </div>
+            <div style="background:var(--bg-3);border:1.5px solid var(--border);border-radius:8px;padding:12px">
+              <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;font-weight:500">Escrow Status</div>
+              <div style="display:flex;flex-direction:column;gap:5px;font-size:12px">
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-secondary)">Total locked</span><span style="font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--gold)">$553.40</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-secondary)">Seller receives</span><span style="color:var(--accent-green);font-family:'DM Mono',monospace;font-size:11px">$472.00</span></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--text-secondary)">Ship deadline</span><span style="color:var(--accent-amber);font-family:'DM Mono',monospace;font-size:11px">Apr 8 12:00pm</span></div>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);background:var(--bg-3);padding:12px;border-radius:8px;line-height:1.6">
+            <strong style="color:var(--text-secondary)">Current Status:</strong> Waiting for seller to print Label A and ship to auth center. Seller has until Apr 8 12:00pm. If no carrier scan by deadline, buyer is auto-refunded and seller receives Strike 1. You cannot modify this deadline — escalate to operations manager if extension is needed.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CANNED RESPONSES ===== -->
+    <div id="s-canned" style="display:none">
+      <div class="page-header"><div><div class="page-title">Canned <em>Responses</em></div><div class="page-subtitle">Pre-written replies for common questions · Click to copy into compose</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="panel-card">
+          <div class="panel-header"><div class="panel-title">Where is my money? (Escrow explanation)</div><button class="btn-ghost" style="font-size:11px;padding:5px 12px">Copy</button></div>
+          <div class="panel-body"><div style="font-size:13px;color:var(--text-secondary);line-height:1.7">Your USDC is completely safe and locked in a smart contract on the Base blockchain. It cannot be moved by anyone — not the seller, not us — until the specific conditions of your order are met. Think of it as a digital safe deposit box that only opens under the right circumstances. You can verify this yourself by checking the contract address on Basescan.</div></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-header"><div class="panel-title">How to get Base USDC</div><button class="btn-ghost" style="font-size:11px;padding:5px 12px">Copy</button></div>
+          <div class="panel-body"><div style="font-size:13px;color:var(--text-secondary);line-height:1.7">The easiest way: Create a Coinbase account at coinbase.com, buy USDC, then withdraw to the Base network (not Ethereum — specifically select Base). Coinbase supports Base withdrawals natively. Alternatively, if you have ETH on Base, you can swap ETH → USDC on Uniswap. Our full guide is at troveexchange.com/#wallets.</div></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-header"><div class="panel-title">What happens after auth rejection</div><button class="btn-ghost" style="font-size:11px;padding:5px 12px">Copy</button></div>
+          <div class="panel-body"><div style="font-size:13px;color:var(--text-secondary);line-height:1.7">When a card is rejected, your full payment stays locked in escrow — it doesn't go anywhere. The seller has 48 hours to dispute the rejection with evidence. If they don't dispute, you receive a full refund automatically. If they dispute, our resolution team reviews both sides and makes a recommendation within 24-72 hours. Either way, your funds are protected throughout.</div></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-header"><div class="panel-title">Seller account suspension appeal</div><button class="btn-ghost" style="font-size:11px;padding:5px 12px">Copy</button></div>
+          <div class="panel-body"><div style="font-size:13px;color:var(--text-secondary);line-height:1.7">Your account has been temporarily suspended for missing a shipping deadline. During this suspension, your listings are hidden but no other action is taken. If you have evidence that you did ship within the deadline (carrier receipt, tracking confirmation), please reply to this ticket with that documentation and we will escalate your case to our operations team for review. Suspensions are not permanent and can be reversed with valid evidence.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ESCALATION GUIDE ===== -->
+    <div id="s-escalate" style="display:none">
+      <div class="page-header"><div><div class="page-title">Escalation <em>Guide</em></div><div class="page-subtitle">When and who to escalate to</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="panel-card">
+          <div class="panel-header"><div class="panel-title" style="color:var(--accent-red)">Escalate to Dispute Team (D. Roberts)</div></div>
+          <div class="panel-body"><div style="font-size:13px;color:var(--text-secondary);line-height:1.8">• User is asking about an active dispute outcome<br>• Authentication decision is being contested<br>• Both parties are giving conflicting accounts and you cannot determine fault<br>• Suspected fraud by either buyer or seller<br>• Card damage or condition complaint after delivery</div></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-header"><div class="panel-title" style="color:var(--accent-amber)">Escalate to Operations Manager</div></div>
+          <div class="panel-body"><div style="font-size:13px;color:var(--text-secondary);line-height:1.8">• User is requesting a shipping deadline extension<br>• Seller claims suspension was issued in error<br>• User is requesting an account review or strike removal<br>• Listing dispute (seller claiming their listing was wrongly removed)<br>• Multiple tickets from same user suggesting coordinated issue</div></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-header"><div class="panel-title" style="color:var(--accent-blue)">Escalate to Owner (for L2 actions)</div></div>
+          <div class="panel-body"><div style="font-size:13px;color:var(--text-secondary);line-height:1.8">• Manual refund is clearly needed and dispute team has confirmed<br>• Escrow funds appear stuck due to technical issue<br>• User reports their wallet address has changed and funds need rerouting<br>• Any situation involving direct manipulation of USDC<br>• Legal or regulatory inquiry — do NOT handle these, escalate immediately</div></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-header"><div class="panel-title" style="color:var(--accent-green)">Handle Yourself (L1 Support)</div></div>
+          <div class="panel-body"><div style="font-size:13px;color:var(--text-secondary);line-height:1.8">• How to use the platform (onboarding, wallet, USDC)<br>• Order status questions (use order lookup)<br>• Tracking number questions<br>• Account profile updates<br>• General FAQ questions<br>• Reassurance about escrow safety<br>• Responding to resolved ticket follow-ups</div></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const toggle=document.getElementById('themeToggle');
+const html=document.documentElement;
+const saved=localStorage.getItem('trove-theme')||'dark';
+html.setAttribute('data-theme',saved);
+toggle.textContent=saved==='dark'?'🌙':'☀️';
+toggle.addEventListener('click',()=>{
+  const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  toggle.textContent=next==='dark'?'🌙':'☀️';
+  localStorage.setItem('trove-theme',next);
+});
+
+const sections=['tickets','ticket-detail','user-lookup','order-lookup','canned','escalate'];
+function show(id){
+  sections.forEach(s=>{
+    const el=document.getElementById('s-'+s);
+    if(el) el.style.display=s===id?'block':'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(item=>{
+    item.classList.remove('active');
+    if(item.getAttribute('onclick')&&item.getAttribute('onclick').includes("'"+id.split('-')[0]+"'")){
+      item.classList.add('active');
+    }
+  });
+  window.scrollTo(0,0);
+}
+
+function switchTab(el){
+  el.closest('.td-footer').querySelectorAll('.compose-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const ta=el.closest('.td-footer').querySelector('.compose-textarea');
+  if(el.textContent.includes('Internal')){
+    ta.placeholder='Internal note — not visible to user...';
+    ta.style.borderColor='rgba(232,168,56,0.4)';
+  } else if(el.textContent.includes('Canned')){
+    ta.placeholder='Select a canned response from the sidebar tool...';
+    ta.style.borderColor='';
+  } else {
+    ta.placeholder='Reply to user...';
+    ta.style.borderColor='';
+  }
+}
+
+document.querySelectorAll('.ticket-card').forEach(card=>{
+  card.addEventListener('click',()=>{
+    document.querySelectorAll('.ticket-card').forEach(c=>c.classList.remove('selected'));
+    card.classList.add('selected');
+  });
+});
+</script>
+</body>
+</html>

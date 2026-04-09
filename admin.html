@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — Trove Exchange</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+[data-theme="dark"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;
+  --teal:#C9A84C;--teal-hover:#E8C97A;--teal-bg:rgba(201,168,76,0.1);--teal-border:rgba(201,168,76,0.28);
+  --bg:#0A0A0B;--bg-2:#111114;--bg-3:#18181C;--bg-4:#222228;--bg-5:#2A2A32;
+  --text-primary:#F0EDE6;--text-secondary:#B8B4AC;--text-muted:#6C6A66;
+  --accent-green:#4CAF7C;--accent-red:#C84B3C;--accent-blue:#3C7DC8;--accent-amber:#E8A838;
+  --border:#2A2A32;--border-gold:rgba(201,168,76,0.28);
+  --nav-bg:rgba(10,10,11,0.97);--sidebar-bg:#0A0A0D;
+  --card-bg:#111114;--input-bg:#18181C;
+  --l2-border:rgba(232,168,56,0.4);--l2-bg:rgba(232,168,56,0.06);
+  --l3-border:rgba(200,75,60,0.4);--l3-bg:rgba(200,75,60,0.06);
+}
+[data-theme="light"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;
+  --teal:#0D6E6E;--teal-hover:#0A5A5A;--teal-bg:rgba(13,110,110,0.08);--teal-border:rgba(13,110,110,0.28);
+  --bg:#F5F2EC;--bg-2:#EDEAE3;--bg-3:#E4E0D8;--bg-4:#D8D4CC;--bg-5:#CCC8C0;
+  --text-primary:#1A1814;--text-secondary:#4A4640;--text-muted:#8A8680;
+  --accent-green:#1A6B3A;--accent-red:#B83C2C;--accent-blue:#1A5EA0;--accent-amber:#9B6E1A;
+  --border:#C8C4BC;--border-gold:rgba(13,110,110,0.25);
+  --nav-bg:rgba(245,242,236,0.98);--sidebar-bg:#E0DDD6;
+  --card-bg:#EDEAE3;--input-bg:#E4E0D8;
+  --l2-border:rgba(155,110,26,0.4);--l2-bg:rgba(155,110,26,0.06);
+  --l3-border:rgba(184,60,44,0.4);--l3-bg:rgba(184,60,44,0.06);
+}
+
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-weight:400;overflow-x:hidden;line-height:1.6;transition:background 0.3s,color 0.3s}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:300;background:var(--nav-bg);backdrop-filter:blur(24px);border-bottom:1px solid var(--accent-red);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;letter-spacing:0.1em;color:var(--gold);display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-logo-icon{width:22px;height:22px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0}
+.nav-admin-badge{font-family:'DM Mono',monospace;font-size:10px;padding:4px 12px;border-radius:20px;background:rgba(200,75,60,0.15);border:1px solid rgba(200,75,60,0.5);color:var(--accent-red);font-weight:600;letter-spacing:0.06em;animation:pulse-red 3s ease infinite}
+@keyframes pulse-red{0%,100%{border-color:rgba(200,75,60,0.5)}50%{border-color:rgba(200,75,60,0.9)}}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-wallet{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);background:var(--bg-3);border:1px solid var(--border);padding:6px 12px;border-radius:8px}
+.nav-wallet span{color:var(--accent-green)}
+.theme-toggle{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:14px;transition:all 0.2s}
+.theme-toggle:hover{border-color:var(--teal);color:var(--teal)}
+.nav-avatar{width:32px;height:32px;border-radius:50%;background:rgba(200,75,60,0.15);border:1.5px solid rgba(200,75,60,0.4);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:600;color:var(--accent-red)}
+
+/* LAYOUT */
+.layout{display:flex;padding-top:64px;min-height:100vh}
+
+/* SIDEBAR */
+.dash-sidebar{width:230px;flex-shrink:0;background:var(--sidebar-bg);border-right:0.5px solid var(--border);position:fixed;top:64px;left:0;height:calc(100vh - 64px);overflow-y:auto;padding:16px 0;display:flex;flex-direction:column}
+.dash-sidebar::-webkit-scrollbar{width:3px}
+.dash-sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.nav-section-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);padding:12px 16px 4px;font-weight:500}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:all 0.15s;border-left:2px solid transparent;text-decoration:none;color:var(--text-secondary);font-size:12px;font-weight:500}
+.nav-item:hover{color:var(--text-primary);background:var(--bg-3)}
+.nav-item.active{color:var(--teal);background:var(--teal-bg);border-left-color:var(--teal)}
+.nav-item.danger{color:var(--text-secondary)}
+.nav-item.danger:hover{color:var(--accent-red);background:var(--l3-bg)}
+.nav-item.danger.active{color:var(--accent-red);background:var(--l3-bg);border-left-color:var(--accent-red)}
+.nav-icon{width:15px;text-align:center;font-size:13px;flex-shrink:0}
+.nav-badge{margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:8px;color:#fff;font-weight:600}
+.nb-red{background:var(--accent-red)}
+.nb-amber{background:var(--accent-amber)}
+.nb-green{background:var(--accent-green)}
+.nb-blue{background:var(--accent-blue)}
+.layer-indicator{font-family:'DM Mono',monospace;font-size:8px;padding:1px 5px;border-radius:4px;margin-left:auto;font-weight:600}
+.l2-ind{background:var(--l2-bg);border:1px solid var(--l2-border);color:var(--accent-amber)}
+.l3-ind{background:var(--l3-bg);border:1px solid var(--l3-border);color:var(--accent-red)}
+
+/* MAIN */
+.dash-main{margin-left:230px;flex:1;padding:24px 24px 60px;min-width:0}
+
+/* PAGE HEADER */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:300;color:var(--text-primary)}
+.page-title em{font-style:italic;color:var(--gold)}
+.page-subtitle{font-size:12px;color:var(--text-muted);margin-top:2px;font-family:'DM Mono',monospace}
+.page-actions{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
+
+/* BUTTONS */
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary);padding:7px 14px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;transition:all 0.2s;border-radius:8px}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal)}
+.btn-primary{background:var(--teal);border:none;color:#fff;padding:7px 14px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s}
+.btn-primary:hover{background:var(--teal-hover)}
+[data-theme="dark"] .btn-primary{color:#0A0A0B}
+.btn-l2{background:var(--l2-bg);border:1.5px solid var(--l2-border);color:var(--accent-amber);padding:7px 14px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s}
+.btn-l2:hover{background:var(--accent-amber);color:#0A0A0B}
+.btn-l3{background:var(--l3-bg);border:1.5px solid var(--l3-border);color:var(--accent-red);padding:7px 14px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s}
+.btn-l3:hover{background:var(--accent-red);color:#fff}
+.btn-danger{background:transparent;border:1.5px solid rgba(200,75,60,0.4);color:var(--accent-red);padding:7px 14px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s}
+.btn-danger:hover{background:var(--accent-red);color:#fff}
+
+/* ACTION BADGES */
+.action-badge{font-family:'DM Mono',monospace;font-size:9px;padding:2px 8px;border-radius:4px;font-weight:600;display:inline-block;margin-bottom:4px}
+.ab-l1{background:rgba(76,175,124,0.1);border:1px solid rgba(76,175,124,0.3);color:var(--accent-green)}
+.ab-l2{background:var(--l2-bg);border:1px solid var(--l2-border);color:var(--accent-amber)}
+.ab-l3{background:var(--l3-bg);border:1px solid var(--l3-border);color:var(--accent-red)}
+
+/* METRICS */
+.metrics-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+.metric-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;transition:border-color 0.2s}
+.metric-card:hover{border-color:var(--teal-border)}
+.metric-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;font-weight:500}
+.metric-value{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;line-height:1;color:var(--text-primary)}
+.metric-value.gold{color:var(--gold)}
+.metric-value.green{color:var(--accent-green)}
+.metric-value.teal{color:var(--teal)}
+.metric-value.red{color:var(--accent-red)}
+.metric-value.amber{color:var(--accent-amber)}
+.metric-sub{font-size:10px;color:var(--text-muted);margin-top:4px;font-family:'DM Mono',monospace}
+
+/* CARDS */
+.panel-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.panel-card.l2{border-color:var(--l2-border)}
+.panel-card.l3{border-color:var(--l3-border)}
+.panel-header{padding:14px 18px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.panel-header.l2{background:var(--l2-bg)}
+.panel-header.l3{background:var(--l3-bg)}
+.panel-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;font-weight:500}
+.panel-title.l2{color:var(--accent-amber)}
+.panel-title.l3{color:var(--accent-red)}
+.panel-title.normal{color:var(--text-muted)}
+.panel-body{padding:18px}
+
+/* TABLES */
+.data-table{width:100%;border-collapse:collapse}
+.data-table thead tr{border-bottom:0.5px solid var(--border)}
+.data-table th{text-align:left;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);padding:10px 14px;font-weight:500}
+.data-table tbody tr{border-bottom:0.5px solid var(--border);transition:background 0.15s;cursor:pointer}
+.data-table tbody tr:last-child{border-bottom:none}
+.data-table tbody tr:hover{background:var(--bg-3)}
+.data-table td{padding:12px 14px;font-size:12px;vertical-align:middle}
+.td-mono{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+.td-price{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--gold)}
+.td-user{font-size:13px;font-weight:500;color:var(--text-primary)}
+.td-sub{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:1px}
+
+/* STATUS PILLS */
+.pill{font-family:'DM Mono',monospace;font-size:9px;padding:3px 9px;border-radius:20px;font-weight:500;white-space:nowrap;display:inline-block}
+.pill-green{background:rgba(76,175,124,0.1);border:1px solid rgba(76,175,124,0.3);color:var(--accent-green)}
+.pill-red{background:rgba(200,75,60,0.1);border:1px solid rgba(200,75,60,0.3);color:var(--accent-red)}
+.pill-amber{background:rgba(232,168,56,0.1);border:1px solid rgba(232,168,56,0.3);color:var(--accent-amber)}
+.pill-blue{background:rgba(60,125,200,0.1);border:1px solid rgba(60,125,200,0.3);color:var(--accent-blue)}
+.pill-gold{background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.28);color:var(--gold)}
+.pill-muted{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-muted)}
+
+/* SWATCHES */
+.swatch{width:26px;height:36px;border-radius:3px;flex-shrink:0}
+.sw-poke{background:linear-gradient(135deg,#1a3a5c,#0d2035);border:1px solid rgba(255,215,0,0.2)}
+.sw-mtg{background:linear-gradient(135deg,#1c2a1c,#0d1a0d);border:1px solid rgba(76,175,124,0.2)}
+.sw-op{background:linear-gradient(135deg,#2a1c1c,#1a0d0d);border:1px solid rgba(200,75,60,0.2)}
+
+/* FEE SLIDERS */
+.fee-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.fee-item{background:var(--bg-3);border:1.5px solid var(--border);border-radius:10px;padding:16px}
+.fee-item-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;font-weight:500}
+.fee-item-who{font-size:10px;color:var(--text-muted);margin-bottom:10px}
+.fee-slider-row{display:flex;align-items:center;gap:10px}
+.fee-slider{flex:1;height:4px;background:var(--border);border-radius:2px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none}
+.fee-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--teal);cursor:pointer;border:2px solid var(--bg)}
+.fee-val-display{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--gold);min-width:56px;text-align:right}
+.fee-range{font-size:10px;color:var(--text-muted);margin-top:4px;font-family:'DM Mono',monospace}
+.apply-fee-btn{width:100%;background:var(--teal);border:none;color:#fff;padding:12px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:16px;transition:all 0.2s}
+.apply-fee-btn:hover{background:var(--teal-hover)}
+[data-theme="dark"] .apply-fee-btn{color:#0A0A0B}
+
+/* TREASURY */
+.treasury-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+.treasury-card{background:var(--bg-3);border:1.5px solid var(--border);border-radius:12px;padding:20px 22px}
+.treasury-card.highlight{border-color:var(--teal-border);background:var(--teal-bg)}
+.treasury-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;font-weight:500}
+.treasury-val{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:300;line-height:1;color:var(--text-primary)}
+.treasury-val.gold{color:var(--gold)}
+.treasury-val.green{color:var(--accent-green)}
+.treasury-val.teal{color:var(--teal)}
+.treasury-val.amber{color:var(--accent-amber)}
+.treasury-sub{font-size:11px;color:var(--text-muted);margin-top:6px}
+
+/* MULTISIG SIGNERS */
+.signer-list{display:flex;flex-direction:column;gap:10px}
+.signer-row{background:var(--bg-3);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.signer-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;flex-shrink:0}
+.sn-active{background:rgba(76,175,124,0.15);border:1.5px solid rgba(76,175,124,0.4);color:var(--accent-green)}
+.sn-warm{background:rgba(232,168,56,0.12);border:1.5px solid rgba(232,168,56,0.3);color:var(--accent-amber)}
+.sn-cold{background:rgba(60,125,200,0.12);border:1.5px solid rgba(60,125,200,0.3);color:var(--accent-blue)}
+.sn-lawyer{background:rgba(200,75,60,0.1);border:1.5px solid rgba(200,75,60,0.3);color:var(--accent-red)}
+.signer-info{flex:1}
+.signer-name{font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:2px}
+.signer-addr{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+.signer-type{font-size:11px;color:var(--text-secondary);margin-top:2px}
+.signer-status{font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;flex-shrink:0}
+.last-active{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace;flex-shrink:0}
+
+/* PARAMETER TABLE */
+.param-table{width:100%;border-collapse:collapse}
+.param-table tbody tr{border-bottom:0.5px solid var(--border)}
+.param-table tbody tr:last-child{border-bottom:none}
+.param-table tbody tr:hover{background:var(--bg-3)}
+.param-table td{padding:12px 14px;font-size:12px;vertical-align:middle}
+.param-name{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-primary);font-weight:500}
+.param-desc{font-size:11px;color:var(--text-muted);margin-top:2px}
+.param-current{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold)}
+.param-change-req{font-family:'DM Mono',monospace;font-size:9px;padding:2px 8px;border-radius:4px;font-weight:600}
+.req-l2{background:var(--l2-bg);border:1px solid var(--l2-border);color:var(--accent-amber)}
+.req-l3{background:var(--l3-bg);border:1px solid var(--l3-border);color:var(--accent-red)}
+.req-l4{background:rgba(200,75,60,0.2);border:1px solid rgba(200,75,60,0.6);color:var(--accent-red);font-size:9px}
+.param-edit-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;transition:all 0.2s}
+.param-edit-btn:hover{border-color:var(--teal);color:var(--teal)}
+
+/* AUDIT LOG */
+.audit-row{display:flex;gap:14px;padding:12px 0;border-bottom:0.5px solid var(--border);align-items:flex-start}
+.audit-row:last-child{border-bottom:none}
+.audit-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);flex-shrink:0;min-width:80px}
+.audit-level{flex-shrink:0}
+.audit-action{font-size:12px;color:var(--text-secondary);flex:1;line-height:1.5}
+.audit-action strong{color:var(--text-primary);font-weight:500}
+.audit-actor{font-family:'DM Mono',monospace;font-size:10px;color:var(--teal);flex-shrink:0}
+.audit-hash{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);margin-top:2px}
+
+/* USER DETAIL */
+.user-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.user-detail-card{background:var(--bg-3);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px}
+.udc-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;font-weight:500}
+.udc-value{font-size:13px;font-weight:500;color:var(--text-primary)}
+.udc-value.mono{font-family:'DM Mono',monospace;font-size:10px}
+.udc-value.gold{color:var(--gold)}
+.udc-value.green{color:var(--accent-green)}
+.udc-value.red{color:var(--accent-red)}
+
+/* SEARCH BAR */
+.search-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.search-input{flex:1;background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:9px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-primary);outline:none;transition:border-color 0.2s;min-width:200px}
+.search-input:focus{border-color:var(--teal)}
+.search-input::placeholder{color:var(--text-muted)}
+.filter-select{background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:9px 14px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-primary);outline:none;cursor:pointer;transition:border-color 0.2s}
+.filter-select:focus{border-color:var(--teal)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg-2);border:1.5px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:480px;position:relative}
+.modal.l2{border-color:var(--l2-border)}
+.modal.l3{border-color:var(--l3-border)}
+.modal-close{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:14px;transition:all 0.2s}
+.modal-close:hover{border-color:var(--teal);color:var(--teal)}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;margin-bottom:6px}
+.modal-title em{font-style:italic;color:var(--gold)}
+.modal-sub{font-size:12px;color:var(--text-secondary);margin-bottom:18px;line-height:1.6}
+.modal-warning{background:var(--l3-bg);border:1px solid var(--l3-border);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--accent-red);line-height:1.6}
+.modal-warning.amber{background:var(--l2-bg);border-color:var(--l2-border);color:var(--accent-amber)}
+.modal-input{width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-primary);outline:none;margin-bottom:12px;transition:border-color 0.2s}
+.modal-input:focus{border-color:var(--teal)}
+.modal-sign-btn{width:100%;padding:14px;font-size:14px;font-weight:700;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;border:none;margin-bottom:8px;transition:all 0.2s}
+.sign-l2{background:var(--accent-amber);color:#0A0A0B}
+.sign-l2:hover{opacity:0.88}
+.sign-l3{background:var(--accent-red);color:#fff}
+.sign-l3:hover{opacity:0.88}
+.sign-confirm{background:var(--accent-green);color:#fff}
+.sign-confirm:hover{opacity:0.88}
+
+/* INACTIVITY MONITOR */
+.inactivity-bar{background:var(--bg-3);border:1.5px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.inact-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);font-weight:500}
+.inact-bar-wrap{flex:1;height:6px;background:var(--border);border-radius:4px;overflow:hidden;min-width:100px}
+.inact-bar-fill{height:100%;border-radius:4px;background:var(--accent-green);width:8%}
+.inact-days{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--accent-green)}
+.inact-note{font-size:11px;color:var(--text-muted)}
+
+/* ANALYTICS CHARTS */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chart-box{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:18px}
+.chart-box-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px;font-weight:500}
+.mini-bar-chart{display:flex;align-items:flex-end;gap:6px;height:80px}
+.mini-bar{flex:1;background:var(--teal-bg);border:1px solid var(--teal-border);border-radius:3px 3px 0 0;transition:background 0.2s;cursor:pointer;position:relative}
+.mini-bar:hover{background:var(--teal)}
+.mini-bar-label{font-family:'DM Mono',monospace;font-size:8px;color:var(--text-muted);text-align:center;margin-top:4px}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:12px}
+.stat-row:last-child{border-bottom:none}
+.stat-label{color:var(--text-secondary)}
+.stat-val{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--text-primary)}
+.stat-val.green{color:var(--accent-green)}
+.stat-val.red{color:var(--accent-red)}
+
+/* MOBILE */
+.mobile-sidebar-btn{display:none;align-items:center;gap:6px;background:var(--bg-2);border:1.5px solid var(--border);color:var(--text-secondary);padding:6px 10px;font-size:11px;font-weight:500;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:150}
+.sidebar-overlay.open{display:block}
+
+@media(max-width:1100px){.metrics-row{grid-template-columns:repeat(3,1fr)}.treasury-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.dash-sidebar{transform:translateX(-100%);transition:transform 0.3s;z-index:160}.dash-sidebar.open{transform:translateX(0)}.dash-main{margin-left:0}.mobile-sidebar-btn{display:flex}.metrics-row{grid-template-columns:repeat(2,1fr)}.fee-grid{grid-template-columns:1fr}.chart-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.dash-main{padding:14px 10px 40px}.metrics-row{grid-template-columns:1fr 1fr}.user-detail-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="refundModal">
+  <div class="modal l2">
+    <button class="modal-close" onclick="closeModal('refundModal')">✕</button>
+    <div class="action-badge ab-l2">Layer 2 · Wallet Signature Required</div>
+    <div class="modal-title">Manual <em>Refund</em></div>
+    <p class="modal-sub">Refund a specific order. Funds return to the original buyer wallet only. Cannot send to any other address.</p>
+    <div class="modal-warning amber">⚠ This requires your Wallet 1 signature. The transaction will be logged on-chain permanently with your wallet address and timestamp.</div>
+    <input class="modal-input" type="text" placeholder="Order ID (e.g. #4821)">
+    <input class="modal-input" type="text" placeholder="Reason for refund">
+    <div style="background:var(--bg-3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-family:'DM Mono',monospace;font-size:11px;line-height:2">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Refund Amount</span><span style="color:var(--text-primary)">$553.40 USDC</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Destination</span><span style="color:var(--accent-green)">0x742d...f44e (Buyer)</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Gas Est.</span><span style="color:var(--text-muted)">~$0.04 on Base</span></div>
+    </div>
+    <button class="modal-sign-btn sign-l2">🔑 Sign with Wallet 1 — Execute Refund</button>
+    <button class="btn-ghost" style="width:100%;padding:10px;border-radius:8px" onclick="closeModal('refundModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="strikeModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('strikeModal')">✕</button>
+    <div class="action-badge ab-l1">Layer 1 · Database Action</div>
+    <div class="modal-title">Issue <em>Strike</em></div>
+    <p class="modal-sub">Issue a strike to a seller. This is a database action — no wallet signature required.</p>
+    <input class="modal-input" type="text" placeholder="Username or wallet address">
+    <select class="modal-input" style="cursor:pointer">
+      <option>Strike 1 — 7-day suspension</option>
+      <option>Strike 2 — 30-day suspension</option>
+      <option>Strike 3 — Permanent ban</option>
+      <option>Override — Custom penalty</option>
+    </select>
+    <input class="modal-input" type="text" placeholder="Reason (visible to seller)">
+    <button class="modal-sign-btn sign-confirm">Issue Strike</button>
+    <button class="btn-ghost" style="width:100%;padding:10px;border-radius:8px" onclick="closeModal('strikeModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="paramModal">
+  <div class="modal l2">
+    <button class="modal-close" onclick="closeModal('paramModal')">✕</button>
+    <div class="action-badge ab-l2">Layer 2 · Wallet Signature Required</div>
+    <div class="modal-title">Edit <em>Parameter</em></div>
+    <p class="modal-sub">Change a smart contract parameter. Requires Wallet 1 signature. Takes effect immediately on-chain.</p>
+    <div class="modal-warning amber">⚠ Parameter: <strong>shippingDeadlineHours</strong><br>Current value: <strong>48</strong> · Change is permanent until modified again.</div>
+    <input class="modal-input" type="number" placeholder="New value" value="48">
+    <input class="modal-input" type="text" placeholder="Reason for change">
+    <button class="modal-sign-btn sign-l2">🔑 Sign & Update Parameter</button>
+    <button class="btn-ghost" style="width:100%;padding:10px;border-radius:8px" onclick="closeModal('paramModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="withdrawModal">
+  <div class="modal l3">
+    <button class="modal-close" onclick="closeModal('withdrawModal')">✕</button>
+    <div class="action-badge ab-l3">Layer 3 · 3-of-4 Multisig Required</div>
+    <div class="modal-title">Treasury <em>Withdrawal</em></div>
+    <p class="modal-sub">Withdraw platform revenue from treasury. Requires 3 of 4 signers. Cannot exceed daily limit.</p>
+    <div class="modal-warning">🔴 This action requires 3 of 4 wallet signatures via Safe. You will be redirected to the Safe interface to propose this transaction. Co-signers will receive a notification to review and sign.</div>
+    <div style="background:var(--bg-3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-family:'DM Mono',monospace;font-size:11px;line-height:2">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Available</span><span style="color:var(--gold)">$27,840 USDC</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Daily Limit</span><span style="color:var(--text-primary)">$50,000 USDC</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Destination</span><span style="color:var(--accent-green)">0x8f2a...d91c (Safe)</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Signatures Needed</span><span style="color:var(--accent-red)">3 of 4</span></div>
+    </div>
+    <input class="modal-input" type="number" placeholder="Amount (max $50,000)" max="50000">
+    <button class="modal-sign-btn sign-l3">🔐 Open Safe — Propose Transaction</button>
+    <button class="btn-ghost" style="width:100%;padding:10px;border-radius:8px" onclick="closeModal('withdrawModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="banModal">
+  <div class="modal l3">
+    <button class="modal-close" onclick="closeModal('banModal')">✕</button>
+    <div class="action-badge ab-l1">Layer 1 · Database Action</div>
+    <div class="modal-title">Permanent <em>Ban</em></div>
+    <p class="modal-sub">Permanently ban a user. Wallet address is flagged. All listings removed. This action is logged.</p>
+    <div class="modal-warning">⚠ This is irreversible from the UI. Appeal process only via email. User will be notified.</div>
+    <input class="modal-input" type="text" placeholder="Username">
+    <input class="modal-input" type="text" placeholder="Reason (internal + shown to user)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:12px;color:var(--text-secondary)">
+      <input type="checkbox" id="flagWallet"> <label for="flagWallet">Flag wallet address on-chain (prevents new account)</label>
+    </div>
+    <button class="modal-sign-btn sign-l3">Confirm Permanent Ban</button>
+    <button class="btn-ghost" style="width:100%;padding:10px;border-radius:8px" onclick="closeModal('banModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="transferModal">
+  <div class="modal l3">
+    <button class="modal-close" onclick="closeModal('transferModal')">✕</button>
+    <div class="action-badge ab-l3">Layer 3 · 4-of-4 Multisig Required</div>
+    <div class="modal-title">Full Admin <em>Transfer</em></div>
+    <p class="modal-sub">Transfer complete platform ownership. Used for acquisition or succession. Requires ALL 4 signers. Atomic — either everything transfers or nothing does.</p>
+    <div class="modal-warning">🔴 IRREVERSIBLE. All current signers are removed and replaced atomically. Ensure new wallet addresses are verified before proceeding. This cannot be undone.</div>
+    <input class="modal-input" type="text" placeholder="New Wallet 1 address (new admin)">
+    <input class="modal-input" type="text" placeholder="New Wallet 2 address (co-signer A)">
+    <input class="modal-input" type="text" placeholder="New Wallet 3 address (co-signer B)">
+    <input class="modal-input" type="text" placeholder="New Wallet 4 address (dead man's switch)">
+    <button class="modal-sign-btn sign-l3">🔐 Open Safe — Propose Full Transfer (4-of-4)</button>
+    <button class="btn-ghost" style="width:100%;padding:10px;border-radius:8px" onclick="closeModal('transferModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"></div>
+    TROVE
+  </a>
+  <span class="nav-admin-badge">⚡ ADMIN PANEL · RESTRICTED ACCESS</span>
+  <div class="nav-right">
+    <button class="mobile-sidebar-btn" id="mobileSidebarBtn">☰ Menu</button>
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+    <div class="nav-wallet">Wallet 1: <span>0x742d...f44e</span> · Connected</div>
+    <div class="nav-avatar">TE</div>
+  </div>
+</nav>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="dash-sidebar" id="dashSidebar">
+
+    <div class="nav-section-label">Overview</div>
+    <a class="nav-item active" onclick="show('dashboard')" href="#"><span class="nav-icon">◈</span>Dashboard</a>
+    <a class="nav-item" onclick="show('analytics')" href="#"><span class="nav-icon">◎</span>Analytics</a>
+    <a class="nav-item" onclick="show('audit')" href="#"><span class="nav-icon">◻</span>Audit Log<span class="nav-badge nb-blue">Live</span></a>
+
+    <div class="nav-section-label">Platform</div>
+    <a class="nav-item" onclick="show('users')" href="#"><span class="nav-icon">◑</span>Users<span class="nav-badge nb-red">2</span></a>
+    <a class="nav-item" onclick="show('orders')" href="#"><span class="nav-icon">⇄</span>Orders<span class="nav-badge nb-amber">4</span></a>
+    <a class="nav-item" onclick="show('disputes')" href="#"><span class="nav-icon">⚠</span>Disputes<span class="nav-badge nb-red">3</span></a>
+    <a class="nav-item" onclick="show('listings')" href="#"><span class="nav-icon">◆</span>Listings</a>
+    <a class="nav-item" onclick="show('strikes')" href="#"><span class="nav-icon">✕</span>Strike System<span class="nav-badge nb-red">2</span></a>
+
+    <div class="nav-section-label">Authentication</div>
+    <a class="nav-item" onclick="show('authenticators')" href="#"><span class="nav-icon">✓</span>Authenticators</a>
+    <a class="nav-item" onclick="show('queue')" href="#"><span class="nav-icon">◉</span>Auth Queue<span class="nav-badge nb-amber">5</span></a>
+
+    <div class="nav-section-label">Financial · <span style="color:var(--accent-amber)">L2</span></div>
+    <a class="nav-item" onclick="show('fees')" href="#"><span class="nav-icon">%</span>Fee Controls<span class="layer-indicator l2-ind">L2</span></a>
+    <a class="nav-item" onclick="show('treasury')" href="#"><span class="nav-icon">$</span>Treasury<span class="layer-indicator l2-ind">L2</span></a>
+    <a class="nav-item" onclick="show('tax')" href="#"><span class="nav-icon">◷</span>Tax Remittance</a>
+
+    <div class="nav-section-label">Governance · <span style="color:var(--accent-red)">L3</span></div>
+    <a class="nav-item" onclick="show('parameters')" href="#"><span class="nav-icon">⊡</span>Parameters<span class="layer-indicator l3-ind">L3</span></a>
+    <a class="nav-item danger" onclick="show('multisig')" href="#"><span class="nav-icon">🔐</span>Multisig / Safe<span class="layer-indicator l3-ind">L3</span></a>
+    <a class="nav-item danger" onclick="show('access')" href="#"><span class="nav-icon">◬</span>Access Control</a>
+    <a class="nav-item danger" onclick="show('transfer')" href="#"><span class="nav-icon">⚡</span>Admin Transfer<span class="layer-indicator l3-ind">L3</span></a>
+
+  </aside>
+
+  <main class="dash-main">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div id="s-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Admin <em>Dashboard</em></div>
+          <div class="page-subtitle">Tuesday April 7, 2025 · 09:42am · All systems operational</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-l2" onclick="openModal('refundModal')">Manual Refund</button>
+          <button class="btn-danger" onclick="openModal('strikeModal')">Issue Strike</button>
+        </div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-label">Total Escrowed</div><div class="metric-value gold">$142,800</div><div class="metric-sub">Across 47 active orders</div></div>
+        <div class="metric-card"><div class="metric-label">Platform Revenue</div><div class="metric-value green">$27,840</div><div class="metric-sub">Claimable · 3% fee</div></div>
+        <div class="metric-card"><div class="metric-label">Tax Held</div><div class="metric-value amber">$11,420</div><div class="metric-sub">Pending remittance</div></div>
+        <div class="metric-card"><div class="metric-label">Active Users</div><div class="metric-value teal">1,247</div><div class="metric-sub">284 sellers · 963 buyers</div></div>
+        <div class="metric-card"><div class="metric-label">Open Disputes</div><div class="metric-value red">3</div><div class="metric-sub">Avg 2.4 days open</div></div>
+      </div>
+
+      <!-- ALERTS -->
+      <div class="panel-card l3" style="margin-bottom:16px">
+        <div class="panel-header l3"><div class="panel-title l3">⚡ Alerts Requiring Action</div></div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--l3-bg);border:1px solid var(--l3-border);border-radius:8px;flex-wrap:wrap;gap:10px">
+            <div style="flex:1;font-size:12px;color:var(--text-secondary)"><strong style="color:var(--accent-red)">Dispute #D-041</strong> — Black Lotus BGS 9 ($22,000) · Seller disputing authenticator rejection · 18hrs remaining before escalation</div>
+            <button class="btn-danger" onclick="show('disputes')" style="font-size:11px;padding:6px 12px">Review →</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--l2-bg);border:1px solid var(--l2-border);border-radius:8px;flex-wrap:wrap;gap:10px">
+            <div style="flex:1;font-size:12px;color:var(--text-secondary)"><strong style="color:var(--accent-amber)">Seller GhostSeller_22</strong> — 48hr ship deadline missed on Order #4799 ($340). Auto-refund triggered. Strike 1 queued for manual confirm.</div>
+            <button class="btn-l2" onclick="openModal('strikeModal')" style="font-size:11px;padding:6px 12px">Confirm Strike</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--l2-bg);border:1px solid var(--l2-border);border-radius:8px;flex-wrap:wrap;gap:10px">
+            <div style="flex:1;font-size:12px;color:var(--text-secondary)"><strong style="color:var(--accent-amber)">Tax Remittance Due</strong> — $11,420 USDC held for 6 states. April filing deadline in 8 days. Convert and remit via TaxJar.</div>
+            <button class="btn-ghost" onclick="show('tax')" style="font-size:11px;padding:6px 12px">View →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT ORDERS + AUTH QUEUE -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="panel-card">
+          <div class="panel-header"><div class="panel-title normal">Recent Orders</div><a onclick="show('orders')" href="#" style="font-size:11px;color:var(--teal);font-weight:500">View all →</a></div>
+          <table class="data-table">
+            <thead><tr><th>Card</th><th>Value</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><div style="display:flex;gap:8px;align-items:center"><div class="swatch sw-poke"></div><div><div class="td-user">Charizard PSA 9</div><div class="td-sub">#4821</div></div></div></td><td class="td-price">$487</td><td><span class="pill pill-amber">Awaiting Ship</span></td></tr>
+              <tr><td><div style="display:flex;gap:8px;align-items:center"><div class="swatch sw-mtg"></div><div><div class="td-user">Mox Sapphire BGS 9</div><div class="td-sub">#4819</div></div></div></td><td class="td-price">$6,800</td><td><span class="pill pill-blue">In Transit</span></td></tr>
+              <tr><td><div style="display:flex;gap:8px;align-items:center"><div class="swatch sw-poke"></div><div><div class="td-user">Blastoise PSA 10</div><div class="td-sub">#4815</div></div></div></td><td class="td-price">$3,800</td><td><span class="pill pill-gold">Authenticating</span></td></tr>
+              <tr><td><div style="display:flex;gap:8px;align-items:center"><div class="swatch sw-op"></div><div><div class="td-user">Luffy Alt Art PSA 10</div><div class="td-sub">#4810</div></div></div></td><td class="td-price">$890</td><td><span class="pill pill-green">Auto-Releasing</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel-card">
+          <div class="panel-header"><div class="panel-title normal">Auth Queue</div><a onclick="show('queue')" href="#" style="font-size:11px;color:var(--teal);font-weight:500">View all →</a></div>
+          <table class="data-table">
+            <thead><tr><th>Card</th><th>Value</th><th>Auth</th></tr></thead>
+            <tbody>
+              <tr><td><div style="display:flex;gap:8px;align-items:center"><div class="swatch sw-poke"></div><div><div class="td-user">Charizard PSA 9</div><div class="td-sub">#4821</div></div></div></td><td class="td-price">$487</td><td style="font-size:11px;color:var(--teal)">J. Rivera</td></tr>
+              <tr><td><div style="display:flex;gap:8px;align-items:center"><div class="swatch sw-mtg"></div><div><div class="td-user">Black Lotus BGS 9.5</div><div class="td-sub">#4819</div></div></div></td><td class="td-price">$28,400</td><td style="font-size:11px;color:var(--text-muted)">Unassigned</td></tr>
+              <tr><td><div style="display:flex;gap:8px;align-items:center"><div class="swatch sw-op"></div><div><div class="td-user">Luffy Alt Art PSA 10</div><div class="td-sub">#4815</div></div></div></td><td class="td-price">$890</td><td style="font-size:11px;color:var(--text-muted)">Unassigned</td></tr>
+              <tr><td><div style="display:flex;gap:8px;align-items:center"><div class="swatch sw-poke"></div><div><div class="td-user">Pikachu Illus. PSA 7</div><div class="td-sub">#4812</div></div></div></td><td class="td-price">$4,200</td><td style="font-size:11px;color:var(--text-muted)">Unassigned</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== USERS ===== -->
+    <div id="s-users" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">User <em>Management</em></div><div class="page-subtitle">1,247 total users · 2 flagged · Layer 1 actions</div></div>
+        <div class="page-actions">
+          <button class="btn-danger" onclick="openModal('banModal')">Permanent Ban</button>
+          <button class="btn-danger" onclick="openModal('strikeModal')">Issue Strike</button>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input class="search-input" placeholder="Search username, email, wallet address...">
+        <select class="filter-select"><option>All Users</option><option>Sellers</option><option>Buyers</option><option>Flagged</option><option>Suspended</option><option>Banned</option></select>
+        <select class="filter-select"><option>All Tiers</option><option>New</option><option>Trusted</option><option>Pro</option><option>Elite</option></select>
+      </div>
+      <div class="panel-card">
+        <table class="data-table">
+          <thead><tr><th>User</th><th>Type</th><th>Tier</th><th>Sales</th><th>Purchases</th><th>Strikes</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="td-user">CardKing_88</div><div class="td-sub">0x742d...f44e · Apr 2024</div></td>
+              <td><span class="pill pill-gold">Seller</span></td>
+              <td><span class="pill pill-green">Elite</span></td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px">847</td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px">12</td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-green)">0</td>
+              <td><span class="pill pill-green">Active</span></td>
+              <td><div style="display:flex;gap:6px"><button class="btn-ghost" style="font-size:10px;padding:4px 10px">View</button><button class="btn-ghost" style="font-size:10px;padding:4px 10px">Suspend</button></div></td>
+            </tr>
+            <tr>
+              <td><div class="td-user">RareVault_99</div><div class="td-sub">0x8f2a...d91c · Jun 2024</div></td>
+              <td><span class="pill pill-blue">Buyer</span></td>
+              <td><span class="pill pill-blue">Trusted</span></td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px">0</td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px">38</td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-green)">0</td>
+              <td><span class="pill pill-green">Active</span></td>
+              <td><div style="display:flex;gap:6px"><button class="btn-ghost" style="font-size:10px;padding:4px 10px">View</button></div></td>
+            </tr>
+            <tr style="background:rgba(200,75,60,0.04)">
+              <td><div class="td-user">GhostSeller_22</div><div class="td-sub">0x3b9c...a112 · Jan 2025</div></td>
+              <td><span class="pill pill-gold">Seller</span></td>
+              <td><span class="pill pill-muted">New</span></td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px">0</td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px">0</td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-amber)">1 pending</td>
+              <td><span class="pill pill-amber">Strike Pending</span></td>
+              <td><div style="display:flex;gap:6px"><button class="btn-ghost" style="font-size:10px;padding:4px 10px">View</button><button class="btn-danger" style="font-size:10px;padding:4px 10px" onclick="openModal('strikeModal')">Strike</button></div></td>
+            </tr>
+            <tr>
+              <td><div class="td-user">PowerNine_Pro</div><div class="td-sub">0x91f4...c820 · Mar 2024</div></td>
+              <td><span class="pill pill-gold">Seller</span></td>
+              <td><span class="pill pill-amber">Pro</span></td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px">124</td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px">8</td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-green)">0</td>
+              <td><span class="pill pill-green">Active</span></td>
+              <td><div style="display:flex;gap:6px"><button class="btn-ghost" style="font-size:10px;padding:4px 10px">View</button><button class="btn-ghost" style="font-size:10px;padding:4px 10px">Suspend</button></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== DISPUTES ===== -->
+    <div id="s-disputes" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Dispute <em>Resolution</em></div><div class="page-subtitle">3 open · Average resolution 2.4 days · Layer 2 to resolve</div></div>
+      </div>
+      <div class="panel-card l2">
+        <div class="panel-header l2"><div class="panel-title l2">⚠ Open Disputes — Wallet Signature Required to Resolve</div></div>
+        <div style="padding:0">
+          <div style="padding:16px 18px;border-bottom:0.5px solid var(--border)">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Dispute #D-041 · Black Lotus BGS 9 · $22,000</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">Seller <strong>PowerNine_Pro</strong> disputing authenticator rejection. Reason filed: "Grade label clearly shows BGS 9, matches listing."</div>
+                <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace">Opened: Apr 6 · 18hrs until auto-escalation · Authenticator: J. Rivera</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+                <button class="btn-l2" onclick="openModal('refundModal')" style="font-size:11px;padding:6px 14px">Release to Seller (L2)</button>
+                <button class="btn-danger" style="font-size:11px;padding:6px 14px" onclick="openModal('refundModal')">Refund to Buyer (L2)</button>
+                <button class="btn-ghost" style="font-size:11px;padding:6px 14px">Escalate to Senior</button>
+              </div>
+            </div>
+          </div>
+          <div style="padding:16px 18px;border-bottom:0.5px solid var(--border)">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Dispute #D-039 · Charizard PSA 10 · $36,000</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">Buyer <strong>RareVault_99</strong> claims card does not match listing. Photos submitted show surface scratch not visible in listing photos.</div>
+                <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace">Opened: Apr 5 · 42hrs open · High value — senior review recommended</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+                <button class="btn-l2" style="font-size:11px;padding:6px 14px" onclick="openModal('refundModal')">Refund Buyer (L2)</button>
+                <button class="btn-l2" style="font-size:11px;padding:6px 14px" onclick="openModal('refundModal')">Release Seller (L2)</button>
+              </div>
+            </div>
+          </div>
+          <div style="padding:16px 18px">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Dispute #D-037 · Mox Sapphire BGS 8.5 · $4,800</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">Buyer claims shipping damage. Insurance claim filed with FedEx. Awaiting claim resolution before funds released.</div>
+                <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace">Opened: Apr 3 · Awaiting FedEx claim #FC-2847291 · Est. 5-7 days</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+                <button class="btn-ghost" style="font-size:11px;padding:6px 14px">Extend Hold</button>
+                <button class="btn-l2" style="font-size:11px;padding:6px 14px" onclick="openModal('refundModal')">Force Resolve (L2)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== FEES ===== -->
+    <div id="s-fees" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Fee <em>Controls</em></div><div class="page-subtitle">All fees adjustable · Changes apply to new transactions immediately · Layer 1</div></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-header"><div class="panel-title normal">Platform Fees — Live Controls</div><div style="font-size:11px;color:var(--text-muted)">Last changed: Apr 1, 2025</div></div>
+        <div class="panel-body">
+          <div class="fee-grid">
+            <div class="fee-item">
+              <div class="fee-item-label">Marketplace Fee</div>
+              <div class="fee-item-who">Paid by buyer · Primary revenue</div>
+              <div class="fee-slider-row">
+                <input type="range" class="fee-slider" min="0" max="10" step="0.5" value="3" oninput="updateFee(this,'fee-mkt')">
+                <div class="fee-val-display" id="fee-mkt">3%</div>
+              </div>
+              <div class="fee-range">Range: 0% – 10% · Current: 3%</div>
+            </div>
+            <div class="fee-item">
+              <div class="fee-item-label">Auth + Shipping Fee (Buyer Half)</div>
+              <div class="fee-item-who">Paid by buyer · Covers auth + 50% shipping</div>
+              <div class="fee-slider-row">
+                <input type="range" class="fee-slider" min="0" max="100" step="1" value="25" oninput="updateFee(this,'fee-auth')">
+                <div class="fee-val-display" id="fee-auth">$25</div>
+              </div>
+              <div class="fee-range">Range: $0 – $100 flat · Current: $25</div>
+            </div>
+            <div class="fee-item">
+              <div class="fee-item-label">Shipping Fee (Seller Half)</div>
+              <div class="fee-item-who">Paid by seller · Deducted from payout</div>
+              <div class="fee-slider-row">
+                <input type="range" class="fee-slider" min="0" max="100" step="1" value="15" oninput="updateFee(this,'fee-ship')">
+                <div class="fee-val-display" id="fee-ship">$15</div>
+              </div>
+              <div class="fee-range">Range: $0 – $100 flat · Current: $15</div>
+            </div>
+            <div class="fee-item">
+              <div class="fee-item-label">Buyer Protection Fee</div>
+              <div class="fee-item-who">Paid by buyer · Funds dispute reserve</div>
+              <div class="fee-slider-row">
+                <input type="range" class="fee-slider" min="0" max="5" step="0.1" value="0.5" oninput="updateFee(this,'fee-prot',true)">
+                <div class="fee-val-display" id="fee-prot">0.5%</div>
+              </div>
+              <div class="fee-range">Range: 0% – 5% · Current: 0.5%</div>
+            </div>
+            <div class="fee-item">
+              <div class="fee-item-label">Dispute Bond</div>
+              <div class="fee-item-who">Both parties · Prevents frivolous disputes</div>
+              <div class="fee-slider-row">
+                <input type="range" class="fee-slider" min="5" max="100" step="5" value="25" oninput="updateFee(this,'fee-dispute')">
+                <div class="fee-val-display" id="fee-dispute">$25</div>
+              </div>
+              <div class="fee-range">Range: $5 – $100 flat · Current: $25</div>
+            </div>
+            <div class="fee-item">
+              <div class="fee-item-label">Minimum Listing Price</div>
+              <div class="fee-item-who">Platform floor · Keeps listings premium</div>
+              <div class="fee-slider-row">
+                <input type="range" class="fee-slider" min="0" max="1000" step="50" value="100" oninput="updateFee(this,'fee-min')">
+                <div class="fee-val-display" id="fee-min">$100</div>
+              </div>
+              <div class="fee-range">Range: $0 – $1,000 · Current: $100</div>
+            </div>
+          </div>
+          <button class="apply-fee-btn">Apply Fee Changes — Updates New Transactions Immediately</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TREASURY ===== -->
+    <div id="s-treasury" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Treasury <em>Management</em></div><div class="page-subtitle">Platform funds · Withdrawal requires 3-of-4 multisig · Layer 3</div></div>
+        <div class="page-actions">
+          <button class="btn-l3" onclick="openModal('withdrawModal')">Withdraw Revenue (3-of-4)</button>
+        </div>
+      </div>
+      <div class="treasury-grid">
+        <div class="treasury-card highlight">
+          <div class="treasury-label">Total Escrowed (Locked in Orders)</div>
+          <div class="treasury-val gold">$142,800</div>
+          <div class="treasury-sub">Across 47 active orders · Untouchable · Belongs to buyers/sellers</div>
+        </div>
+        <div class="treasury-card">
+          <div class="treasury-label">Platform Revenue (Claimable)</div>
+          <div class="treasury-val green">$27,840</div>
+          <div class="treasury-sub">3% fees collected · Requires 3-of-4 to withdraw</div>
+        </div>
+        <div class="treasury-card">
+          <div class="treasury-label">Tax Held (Pending Remittance)</div>
+          <div class="treasury-val amber">$11,420</div>
+          <div class="treasury-sub">For 6 states · April filing due in 8 days</div>
+        </div>
+        <div class="treasury-card">
+          <div class="treasury-label">Seller Bond Pool (In-Flight)</div>
+          <div class="treasury-val">$18,240</div>
+          <div class="treasury-sub">Seller collateral · Returns on completion</div>
+        </div>
+      </div>
+      <div class="panel-card l3">
+        <div class="panel-header l3"><div class="panel-title l3">🔐 Withdrawal Rules — Smart Contract Enforced</div></div>
+        <div class="panel-body" style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:13px;color:var(--text-secondary);line-height:1.7">Funds can only be withdrawn to pre-approved addresses. The smart contract enforces:</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-green);flex-shrink:0">✓</span>Escrowed funds can ONLY go to the buyer or seller of the specific order</div>
+            <div style="display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-green);flex-shrink:0">✓</span>Platform revenue can ONLY go to the pre-approved Safe multisig address</div>
+            <div style="display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-green);flex-shrink:0">✓</span>Daily withdrawal limit: $50,000 USDC (adjustable 2-of-4)</div>
+            <div style="display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-red);flex-shrink:0">✗</span>No arbitrary address transfers — ever</div>
+            <div style="display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-red);flex-shrink:0">✗</span>No single-signature treasury access</div>
+            <div style="display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-red);flex-shrink:0">✗</span>No "drain all" function exists in the contract</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PARAMETERS ===== -->
+    <div id="s-parameters" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Contract <em>Parameters</em></div><div class="page-subtitle">All adjustable smart contract values · L2 = wallet sig · L3 = multisig · L4 = full upgrade</div></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-header"><div class="panel-title normal">Adjustable Parameters — On-Chain Values</div></div>
+        <table class="param-table">
+          <tbody>
+            <tr><td><div class="param-name">shippingDeadlineHours</div><div class="param-desc">Hours seller has to ship after buyer purchases</div></td><td class="param-current">48</td><td><span class="param-change-req req-l2">L2 · Wallet Sig</span></td><td><button class="param-edit-btn" onclick="openModal('paramModal')">Edit</button></td></tr>
+            <tr><td><div class="param-name">inspectionWindowHours</div><div class="param-desc">Buyer auto-release window after delivery</div></td><td class="param-current">72</td><td><span class="param-change-req req-l2">L2 · Wallet Sig</span></td><td><button class="param-edit-btn" onclick="openModal('paramModal')">Edit</button></td></tr>
+            <tr><td><div class="param-name">maxSingleRefundUSDC</div><div class="param-desc">Max refund amount per single L2 action</div></td><td class="param-current">$10,000</td><td><span class="param-change-req req-l2">L2 · Wallet Sig</span></td><td><button class="param-edit-btn" onclick="openModal('paramModal')">Edit</button></td></tr>
+            <tr><td><div class="param-name">maxDailyWithdrawalUSDC</div><div class="param-desc">Max treasury withdrawal per 24hrs</div></td><td class="param-current">$50,000</td><td><span class="param-change-req req-l3">L3 · 2-of-4</span></td><td><button class="param-edit-btn" onclick="openModal('paramModal')">Edit</button></td></tr>
+            <tr><td><div class="param-name">platformFeePercent</div><div class="param-desc">Marketplace fee in basis points (300 = 3%)</div></td><td class="param-current">300 bp</td><td><span class="param-change-req req-l2">L2 · Wallet Sig</span></td><td><button class="param-edit-btn" onclick="openModal('paramModal')">Edit</button></td></tr>
+            <tr><td><div class="param-name">minListingPriceUSDC</div><div class="param-desc">Minimum listing price enforced by contract</div></td><td class="param-current">$100</td><td><span class="param-change-req req-l2">L2 · Wallet Sig</span></td><td><button class="param-edit-btn" onclick="openModal('paramModal')">Edit</button></td></tr>
+            <tr><td><div class="param-name">bondPercentElite</div><div class="param-desc">Bond % for Elite tier sellers (bp)</div></td><td class="param-current">100 bp</td><td><span class="param-change-req req-l2">L2 · Wallet Sig</span></td><td><button class="param-edit-btn" onclick="openModal('paramModal')">Edit</button></td></tr>
+            <tr><td><div class="param-name">bondPercentNew</div><div class="param-desc">Bond % for new sellers (bp)</div></td><td class="param-current">400 bp</td><td><span class="param-change-req req-l2">L2 · Wallet Sig</span></td><td><button class="param-edit-btn" onclick="openModal('paramModal')">Edit</button></td></tr>
+            <tr><td><div class="param-name">maxShippingExtensions</div><div class="param-desc">Max times admin can extend ship deadline per order</div></td><td class="param-current">2</td><td><span class="param-change-req req-l2">L2 · Wallet Sig</span></td><td><button class="param-edit-btn" onclick="openModal('paramModal')">Edit</button></td></tr>
+            <tr><td><div class="param-name">disputeBondUSDC</div><div class="param-desc">Bond required to open a dispute</div></td><td class="param-current">$25</td><td><span class="param-change-req req-l2">L2 · Wallet Sig</span></td><td><button class="param-edit-btn" onclick="openModal('paramModal')">Edit</button></td></tr>
+            <tr><td><div class="param-name">inactivityTriggerDays</div><div class="param-desc">Days before dead man's switch activates</div></td><td class="param-current">90</td><td><span class="param-change-req req-l3">L3 · 3-of-4</span></td><td><button class="param-edit-btn" onclick="openModal('paramModal')">Edit</button></td></tr>
+            <tr><td><div class="param-name">contractVersion</div><div class="param-desc">Current deployed contract version</div></td><td class="param-current">v1.0.2</td><td><span class="param-change-req req-l4">L4 · Upgrade · 4-of-4</span></td><td><button class="param-edit-btn">View Code</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== MULTISIG ===== -->
+    <div id="s-multisig" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Multisig <em>Safe</em></div><div class="page-subtitle">4-wallet governance · Powered by Safe (Gnosis) on Base · All L3 actions</div></div>
+        <div class="page-actions">
+          <button class="btn-ghost">Open Safe UI →</button>
+        </div>
+      </div>
+
+      <!-- INACTIVITY MONITOR -->
+      <div class="inactivity-bar">
+        <div>
+          <div class="inact-label">Dead Man's Switch</div>
+          <div class="inact-note" style="font-size:11px;color:var(--text-muted)">Wallet 4 activates if Wallet 1 inactive for 90 days</div>
+        </div>
+        <div class="inact-bar-wrap"><div class="inact-bar-fill"></div></div>
+        <div class="inact-days">7 days</div>
+        <div class="inact-note">since last Wallet 1 action · 83 days remaining</div>
+        <button class="btn-ghost" style="font-size:11px;padding:6px 12px">Reset Clock</button>
+      </div>
+
+      <div class="panel-card l3" style="margin-bottom:16px">
+        <div class="panel-header l3"><div class="panel-title l3">🔐 Multisig Signers — Current Configuration</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent-amber)">Threshold: 2-of-4 Standard · 3-of-4 Treasury · 4-of-4 Transfer</div></div>
+        <div class="panel-body">
+          <div class="signer-list">
+            <div class="signer-row">
+              <div class="signer-num sn-active">W1</div>
+              <div class="signer-info">
+                <div class="signer-name">Wallet 1 — Operational Admin (You)</div>
+                <div class="signer-addr">0x742d35Cc6634C0532925a3b8D4C9f44e8A2f44e</div>
+                <div class="signer-type">Hot wallet · Daily use · MetaMask · Layer 2 actions</div>
+              </div>
+              <span class="signer-status pill pill-green">Active</span>
+              <div class="last-active">Last: 7hrs ago</div>
+            </div>
+            <div class="signer-row">
+              <div class="signer-num sn-warm">W2</div>
+              <div class="signer-info">
+                <div class="signer-name">Wallet 2 — Co-Signer A</div>
+                <div class="signer-addr">0x8f2a91C4b3D2e5F1a0B7c6D3e8F2a91C4b3D2e5</div>
+                <div class="signer-type">Warm wallet · Hardware wallet · Used for L3 approvals</div>
+              </div>
+              <span class="signer-status pill pill-amber">Warm</span>
+              <div class="last-active">Last: 12 days ago</div>
+            </div>
+            <div class="signer-row">
+              <div class="signer-num sn-cold">W3</div>
+              <div class="signer-info">
+                <div class="signer-name">Wallet 3 — Co-Signer B (Cold)</div>
+                <div class="signer-addr">0x3b9cF7A2d1E4b8C5a0D2e7F3b9cF7A2d1E4b8C5</div>
+                <div class="signer-type">Cold wallet · Physical safe · Emergency backup only</div>
+              </div>
+              <span class="signer-status pill pill-blue">Cold</span>
+              <div class="last-active">Last: 45 days ago</div>
+            </div>
+            <div class="signer-row">
+              <div class="signer-num sn-lawyer">W4</div>
+              <div class="signer-info">
+                <div class="signer-name">Wallet 4 — Dead Man's Switch</div>
+                <div class="signer-addr">0x91f4C2b5D8e1A7c3F0b4D9e2A5f4C2b5D8e1A7c</div>
+                <div class="signer-type">Legal escrow · Activates after 90 days inactivity · Succession</div>
+              </div>
+              <span class="signer-status pill pill-muted">Dormant</span>
+              <div class="last-active">Activates: Day 90</div>
+            </div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn-l3" onclick="openModal('transferModal')">Full Admin Transfer (4-of-4)</button>
+            <button class="btn-ghost">Replace Signer (3-of-4)</button>
+            <button class="btn-ghost">View Safe on Basescan →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- THRESHOLD MATRIX -->
+      <div class="panel-card">
+        <div class="panel-header"><div class="panel-title normal">Action Threshold Matrix</div></div>
+        <table class="data-table">
+          <thead><tr><th>Action Type</th><th>Examples</th><th>Required</th></tr></thead>
+          <tbody>
+            <tr><td style="color:var(--accent-green);font-weight:600;font-size:12px">Layer 1 · Database</td><td style="font-size:11px;color:var(--text-muted)">Suspend user, delete listing, edit fees, assign auth, issue strike</td><td><span class="pill pill-green">Any Admin Account</span></td></tr>
+            <tr><td style="color:var(--accent-amber);font-weight:600;font-size:12px">Layer 2 · Single Order</td><td style="font-size:11px;color:var(--text-muted)">Refund buyer, release escrow, extend deadline, pause deposits</td><td><span class="pill pill-amber">Wallet 1 Only</span></td></tr>
+            <tr><td style="color:var(--accent-red);font-weight:600;font-size:12px">Layer 3 · Contract Change</td><td style="font-size:11px;color:var(--text-muted)">Change parameters, withdraw revenue, upgrade contract logic</td><td><span class="pill pill-red">2-of-4 Minimum</span></td></tr>
+            <tr><td style="color:var(--accent-red);font-weight:600;font-size:12px">Layer 3 · Treasury</td><td style="font-size:11px;color:var(--text-muted)">Withdraw platform revenue, tax conversion, fee transfers</td><td><span class="pill pill-red">3-of-4 Required</span></td></tr>
+            <tr><td style="color:var(--accent-red);font-weight:600;font-size:12px">Layer 3 · Critical</td><td style="font-size:11px;color:var(--text-muted)">Full admin transfer, contract upgrade, replace all signers</td><td><span class="pill pill-red">4-of-4 Required</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== ACCESS CONTROL ===== -->
+    <div id="s-access" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Access <em>Control</em></div><div class="page-subtitle">Staff accounts and permission levels · Layer 1 management</div></div>
+        <div class="page-actions">
+          <button class="btn-primary">Add Staff Account</button>
+        </div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-header"><div class="panel-title normal">Staff Accounts & Permissions</div></div>
+        <table class="data-table">
+          <thead><tr><th>Staff Member</th><th>Role</th><th>Level</th><th>Permissions</th><th>Last Active</th><th>Actions</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="td-user">Owner (You)</div><div class="td-sub">Wallet 1 · Full access</div></td>
+              <td><span class="pill pill-red">Owner</span></td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-red)">Level 4</td>
+              <td style="font-size:11px;color:var(--text-secondary)">All permissions + L2 contract actions</td>
+              <td class="td-mono">7hrs ago</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><div class="td-user">J. Rivera</div><div class="td-sub">j.rivera@troveexchange.com</div></td>
+              <td><span class="pill pill-blue">Authenticator</span></td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-blue)">Level 0</td>
+              <td style="font-size:11px;color:var(--text-secondary)">Auth queue only · No financial access</td>
+              <td class="td-mono">2hrs ago</td>
+              <td><button class="btn-ghost" style="font-size:10px;padding:4px 10px">Edit</button></td>
+            </tr>
+            <tr>
+              <td><div class="td-user">S. Chen</div><div class="td-sub">s.chen@troveexchange.com</div></td>
+              <td><span class="pill pill-blue">Authenticator</span></td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-blue)">Level 0</td>
+              <td style="font-size:11px;color:var(--text-secondary)">Auth queue only · No financial access</td>
+              <td class="td-mono">4hrs ago</td>
+              <td><button class="btn-ghost" style="font-size:10px;padding:4px 10px">Edit</button></td>
+            </tr>
+            <tr>
+              <td><div class="td-user">Support Team 1</div><div class="td-sub">support1@troveexchange.com</div></td>
+              <td><span class="pill pill-green">Support</span></td>
+              <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-green)">Level 1</td>
+              <td style="font-size:11px;color:var(--text-secondary)">View users + orders · Notes only · No modifications</td>
+              <td class="td-mono">1hr ago</td>
+              <td><button class="btn-ghost" style="font-size:10px;padding:4px 10px">Edit</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel-card" style="margin-top:14px">
+        <div class="panel-header"><div class="panel-title normal">Permission Level Reference</div></div>
+        <table class="data-table">
+          <thead><tr><th>Level</th><th>Role</th><th>Can Do</th><th>Cannot Do</th></tr></thead>
+          <tbody>
+            <tr><td style="font-family:'DM Mono',monospace;color:var(--accent-blue)">L0</td><td>Authenticator</td><td style="font-size:11px;color:var(--text-secondary)">Auth queue, approve/reject/flag cards</td><td style="font-size:11px;color:var(--text-muted)">Everything else</td></tr>
+            <tr><td style="font-family:'DM Mono',monospace;color:var(--accent-green)">L1</td><td>Support</td><td style="font-size:11px;color:var(--text-secondary)">View users, orders, add notes</td><td style="font-size:11px;color:var(--text-muted)">Modify anything financial</td></tr>
+            <tr><td style="font-family:'DM Mono',monospace;color:var(--accent-amber)">L2</td><td>Operations</td><td style="font-size:11px;color:var(--text-secondary)">Issue strikes, extend deadlines, manage auth assignments</td><td style="font-size:11px;color:var(--text-muted)">Financial settings, contract actions</td></tr>
+            <tr><td style="font-family:'DM Mono',monospace;color:var(--accent-amber)">L3</td><td>Senior Admin</td><td style="font-size:11px;color:var(--text-secondary)">Modify fees, remove listings, ban users, view treasury</td><td style="font-size:11px;color:var(--text-muted)">Contract actions, withdrawals</td></tr>
+            <tr><td style="font-family:'DM Mono',monospace;color:var(--accent-red)">L4</td><td>Owner</td><td style="font-size:11px;color:var(--text-secondary)">All of above + L2 contract actions + wallet signing</td><td style="font-size:11px;color:var(--text-muted)">L3 multisig actions (need co-signers)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== ADMIN TRANSFER ===== -->
+    <div id="s-transfer" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Admin <em>Transfer</em></div><div class="page-subtitle">Full ownership transfer · Acquisition or succession · 4-of-4 required · Irreversible</div></div>
+      </div>
+      <div class="panel-card l3">
+        <div class="panel-header l3"><div class="panel-title l3">🔴 Critical Action — Full Platform Transfer</div></div>
+        <div class="panel-body">
+          <div style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:16px">This action transfers complete ownership of the Trove Exchange platform. All current signers are removed and replaced atomically in a single transaction. Either everything transfers or nothing does.</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+            <div style="display:flex;gap:10px;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-green);flex-shrink:0">✓</span>Smart contract ownership transfers to new Safe address</div>
+            <div style="display:flex;gap:10px;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-green);flex-shrink:0">✓</span>Platform treasury transfers to new Safe</div>
+            <div style="display:flex;gap:10px;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-green);flex-shrink:0">✓</span>All current signers removed simultaneously</div>
+            <div style="display:flex;gap:10px;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-green);flex-shrink:0">✓</span>All new signers added simultaneously</div>
+            <div style="display:flex;gap:10px;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-green);flex-shrink:0">✓</span>Database admin credentials transferred separately (manual process)</div>
+            <div style="display:flex;gap:10px;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-green);flex-shrink:0">✓</span>User data, listings, reputation scores — all preserved</div>
+            <div style="display:flex;gap:10px;font-size:12px;color:var(--text-secondary)"><span style="color:var(--accent-red);flex-shrink:0">✗</span>Cannot be reversed after all 4 signatures collected</div>
+          </div>
+          <div style="background:var(--l3-bg);border:1px solid var(--l3-border);border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:12px;color:var(--accent-red);line-height:1.6">⚠ Verify all new wallet addresses with the acquirer/successor BEFORE proposing this transaction. Triple-check every address. A typo results in permanent loss of platform control with no recovery path.</div>
+          <button class="btn-l3" style="padding:14px 28px;font-size:14px;border-radius:10px" onclick="openModal('transferModal')">Initiate Transfer — Open Safe (4-of-4)</button>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-header"><div class="panel-title normal">Compromised Wallet Recovery</div></div>
+        <div class="panel-body">
+          <div style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:16px">If any single wallet is compromised, the other three can vote to remove it and add a replacement. This requires 3-of-4 signatures and can be done even if the compromised wallet is unavailable.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="background:var(--bg-3);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px">
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;font-weight:500">Wallet 1 Compromised</div>
+              <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:10px">Wallets 2+3+4 sign to remove W1 and add new wallet. Attacker locked out immediately.</div>
+              <button class="btn-danger" style="font-size:11px;padding:6px 12px;width:100%">Remove & Replace W1 (3-of-4)</button>
+            </div>
+            <div style="background:var(--bg-3);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px">
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;font-weight:500">Any Other Wallet Compromised</div>
+              <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:10px">Remaining wallets including W1 sign to remove the compromised signer and replace.</div>
+              <button class="btn-danger" style="font-size:11px;padding:6px 12px;width:100%">Remove & Replace Signer (3-of-4)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== AUDIT LOG ===== -->
+    <div id="s-audit" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Audit <em>Log</em></div><div class="page-subtitle">Immutable record of all admin actions · On-chain actions include tx hash</div></div>
+        <div class="page-actions">
+          <button class="btn-ghost">Export CSV</button>
+          <button class="btn-ghost">Filter</button>
+        </div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-body" style="padding:0">
+          <div style="padding:14px 18px;border-bottom:0.5px solid var(--border)">
+            <div class="audit-row"><div class="audit-time">09:42am</div><div class="audit-level"><span class="action-badge ab-l1">L1</span></div><div class="audit-action"><strong>Fee updated</strong> — Buyer protection fee changed from 0.4% to 0.5%</div><div class="audit-actor">Owner</div></div>
+            <div class="audit-row"><div class="audit-time">09:18am</div><div class="audit-level"><span class="action-badge ab-l2">L2</span></div><div class="audit-action"><strong>Refund executed</strong> — Order #4799 ($340) refunded to buyer 0x3b9c...a112 · 48hr deadline missed</div><div class="audit-actor">Owner · W1</div><div class="audit-hash">tx: 0x8f2a...d91c</div></div>
+            <div class="audit-row"><div class="audit-time">09:02am</div><div class="audit-level"><span class="action-badge ab-l1">L1</span></div><div class="audit-action"><strong>Auth assigned</strong> — J. Rivera assigned to Order #4821 (Charizard PSA 9)</div><div class="audit-actor">Owner</div></div>
+            <div class="audit-row"><div class="audit-time">Yesterday</div><div class="audit-level"><span class="action-badge ab-l2">L2</span></div><div class="audit-action"><strong>Dispute resolved</strong> — #D-035 released to seller CardKing_88 · Buyer dispute denied</div><div class="audit-actor">Owner · W1</div><div class="audit-hash">tx: 0x742d...f44e</div></div>
+            <div class="audit-row"><div class="audit-time">Apr 5</div><div class="audit-level"><span class="action-badge ab-l1">L1</span></div><div class="audit-action"><strong>User suspended</strong> — GhostSeller_22 suspended 7 days for missed shipping deadline (Strike 1)</div><div class="audit-actor">Owner</div></div>
+            <div class="audit-row"><div class="audit-time">Apr 3</div><div class="audit-level"><span class="action-badge ab-l3">L3</span></div><div class="audit-action"><strong>Parameter changed</strong> — shippingDeadlineHours updated 72 → 48 · Signed W1 + W2</div><div class="audit-actor">W1 + W2</div><div class="audit-hash">tx: 0x91f4...c820</div></div>
+            <div class="audit-row"><div class="audit-time">Mar 30</div><div class="audit-level"><span class="action-badge ab-l3">L3</span></div><div class="audit-action"><strong>Treasury withdrawal</strong> — $15,000 USDC withdrawn to Safe 0x8f2a...d91c</div><div class="audit-actor">W1 + W2 + W3</div><div class="audit-hash">tx: 0x3b9c...a112</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ANALYTICS ===== -->
+    <div id="s-analytics" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Platform <em>Analytics</em></div><div class="page-subtitle">Real-time · April 2025</div></div>
+        <div class="page-actions">
+          <button class="btn-ghost">Export</button>
+        </div>
+      </div>
+      <div class="metrics-row" style="grid-template-columns:repeat(4,1fr)">
+        <div class="metric-card"><div class="metric-label">Monthly Volume</div><div class="metric-value gold">$284,000</div><div class="metric-sub">▲ 42% vs last month</div></div>
+        <div class="metric-card"><div class="metric-label">Monthly Revenue</div><div class="metric-value green">$8,520</div><div class="metric-sub">3% of volume</div></div>
+        <div class="metric-card"><div class="metric-label">Auth Pass Rate</div><div class="metric-value teal">91.4%</div><div class="metric-sub">142 of 155 passed</div></div>
+        <div class="metric-card"><div class="metric-label">Dispute Rate</div><div class="metric-value">1.2%</div><div class="metric-sub">Below industry avg</div></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-box">
+          <div class="chart-box-title">Daily Volume — Last 7 Days</div>
+          <div class="mini-bar-chart">
+            <div><div class="mini-bar" style="height:40%"></div><div class="mini-bar-label">Mon</div></div>
+            <div><div class="mini-bar" style="height:65%"></div><div class="mini-bar-label">Tue</div></div>
+            <div><div class="mini-bar" style="height:45%"></div><div class="mini-bar-label">Wed</div></div>
+            <div><div class="mini-bar" style="height:80%"></div><div class="mini-bar-label">Thu</div></div>
+            <div><div class="mini-bar" style="height:60%"></div><div class="mini-bar-label">Fri</div></div>
+            <div><div class="mini-bar" style="height:90%"></div><div class="mini-bar-label">Sat</div></div>
+            <div><div class="mini-bar" style="height:70%"></div><div class="mini-bar-label">Sun</div></div>
+          </div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title">Platform Health</div>
+          <div class="stat-row"><span class="stat-label">Avg order value</span><span class="stat-val">$1,832</span></div>
+          <div class="stat-row"><span class="stat-label">Avg ship time</span><span class="stat-val green">1.6 days</span></div>
+          <div class="stat-row"><span class="stat-label">Avg auth time</span><span class="stat-val">4.2 min</span></div>
+          <div class="stat-row"><span class="stat-label">Auto-refunds triggered</span><span class="stat-val red">3</span></div>
+          <div class="stat-row"><span class="stat-label">Strikes issued</span><span class="stat-val">4</span></div>
+          <div class="stat-row"><span class="stat-label">Permanent bans</span><span class="stat-val">1</span></div>
+          <div class="stat-row"><span class="stat-label">New users this month</span><span class="stat-val green">+284</span></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title">Volume by Game</div>
+          <div class="stat-row"><span class="stat-label">Pokémon TCG</span><span class="stat-val">58%</span></div>
+          <div class="stat-row"><span class="stat-label">Magic: The Gathering</span><span class="stat-val">28%</span></div>
+          <div class="stat-row"><span class="stat-label">One Piece TCG</span><span class="stat-val">9%</span></div>
+          <div class="stat-row"><span class="stat-label">Sports Cards</span><span class="stat-val">3%</span></div>
+          <div class="stat-row"><span class="stat-label">Other</span><span class="stat-val">2%</span></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title">Top Sellers This Month</div>
+          <div class="stat-row"><span class="stat-label">CardKing_88</span><span class="stat-val gold">$48,200</span></div>
+          <div class="stat-row"><span class="stat-label">PowerNine_Pro</span><span class="stat-val gold">$32,400</span></div>
+          <div class="stat-row"><span class="stat-label">SlabMaster</span><span class="stat-val gold">$18,900</span></div>
+          <div class="stat-row"><span class="stat-label">VintageVault</span><span class="stat-val gold">$12,100</span></div>
+          <div class="stat-row"><span class="stat-label">MTGLegacy</span><span class="stat-val gold">$9,800</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STUB SECTIONS -->
+    <div id="s-orders" style="display:none"><div class="page-header"><div><div class="page-title">Order <em>Management</em></div><div class="page-subtitle">All orders · Full escrow visibility · L2 actions available</div></div></div><div class="panel-card"><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-muted)">Full orders table with escrow status, timeline, and L2 action buttons per order.</div></div></div>
+    <div id="s-listings" style="display:none"><div class="page-header"><div><div class="page-title">Listing <em>Management</em></div><div class="page-subtitle">All listings · Force remove · Override pricing</div></div></div><div class="panel-card"><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-muted)">Full listings grid with admin controls — remove, edit, feature, delist.</div></div></div>
+    <div id="s-strikes" style="display:none"><div class="page-header"><div><div class="page-title">Strike <em>System</em></div><div class="page-subtitle">All users with strikes · Issue, override, remove</div></div></div><div class="panel-card"><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-muted)">Strike management table — all users with active strikes, suspension timelines, override controls.</div></div></div>
+    <div id="s-authenticators" style="display:none"><div class="page-header"><div><div class="page-title"><em>Authenticators</em></div><div class="page-subtitle">Manage auth staff, performance, assignments</div></div></div><div class="panel-card"><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-muted)">Authenticator management — add/remove staff, view performance stats, reassign queue items.</div></div></div>
+    <div id="s-queue" style="display:none"><div class="page-header"><div><div class="page-title">Auth <em>Queue</em></div><div class="page-subtitle">Admin view of authentication queue · Reassign cards</div></div></div><div class="panel-card"><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-muted)">Full auth queue with admin controls — reassign, override decisions, view audit trail per card.</div></div></div>
+    <div id="s-tax" style="display:none"><div class="page-header"><div><div class="page-title">Tax <em>Remittance</em></div><div class="page-subtitle">USDC held per state · Convert and file via TaxJar</div></div></div><div class="panel-card"><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-muted)">Tax dashboard — USDC held per state, conversion pipeline, TaxJar AutoFile integration, filing history.</div></div></div>
+
+  </main>
+</div>
+
+<script>
+// THEME
+const toggle=document.getElementById('themeToggle');
+const html=document.documentElement;
+const saved=localStorage.getItem('trove-theme')||'dark';
+html.setAttribute('data-theme',saved);
+toggle.textContent=saved==='dark'?'🌙':'☀️';
+toggle.addEventListener('click',()=>{
+  const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  toggle.textContent=next==='dark'?'🌙':'☀️';
+  localStorage.setItem('trove-theme',next);
+});
+
+// SECTIONS
+const sections=['dashboard','users','orders','disputes','listings','strikes','authenticators','queue','fees','treasury','tax','parameters','multisig','access','transfer','audit','analytics'];
+function show(id){
+  sections.forEach(s=>{
+    const el=document.getElementById('s-'+s);
+    if(el) el.style.display=s===id?'block':'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(item=>{
+    item.classList.remove('active');
+    if(item.getAttribute('onclick')&&item.getAttribute('onclick').includes("'"+id+"'")){
+      item.classList.add('active');
+    }
+  });
+  closeMobile();
+  window.scrollTo(0,0);
+}
+
+// MOBILE
+const mobileSidebarBtn=document.getElementById('mobileSidebarBtn');
+const dashSidebar=document.getElementById('dashSidebar');
+const sidebarOverlay=document.getElementById('sidebarOverlay');
+mobileSidebarBtn.addEventListener('click',()=>{
+  dashSidebar.classList.add('open');
+  sidebarOverlay.classList.add('open');
+  document.body.style.overflow='hidden';
+});
+function closeMobile(){
+  dashSidebar.classList.remove('open');
+  sidebarOverlay.classList.remove('open');
+  document.body.style.overflow='';
+}
+sidebarOverlay.addEventListener('click',closeMobile);
+
+// MODALS
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',(e)=>{if(e.target===o) o.classList.remove('open')});
+});
+
+// FEE SLIDERS
+function updateFee(el,id,isPct){
+  const v=parseFloat(el.value);
+  document.getElementById(id).textContent=isPct?v.toFixed(1)+'%':'$'+v;
+}
+
+// MINI BARS click
+document.querySelectorAll('.mini-bar').forEach(bar=>{
+  bar.addEventListener('click',()=>{
+    document.querySelectorAll('.mini-bar').forEach(b=>b.style.background='');
+    bar.style.background='var(--teal)';
+  });
+});
+</script>
+</body>
+</html>

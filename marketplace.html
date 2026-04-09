@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marketplace — Trove Exchange</title>
+<meta name="description" content="Browse authenticated TCG cards on Trove Exchange. Every card verified. Every transaction escrow-protected.">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+[data-theme="dark"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;
+  --bg:#0A0A0B;--bg-2:#111114;--bg-3:#18181C;--bg-4:#222228;--bg-5:#2A2A32;
+  --text-primary:#F0EDE6;--text-secondary:#B8B4AC;--text-muted:#6C6A66;
+  --accent-green:#4CAF7C;--accent-red:#C84B3C;--accent-blue:#3C7DC8;
+  --border:#2A2A32;--border-gold:rgba(201,168,76,0.28);
+  --nav-bg:rgba(10,10,11,0.94);--sidebar-bg:#0E0E11;
+  --card-bg:#111114;--card-hover:#18181C;--search-bg:#18181C;
+  --filter-active:rgba(201,168,76,0.1);
+}
+[data-theme="light"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;
+  --bg:#F5F2EC;--bg-2:#EDEAE3;--bg-3:#E4E0D8;--bg-4:#D8D4CC;--bg-5:#CCC8C0;
+  --text-primary:#1A1814;--text-secondary:#4A4640;--text-muted:#8A8680;
+  --accent-green:#1A6B3A;--accent-red:#B83C2C;--accent-blue:#1A5EA0;
+  --border:#C8C4BC;--border-gold:rgba(13,110,110,0.25);
+  --nav-bg:rgba(245,242,236,0.96);--sidebar-bg:#E8E4DC;
+  --card-bg:#EDEAE3;--card-hover:#E4E0D8;--search-bg:#E4E0D8;
+  --filter-active:rgba(13,110,110,0.08);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-weight:400;overflow-x:hidden;line-height:1.6;transition:background 0.3s,color 0.3s;padding-top:64px}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);backdrop-filter:blur(24px);border-bottom:0.5px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;letter-spacing:0.1em;color:var(--gold);display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-logo-icon{width:22px;height:22px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0}
+.nav-center{flex:1;max-width:480px;margin:0 1.5rem}
+.nav-search{background:var(--search-bg);border:1.5px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:8px;border-radius:10px;transition:border-color 0.2s}
+.nav-search:focus-within{border-color:var(--gold)}
+.nav-search input{flex:1;background:transparent;border:none;outline:none;color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 0}
+.nav-search input::placeholder{color:var(--text-muted)}
+.nav-search-icon{color:var(--text-muted);font-size:15px;flex-shrink:0}
+.nav-actions{display:flex;align-items:center;gap:8px}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary);padding:7px 16px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;transition:all 0.2s;border-radius:8px}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn-gold{background:var(--gold);border:none;color:#fff;padding:7px 16px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s}
+.btn-gold:hover{background:var(--gold-light)}
+.theme-toggle{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:14px;transition:all 0.2s;flex-shrink:0}
+.theme-toggle:hover{border-color:var(--gold);color:var(--gold)}
+
+/* BREADCRUMB */
+.breadcrumb{padding:16px 1.5rem;border-bottom:0.5px solid var(--border);background:var(--bg-2);display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted)}
+.breadcrumb a{color:var(--text-muted);text-decoration:none;transition:color 0.2s}
+.breadcrumb a:hover{color:var(--gold)}
+.breadcrumb-sep{opacity:0.4}
+
+/* LAYOUT */
+.page-layout{display:flex;min-height:calc(100vh - 64px);align-items:flex-start}
+
+/* SIDEBAR */
+.sidebar{width:260px;flex-shrink:0;background:var(--sidebar-bg);border-right:0.5px solid var(--border);position:sticky;top:64px;height:calc(100vh - 64px);overflow-y:auto;padding:0}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-track{background:transparent}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.sidebar-section{border-bottom:0.5px solid var(--border);padding:20px}
+.sidebar-section-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px;font-weight:500;display:flex;align-items:center;justify-content:space-between}
+.sidebar-clear{font-size:10px;color:var(--gold);cursor:pointer;letter-spacing:0;text-transform:none;font-family:'DM Sans',sans-serif;font-weight:500;transition:opacity 0.2s}
+.sidebar-clear:hover{opacity:0.7}
+
+/* FILTER CHECKBOXES */
+.filter-list{display:flex;flex-direction:column;gap:2px}
+.filter-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;transition:background 0.15s;user-select:none}
+.filter-item:hover{background:var(--bg-3)}
+.filter-item.active{background:var(--filter-active);border:1px solid var(--border-gold)}
+.filter-item input[type="checkbox"]{display:none}
+.filter-check{width:16px;height:16px;border:1.5px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s}
+.filter-item.active .filter-check{background:var(--gold);border-color:var(--gold)}
+.filter-check-mark{width:8px;height:6px;opacity:0;transition:opacity 0.15s}
+.filter-item.active .filter-check-mark{opacity:1}
+.filter-label{font-size:13px;color:var(--text-secondary);flex:1;transition:color 0.15s}
+.filter-item.active .filter-label{color:var(--text-primary)}
+.filter-count{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+
+/* GRADE FILTER */
+.grade-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.grade-btn{padding:7px 4px;border:1.5px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);text-align:center;transition:all 0.15s;font-weight:500}
+.grade-btn:hover{border-color:var(--gold);color:var(--gold)}
+.grade-btn.active{background:var(--filter-active);border-color:var(--gold);color:var(--gold)}
+
+/* PRICE RANGE */
+.price-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.price-input-wrap{position:relative}
+.price-input-prefix{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)}
+.price-input{width:100%;background:var(--bg-3);border:1.5px solid var(--border);border-radius:8px;padding:9px 10px 9px 22px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text-primary);outline:none;transition:border-color 0.2s}
+.price-input:focus{border-color:var(--gold)}
+.price-input::placeholder{color:var(--text-muted)}
+.price-slider{width:100%;height:3px;background:var(--border);border-radius:2px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none}
+.price-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid var(--bg)}
+
+/* SORT BAR */
+.sort-bar{padding:16px 1.5rem;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--bg)}
+.sort-left{display:flex;align-items:center;gap:12px}
+.results-count{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)}
+.results-count span{color:var(--text-primary);font-weight:500}
+.filter-toggle-btn{display:none;align-items:center;gap:6px;background:var(--bg-2);border:1.5px solid var(--border);color:var(--text-secondary);padding:8px 14px;font-size:12px;font-weight:500;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.filter-toggle-btn:hover{border-color:var(--gold);color:var(--gold)}
+.active-filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.active-tag{display:inline-flex;align-items:center;gap:5px;background:var(--filter-active);border:1px solid var(--border-gold);color:var(--gold);font-size:11px;padding:4px 10px;border-radius:20px;font-family:'DM Sans',sans-serif;font-weight:500}
+.active-tag-x{cursor:pointer;opacity:0.7;font-size:13px;line-height:1;transition:opacity 0.2s}
+.active-tag-x:hover{opacity:1}
+.sort-right{display:flex;align-items:center;gap:10px}
+.sort-label{font-size:12px;color:var(--text-muted);white-space:nowrap}
+.sort-select{background:var(--bg-2);border:1.5px solid var(--border);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:12px;padding:8px 32px 8px 12px;border-radius:8px;cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236C6A66' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color 0.2s;min-width:160px}
+.sort-select:focus{border-color:var(--gold)}
+.view-btns{display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden}
+.view-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;color:var(--text-muted);transition:all 0.15s}
+.view-btn.active{background:var(--bg-3);color:var(--gold)}
+.view-btn:hover:not(.active){background:var(--bg-3)}
+
+/* MAIN CONTENT */
+.main-content{flex:1;min-width:0;padding:20px 1.5rem}
+
+/* CARD GRID */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:40px}
+.card-grid.list-view{grid-template-columns:1fr}
+
+/* LISTING CARD - GRID */
+.listing-card{background:var(--card-bg);border-radius:12px;border:1.5px solid var(--border);overflow:hidden;cursor:pointer;transition:all 0.25s;position:relative}
+.listing-card:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(0,0,0,0.3);border-color:var(--border-gold)}
+.card-img-wrap{aspect-ratio:3/4;background:var(--bg-3);position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.card-visual{width:70%;aspect-ratio:2.5/3.5;border-radius:5px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;overflow:hidden}
+.card-shine{position:absolute;inset:0;background:linear-gradient(135deg,rgba(201,168,76,0.1) 0%,transparent 45%,rgba(201,168,76,0.05) 100%);pointer-events:none}
+.card-badge{position:absolute;top:10px;left:10px;font-family:'DM Mono',monospace;font-size:10px;padding:3px 9px;border-radius:6px;font-weight:500;z-index:2}
+.badge-psa{background:rgba(60,125,200,0.18);border:1px solid rgba(60,125,200,0.45);color:#7BB4E8}
+.badge-bgs{background:rgba(201,168,76,0.12);border:1px solid var(--border-gold);color:var(--gold)}
+.badge-cgc{background:rgba(76,175,124,0.12);border:1px solid rgba(76,175,124,0.4);color:#6FCF97}
+.badge-raw{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text-muted)}
+.card-grade-badge{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:600;z-index:2}
+.grade-10{background:rgba(201,168,76,0.15);border:1.5px solid var(--gold);color:var(--gold)}
+.grade-9{background:rgba(76,175,124,0.12);border:1.5px solid rgba(76,175,124,0.5);color:#6FCF97}
+.grade-8{background:rgba(60,125,200,0.12);border:1.5px solid rgba(60,125,200,0.4);color:#7BB4E8}
+.grade-7{background:rgba(255,255,255,0.06);border:1.5px solid var(--border);color:var(--text-secondary)}
+.card-wishlist{position:absolute;bottom:10px;right:10px;width:28px;height:28px;border-radius:50%;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;z-index:2;font-size:12px;color:var(--text-muted)}
+.card-wishlist:hover,.card-wishlist.active{border-color:var(--accent-red);color:var(--accent-red);background:rgba(200,75,60,0.1)}
+.card-body{padding:13px 14px}
+.card-game-tag{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:3px;font-weight:500}
+.card-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;line-height:1.2;margin-bottom:2px;color:var(--text-primary)}
+.card-set-info{font-size:11px;color:var(--text-secondary);margin-bottom:10px}
+.card-footer{display:flex;align-items:flex-end;justify-content:space-between}
+.card-price-wrap{}
+.card-price{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:600;color:var(--gold);line-height:1}
+.card-price-usdc{font-size:9px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:2px}
+.card-comp{font-size:10px;color:var(--text-muted);margin-top:1px}
+.card-comp span{color:var(--accent-green)}
+.card-buy-btn{background:var(--gold);border:none;color:#fff;padding:7px 14px;font-size:11px;font-weight:600;border-radius:7px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;white-space:nowrap}
+.card-buy-btn:hover{background:var(--gold-light)}
+
+/* LISTING CARD - LIST VIEW */
+.list-view .listing-card{display:flex;align-items:center;gap:0}
+.list-view .card-img-wrap{width:80px;min-width:80px;aspect-ratio:auto;height:110px;border-radius:10px 0 0 10px;flex-shrink:0}
+.list-view .card-visual{width:75%;aspect-ratio:2.5/3.5}
+.list-view .card-body{flex:1;display:flex;align-items:center;gap:16px;padding:14px 16px;flex-wrap:wrap}
+.list-view .card-info-main{flex:1;min-width:140px}
+.list-view .card-set-info{margin-bottom:0}
+.list-view .card-footer{flex-direction:row;align-items:center;gap:16px;margin-left:auto}
+.list-view .card-comp{display:none}
+
+/* CARD VISUALS */
+.v-poke{background:linear-gradient(145deg,#1a3a5c,#0d2035);border:2px solid rgba(255,215,0,0.2)}
+.v-poke-purple{background:linear-gradient(145deg,#2a1a3e,#1a0d2a);border:2px solid rgba(180,100,255,0.22)}
+.v-poke-water{background:linear-gradient(145deg,#1a2a3a,#0d1a2a);border:2px solid rgba(100,180,255,0.22)}
+.v-poke-fire{background:linear-gradient(145deg,#3a1a0d,#2a0d07);border:2px solid rgba(255,120,40,0.22)}
+.v-mtg-green{background:linear-gradient(160deg,#1c2a1c,#0d1a0d);border:2px solid rgba(76,175,124,0.25)}
+.v-mtg-blue{background:linear-gradient(160deg,#1a1c2a,#0d0f1a);border:2px solid rgba(60,125,200,0.25)}
+.v-mtg-black{background:linear-gradient(160deg,#1a1a1a,#0d0d0d);border:2px solid rgba(150,150,150,0.2)}
+.v-mtg-purple{background:linear-gradient(160deg,#2a1c2a,#1a0d1a);border:2px solid rgba(180,100,255,0.25)}
+.v-op-red{background:linear-gradient(160deg,#2a1c1c,#1a0d0d);border:2px solid rgba(200,75,60,0.25)}
+.v-op-blue{background:linear-gradient(160deg,#1a1c2a,#0d0f1a);border:2px solid rgba(60,125,200,0.25)}
+.v-sport{background:linear-gradient(145deg,#1a2a1a,#0d1a0d);border:2px solid rgba(76,175,124,0.2)}
+.card-icon{font-size:22px;opacity:0.75}
+.card-bars-mini{display:flex;flex-direction:column;gap:3px;width:60%}
+.bar-mini{height:2.5px;border-radius:2px}
+
+/* PAGINATION */
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:20px 0 40px}
+.page-btn{width:36px;height:36px;border:1.5px solid var(--border);border-radius:8px;background:transparent;color:var(--text-secondary);font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-weight:500}
+.page-btn:hover{border-color:var(--gold);color:var(--gold)}
+.page-btn.active{background:var(--gold);border-color:var(--gold);color:#fff}
+.page-btn.arrow{font-size:14px}
+.page-ellipsis{color:var(--text-muted);font-family:'DM Mono',monospace;font-size:12px;padding:0 4px}
+
+/* MOBILE FILTER OVERLAY */
+.filter-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;backdrop-filter:blur(4px)}
+.filter-overlay.open{display:block}
+.filter-drawer{position:fixed;left:0;top:0;bottom:0;width:min(320px,90vw);background:var(--sidebar-bg);border-right:0.5px solid var(--border);z-index:301;transform:translateX(-100%);transition:transform 0.3s ease;overflow-y:auto;padding-top:64px}
+.filter-drawer.open{transform:translateX(0)}
+.filter-drawer-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border);position:sticky;top:64px;background:var(--sidebar-bg);z-index:1}
+.filter-drawer-title{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-primary);font-weight:500}
+.filter-close{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:16px;transition:all 0.2s}
+.filter-close:hover{border-color:var(--gold);color:var(--gold)}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:80px 20px;color:var(--text-muted)}
+.empty-icon{font-size:48px;margin-bottom:16px;opacity:0.4}
+.empty-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;margin-bottom:8px;color:var(--text-secondary)}
+.empty-sub{font-size:14px;line-height:1.6}
+
+/* RECENTLY VIEWED */
+.section-divider{border-top:0.5px solid var(--border);margin:0 0 32px}
+.section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;font-weight:500}
+
+/* RESPONSIVE */
+@media(max-width:1024px){
+  .sidebar{display:none}
+  .filter-toggle-btn{display:flex}
+  .nav-center{max-width:320px}
+}
+@media(max-width:768px){
+  .nav-center{display:none}
+  .sort-bar{padding:12px 1rem}
+  .main-content{padding:16px 1rem}
+  .card-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .sort-label{display:none}
+  .sort-select{min-width:130px}
+  .results-count{font-size:11px}
+  .active-filters{display:none}
+}
+@media(max-width:480px){
+  nav{padding:0 1rem}
+  .nav-logo{font-size:16px}
+  .btn-ghost{display:none}
+  .card-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .card-name{font-size:15px}
+  .card-price{font-size:18px}
+  .sort-bar{gap:8px}
+  .view-btns{display:none}
+}
+
+/* ===== LIGHT MODE TEAL OVERRIDES ===== */
+[data-theme="light"] .btn-gold{background:#0D6E6E;color:#fff}
+[data-theme="light"] .btn-gold:hover{background:#0A5A5A}
+[data-theme="light"] .btn-ghost:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .btn-primary:hover,[data-theme="light"] .btn-primary{background:#0D6E6E}
+[data-theme="light"] .theme-toggle:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .nav-search:focus-within{border-color:#0D6E6E}
+[data-theme="light"] .search-btn{background:#0D6E6E}
+[data-theme="light"] .search-btn:hover{background:#0A5A5A}
+[data-theme="light"] .search-filter:hover{color:#0D6E6E}
+[data-theme="light"] .filter-item.active{background:rgba(13,110,110,0.08);border-color:rgba(13,110,110,0.3)}
+[data-theme="light"] .filter-item.active .filter-check{background:#0D6E6E;border-color:#0D6E6E}
+[data-theme="light"] .filter-item.active .filter-label{color:#0D6E6E}
+[data-theme="light"] .filter-item:hover{background:rgba(13,110,110,0.05)}
+[data-theme="light"] .grade-btn.active{background:rgba(13,110,110,0.08);border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .grade-btn:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .price-input:focus{border-color:#0D6E6E}
+[data-theme="light"] .sidebar-clear{color:#0D6E6E}
+[data-theme="light"] .sort-select:focus{border-color:#0D6E6E}
+[data-theme="light"] .view-btn.active{color:#0D6E6E}
+[data-theme="light"] .filter-toggle-btn:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .page-btn.active{background:#0D6E6E;border-color:#0D6E6E;color:#fff}
+[data-theme="light"] .page-btn:hover:not(.active){border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .active-tag{background:rgba(13,110,110,0.1);border-color:rgba(13,110,110,0.3);color:#0D6E6E}
+[data-theme="light"] .listing-card:hover{border-color:rgba(13,110,110,0.4)}
+[data-theme="light"] .card-buy-btn{background:#0D6E6E}
+[data-theme="light"] .card-buy-btn:hover{background:#0A5A5A}
+[data-theme="light"] .card-wishlist:hover,[data-theme="light"] .card-wishlist.active{border-color:#B83C2C;color:#B83C2C;background:rgba(184,60,44,0.08)}
+[data-theme="light"] .badge-psa{background:rgba(26,94,160,0.1);border-color:rgba(26,94,160,0.35);color:#1A5EA0}
+[data-theme="light"] .badge-bgs{background:rgba(13,110,110,0.1);border-color:rgba(13,110,110,0.3);color:#0D6E6E}
+[data-theme="light"] .badge-cgc{background:rgba(26,107,58,0.1);border-color:rgba(26,107,58,0.3);color:#1A6B3A}
+[data-theme="light"] .card-comp span{color:#1A6B3A}
+/* Gold stays on prices only */
+[data-theme="light"] .card-price{color:var(--gold)}
+[data-theme="light"] .results-count span{color:var(--text-primary)}
+[data-theme="light"] .filter-close:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .price-slider::-webkit-slider-thumb{background:#0D6E6E}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"></div>
+    <span>TROVE</span>
+  </a>
+  <div class="nav-center">
+    <div class="nav-search">
+      <span class="nav-search-icon">⌕</span>
+      <input type="text" placeholder="Search cards, sets, grades...">
+    </div>
+  </div>
+  <div class="nav-actions">
+    <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+    <button class="btn-ghost">Sign In</button>
+    <button class="btn-gold">List a Card</button>
+  </div>
+</nav>
+
+<!-- BREADCRUMB -->
+<div class="breadcrumb">
+  <a href="index.html">Home</a>
+  <span class="breadcrumb-sep">›</span>
+  <span style="color:var(--text-secondary)">Marketplace</span>
+  <span class="breadcrumb-sep">·</span>
+  <span>247 listings</span>
+</div>
+
+<!-- MOBILE FILTER OVERLAY -->
+<div class="filter-overlay" id="filterOverlay">
+  <div class="filter-drawer" id="filterDrawer">
+    <div class="filter-drawer-header">
+      <span class="filter-drawer-title">Filters</span>
+      <button class="filter-close" id="filterClose">✕</button>
+    </div>
+    <!-- Sidebar content duplicated for mobile drawer -->
+    <div id="mobileFilters"></div>
+  </div>
+</div>
+
+<!-- PAGE LAYOUT -->
+<div class="page-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="desktopSidebar">
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">
+        Game
+        <span class="sidebar-clear" onclick="clearSection(this)">Clear</span>
+      </div>
+      <div class="filter-list">
+        <label class="filter-item active" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Pokémon</span>
+          <span class="filter-count">142</span>
+        </label>
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Magic: The Gathering</span>
+          <span class="filter-count">68</span>
+        </label>
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">One Piece</span>
+          <span class="filter-count">24</span>
+        </label>
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Yu-Gi-Oh</span>
+          <span class="filter-count">8</span>
+        </label>
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Sports Cards</span>
+          <span class="filter-count">5</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">
+        Grading Company
+        <span class="sidebar-clear" onclick="clearSection(this)">Clear</span>
+      </div>
+      <div class="filter-list">
+        <label class="filter-item active" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">PSA</span>
+          <span class="filter-count">168</span>
+        </label>
+        <label class="filter-item active" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">BGS / Beckett</span>
+          <span class="filter-count">54</span>
+        </label>
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">CGC</span>
+          <span class="filter-count">18</span>
+        </label>
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Raw (Ungraded)</span>
+          <span class="filter-count">7</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Grade</div>
+      <div class="grade-grid">
+        <button class="grade-btn active" onclick="toggleGrade(this)">10</button>
+        <button class="grade-btn active" onclick="toggleGrade(this)">9.5</button>
+        <button class="grade-btn active" onclick="toggleGrade(this)">9</button>
+        <button class="grade-btn" onclick="toggleGrade(this)">8.5</button>
+        <button class="grade-btn" onclick="toggleGrade(this)">8</button>
+        <button class="grade-btn" onclick="toggleGrade(this)">7</button>
+        <button class="grade-btn" onclick="toggleGrade(this)">6</button>
+        <button class="grade-btn" onclick="toggleGrade(this)">Raw</button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Price Range</div>
+      <div class="price-inputs">
+        <div class="price-input-wrap">
+          <span class="price-input-prefix">$</span>
+          <input class="price-input" type="number" placeholder="100" min="100">
+        </div>
+        <div class="price-input-wrap">
+          <span class="price-input-prefix">$</span>
+          <input class="price-input" type="number" placeholder="50,000">
+        </div>
+      </div>
+      <input type="range" class="price-slider" min="100" max="50000" value="10000">
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">
+        Set / Era
+        <span class="sidebar-clear" onclick="clearSection(this)">Clear</span>
+      </div>
+      <div class="filter-list">
+        <label class="filter-item active" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Base Set / Shadowless</span>
+          <span class="filter-count">38</span>
+        </label>
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Alpha / Beta</span>
+          <span class="filter-count">12</span>
+        </label>
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Unlimited Edition</span>
+          <span class="filter-count">22</span>
+        </label>
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Promos &amp; Trophies</span>
+          <span class="filter-count">16</span>
+        </label>
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Modern (2020+)</span>
+          <span class="filter-count">89</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Seller Tier</div>
+      <div class="filter-list">
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Elite Only</span>
+          <span class="filter-count">44</span>
+        </label>
+        <label class="filter-item" onclick="toggleFilter(this)">
+          <div class="filter-check"><svg class="filter-check-mark" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="filter-label">Pro &amp; Above</span>
+          <span class="filter-count">112</span>
+        </label>
+      </div>
+    </div>
+
+    <div style="padding:20px">
+      <button class="btn-gold" style="width:100%;padding:12px;font-size:13px;border-radius:10px">Apply Filters</button>
+      <button class="btn-ghost" style="width:100%;padding:12px;font-size:13px;border-radius:10px;margin-top:8px">Reset All</button>
+    </div>
+
+  </aside>
+
+  <!-- MAIN -->
+  <div style="flex:1;min-width:0">
+
+    <!-- SORT BAR -->
+    <div class="sort-bar">
+      <div class="sort-left">
+        <button class="filter-toggle-btn" id="filterToggleBtn">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="1" y1="3" x2="13" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="7" x2="11" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="11" x2="9" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Filters
+        </button>
+        <div class="results-count"><span>247</span> listings</div>
+        <div class="active-filters">
+          <span class="active-tag">Pokémon <span class="active-tag-x">×</span></span>
+          <span class="active-tag">PSA <span class="active-tag-x">×</span></span>
+          <span class="active-tag">BGS <span class="active-tag-x">×</span></span>
+          <span class="active-tag">PSA 9–10 <span class="active-tag-x">×</span></span>
+        </div>
+      </div>
+      <div class="sort-right">
+        <span class="sort-label">Sort by</span>
+        <select class="sort-select" id="sortSelect">
+          <option value="recent">Most Recent</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="grade-desc">Grade: High to Low</option>
+          <option value="ending">Ending Soon</option>
+          <option value="popular">Most Viewed</option>
+        </select>
+        <div class="view-btns">
+          <button class="view-btn active" id="gridViewBtn" title="Grid view">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>
+          </button>
+          <button class="view-btn" id="listViewBtn" title="List view">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="1" y1="3" x2="13" y2="3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="1" y1="11" x2="13" y2="11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD GRID -->
+    <div class="main-content">
+      <div class="card-grid" id="cardGrid">
+
+        <!-- CARD 1 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-poke"><div class="card-icon">⚡</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(255,215,0,0.5);width:100%"></div><div class="bar-mini" style="background:rgba(255,215,0,0.25);width:70%"></div><div class="bar-mini" style="background:rgba(255,215,0,0.12);width:50%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-psa">PSA</span>
+            <div class="card-grade-badge grade-10">10</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">Pokémon · Base Set</div>
+            <div class="card-name">Charizard Holo</div>
+            <div class="card-set-info">1999 Shadowless · #4/102</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$36,000</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$34,200</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-poke"><div class="card-icon">⚡</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(255,215,0,0.5);width:100%"></div><div class="bar-mini" style="background:rgba(255,215,0,0.25);width:70%"></div><div class="bar-mini" style="background:rgba(255,215,0,0.12);width:50%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-psa">PSA</span>
+            <div class="card-grade-badge grade-9" style="font-size:12px">9</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">Pokémon · Base Set</div>
+            <div class="card-name">Charizard Holo</div>
+            <div class="card-set-info">1999 Shadowless · #4/102</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$487</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$475</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 3 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-mtg-green"><div class="card-icon">✦</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(76,175,124,0.55);width:100%"></div><div class="bar-mini" style="background:rgba(76,175,124,0.28);width:65%"></div><div class="bar-mini" style="background:rgba(76,175,124,0.14);width:80%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-bgs">BGS</span>
+            <div class="card-grade-badge grade-10" style="font-size:11px">9.5</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">MTG · Alpha</div>
+            <div class="card-name">Black Lotus</div>
+            <div class="card-set-info">1993 Limited Edition · Rare</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$28,400</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$29,100</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 4 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-poke-purple"><div class="card-icon">★</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(180,100,255,0.5);width:100%"></div><div class="bar-mini" style="background:rgba(180,100,255,0.25);width:75%"></div><div class="bar-mini" style="background:rgba(180,100,255,0.12);width:50%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-psa">PSA</span>
+            <div class="card-grade-badge grade-7">7</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">Pokémon · Promo</div>
+            <div class="card-name">Pikachu Illustrator</div>
+            <div class="card-set-info">1998 CoroCoro · Trophy Card</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$4,200</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$3,980</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 5 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-op-red"><div class="card-icon">☠</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(200,75,60,0.55);width:100%"></div><div class="bar-mini" style="background:rgba(200,75,60,0.28);width:75%"></div><div class="bar-mini" style="background:rgba(200,75,60,0.14);width:45%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-psa">PSA</span>
+            <div class="card-grade-badge grade-10">10</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">One Piece · OP-01</div>
+            <div class="card-name">Monkey D. Luffy</div>
+            <div class="card-set-info">Romance Dawn · SEC Alt Art</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$890</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$842</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 6 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-mtg-purple"><div class="card-icon">⬟</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(180,100,255,0.5);width:100%"></div><div class="bar-mini" style="background:rgba(180,100,255,0.25);width:55%"></div><div class="bar-mini" style="background:rgba(180,100,255,0.12);width:75%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-bgs">BGS</span>
+            <div class="card-grade-badge grade-9" style="font-size:11px">9.0</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">MTG · Unlimited</div>
+            <div class="card-name">Mox Sapphire</div>
+            <div class="card-set-info">1993 Unlimited Edition · Rare</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$6,800</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$6,950</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 7 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-poke-water"><div class="card-icon">💧</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(100,180,255,0.5);width:100%"></div><div class="bar-mini" style="background:rgba(100,180,255,0.25);width:80%"></div><div class="bar-mini" style="background:rgba(100,180,255,0.12);width:55%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-psa">PSA</span>
+            <div class="card-grade-badge grade-10">10</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">Pokémon · Base Set</div>
+            <div class="card-name">Blastoise Holo</div>
+            <div class="card-set-info">1999 Base Set · #2/102</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$3,800</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$3,580</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 8 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-mtg-blue"><div class="card-icon">◈</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(60,125,200,0.55);width:100%"></div><div class="bar-mini" style="background:rgba(60,125,200,0.28);width:60%"></div><div class="bar-mini" style="background:rgba(60,125,200,0.14);width:80%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-psa">PSA</span>
+            <div class="card-grade-badge grade-9" style="font-size:11px">9.5</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">MTG · Alpha</div>
+            <div class="card-name">Ancestral Recall</div>
+            <div class="card-set-info">1993 Alpha · Power Nine</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$9,200</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$8,900</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 9 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-poke-fire"><div class="card-icon">🔥</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(255,120,40,0.55);width:100%"></div><div class="bar-mini" style="background:rgba(255,120,40,0.28);width:65%"></div><div class="bar-mini" style="background:rgba(255,120,40,0.14);width:45%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-psa">PSA</span>
+            <div class="card-grade-badge grade-9" style="font-size:11px">9</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">Pokémon · Base Set</div>
+            <div class="card-name">Charizard Holo</div>
+            <div class="card-set-info">1999 1st Edition · #4/102</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$12,500</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$11,800</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 10 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-mtg-black"><div class="card-icon">⚔</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(150,150,150,0.4);width:100%"></div><div class="bar-mini" style="background:rgba(150,150,150,0.2);width:70%"></div><div class="bar-mini" style="background:rgba(150,150,150,0.1);width:55%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-bgs">BGS</span>
+            <div class="card-grade-badge grade-8" style="font-size:11px">8.5</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">MTG · Unlimited</div>
+            <div class="card-name">Mox Ruby</div>
+            <div class="card-set-info">1993 Unlimited Edition · Rare</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$4,100</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$4,250</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 11 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-op-blue"><div class="card-icon">⚓</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(60,125,200,0.55);width:100%"></div><div class="bar-mini" style="background:rgba(60,125,200,0.28);width:80%"></div><div class="bar-mini" style="background:rgba(60,125,200,0.14);width:55%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-cgc">CGC</span>
+            <div class="card-grade-badge grade-9" style="font-size:11px">9.5</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">One Piece · OP-05</div>
+            <div class="card-name">Roronoa Zoro</div>
+            <div class="card-set-info">Awakening of the New Era · SR</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$340</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$310</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 12 -->
+        <div class="listing-card">
+          <div class="card-img-wrap">
+            <div class="card-visual v-sport"><div class="card-icon">◉</div><div class="card-bars-mini"><div class="bar-mini" style="background:rgba(76,175,124,0.5);width:100%"></div><div class="bar-mini" style="background:rgba(76,175,124,0.25);width:70%"></div><div class="bar-mini" style="background:rgba(76,175,124,0.12);width:85%"></div></div></div>
+            <div class="card-shine"></div>
+            <span class="card-badge badge-psa">PSA</span>
+            <div class="card-grade-badge grade-10">10</div>
+            <div class="card-wishlist">♡</div>
+          </div>
+          <div class="card-body">
+            <div class="card-game-tag">Sports · Baseball</div>
+            <div class="card-name">Mickey Mantle RC</div>
+            <div class="card-set-info">1952 Topps · #311</div>
+            <div class="card-footer">
+              <div class="card-price-wrap">
+                <div class="card-price">$8,400</div>
+                <div class="card-price-usdc">USDC · Escrow protected</div>
+                <div class="card-comp">30d avg: <span>$8,100</span></div>
+              </div>
+              <button class="card-buy-btn">Buy Now</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /card-grid -->
+
+      <!-- PAGINATION -->
+      <div class="pagination">
+        <button class="page-btn arrow">‹</button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">2</button>
+        <button class="page-btn">3</button>
+        <span class="page-ellipsis">…</span>
+        <button class="page-btn">21</button>
+        <button class="page-btn arrow">›</button>
+      </div>
+
+    </div><!-- /main-content -->
+  </div><!-- /flex wrapper -->
+</div><!-- /page-layout -->
+
+<script>
+// THEME
+const toggle=document.getElementById('themeToggle');
+const html=document.documentElement;
+const saved=localStorage.getItem('trove-theme')||'dark';
+html.setAttribute('data-theme',saved);
+toggle.textContent=saved==='dark'?'🌙':'☀️';
+toggle.addEventListener('click',()=>{
+  const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  toggle.textContent=next==='dark'?'🌙':'☀️';
+  localStorage.setItem('trove-theme',next);
+});
+
+// FILTER TOGGLE
+function toggleFilter(el){
+  el.classList.toggle('active');
+}
+function toggleGrade(el){
+  el.classList.toggle('active');
+}
+function clearSection(el){
+  const section=el.closest('.sidebar-section');
+  section.querySelectorAll('.filter-item').forEach(i=>i.classList.remove('active'));
+  section.querySelectorAll('.grade-btn').forEach(b=>b.classList.remove('active'));
+}
+
+// MOBILE FILTER DRAWER
+const filterToggleBtn=document.getElementById('filterToggleBtn');
+const filterOverlay=document.getElementById('filterOverlay');
+const filterDrawer=document.getElementById('filterDrawer');
+const filterClose=document.getElementById('filterClose');
+const mobileFilters=document.getElementById('mobileFilters');
+
+filterToggleBtn.addEventListener('click',()=>{
+  // Clone desktop sidebar content into mobile drawer
+  const desktopSidebar=document.getElementById('desktopSidebar');
+  mobileFilters.innerHTML=desktopSidebar.innerHTML;
+  // Re-attach events
+  mobileFilters.querySelectorAll('.filter-item').forEach(el=>{
+    el.onclick=()=>toggleFilter(el);
+  });
+  mobileFilters.querySelectorAll('.grade-btn').forEach(el=>{
+    el.onclick=()=>toggleGrade(el);
+  });
+  filterOverlay.classList.add('open');
+  filterDrawer.classList.add('open');
+  document.body.style.overflow='hidden';
+});
+
+function closeFilter(){
+  filterOverlay.classList.remove('open');
+  filterDrawer.classList.remove('open');
+  document.body.style.overflow='';
+}
+filterClose.addEventListener('click',closeFilter);
+filterOverlay.addEventListener('click',(e)=>{
+  if(e.target===filterOverlay) closeFilter();
+});
+
+// VIEW TOGGLE
+const gridViewBtn=document.getElementById('gridViewBtn');
+const listViewBtn=document.getElementById('listViewBtn');
+const cardGrid=document.getElementById('cardGrid');
+
+gridViewBtn.addEventListener('click',()=>{
+  cardGrid.classList.remove('list-view');
+  gridViewBtn.classList.add('active');
+  listViewBtn.classList.remove('active');
+});
+listViewBtn.addEventListener('click',()=>{
+  cardGrid.classList.add('list-view');
+  listViewBtn.classList.add('active');
+  gridViewBtn.classList.remove('active');
+});
+
+// WISHLIST TOGGLE
+document.querySelectorAll('.card-wishlist').forEach(btn=>{
+  btn.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    btn.classList.toggle('active');
+    btn.textContent=btn.classList.contains('active')?'♥':'♡';
+  });
+});
+
+// PAGINATION
+document.querySelectorAll('.page-btn:not(.arrow)').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.page-btn:not(.arrow)').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ACTIVE TAGS dismiss
+document.querySelectorAll('.active-tag-x').forEach(x=>{
+  x.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    x.closest('.active-tag').remove();
+  });
+});
+</script>
+</body>
+</html>

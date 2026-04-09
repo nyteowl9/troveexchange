@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seller Dashboard — Trove Exchange</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+[data-theme="dark"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;
+  --teal:#C9A84C;--teal-hover:#E8C97A;--teal-bg:rgba(201,168,76,0.1);--teal-border:rgba(201,168,76,0.28);
+  --bg:#0A0A0B;--bg-2:#111114;--bg-3:#18181C;--bg-4:#222228;--bg-5:#2A2A32;
+  --text-primary:#F0EDE6;--text-secondary:#B8B4AC;--text-muted:#6C6A66;
+  --accent-green:#4CAF7C;--accent-red:#C84B3C;--accent-blue:#3C7DC8;--accent-amber:#E8A838;
+  --border:#2A2A32;--border-gold:rgba(201,168,76,0.28);
+  --nav-bg:rgba(10,10,11,0.94);--sidebar-bg:#0E0E11;
+  --card-bg:#111114;--input-bg:#18181C;
+}
+[data-theme="light"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;
+  --teal:#0D6E6E;--teal-hover:#0A5A5A;--teal-bg:rgba(13,110,110,0.08);--teal-border:rgba(13,110,110,0.28);
+  --bg:#F5F2EC;--bg-2:#EDEAE3;--bg-3:#E4E0D8;--bg-4:#D8D4CC;--bg-5:#CCC8C0;
+  --text-primary:#1A1814;--text-secondary:#4A4640;--text-muted:#8A8680;
+  --accent-green:#1A6B3A;--accent-red:#B83C2C;--accent-blue:#1A5EA0;--accent-amber:#9B6E1A;
+  --border:#C8C4BC;--border-gold:rgba(13,110,110,0.25);
+  --nav-bg:rgba(245,242,236,0.96);--sidebar-bg:#E4E0D8;
+  --card-bg:#EDEAE3;--input-bg:#E4E0D8;
+}
+
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-weight:400;overflow-x:hidden;line-height:1.6;transition:background 0.3s,color 0.3s}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);backdrop-filter:blur(24px);border-bottom:0.5px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;letter-spacing:0.1em;color:var(--gold);display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-logo-icon{width:22px;height:22px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-user{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.2s}
+.nav-user:hover{border-color:var(--teal-border)}
+.nav-avatar{width:28px;height:28px;border-radius:50%;background:var(--teal-bg);border:1.5px solid var(--teal-border);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:600;color:var(--teal)}
+.nav-username{font-size:12px;font-weight:500;color:var(--text-secondary)}
+.nav-badge{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:20px;background:var(--teal-bg);border:1px solid var(--teal-border);color:var(--teal);font-weight:500}
+.theme-toggle{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:14px;transition:all 0.2s}
+.theme-toggle:hover{border-color:var(--teal);color:var(--teal)}
+.btn-primary{background:var(--teal);border:none;color:#fff;padding:8px 18px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s;white-space:nowrap}
+.btn-primary:hover{background:var(--teal-hover)}
+[data-theme="dark"] .btn-primary{color:#0A0A0B}
+
+/* LAYOUT */
+.layout{display:flex;padding-top:64px;min-height:100vh}
+
+/* LEFT SIDEBAR NAV */
+.dash-sidebar{width:220px;flex-shrink:0;background:var(--sidebar-bg);border-right:0.5px solid var(--border);position:fixed;top:64px;left:0;height:calc(100vh - 64px);overflow-y:auto;padding:20px 0;display:flex;flex-direction:column}
+.dash-nav-section{margin-bottom:4px}
+.dash-nav-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);padding:0 16px;margin-bottom:4px;margin-top:16px;font-weight:500}
+.dash-nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;transition:all 0.15s;border-left:2px solid transparent;text-decoration:none;color:var(--text-secondary);font-size:13px;font-weight:500}
+.dash-nav-item:hover{color:var(--text-primary);background:var(--bg-3);border-left-color:var(--border)}
+.dash-nav-item.active{color:var(--teal);background:var(--teal-bg);border-left-color:var(--teal)}
+.dash-nav-icon{width:16px;text-align:center;font-size:14px;flex-shrink:0}
+.dash-nav-badge{margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:10px;background:var(--accent-amber);color:#fff;font-weight:600}
+.dash-nav-badge.red{background:var(--accent-red)}
+.dash-sidebar-bottom{margin-top:auto;padding:16px;border-top:0.5px solid var(--border)}
+.seller-tier-card{background:var(--teal-bg);border:1px solid var(--teal-border);border-radius:10px;padding:12px}
+.seller-tier-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:4px;font-weight:500}
+.seller-tier-name{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:400;color:var(--text-primary)}
+.seller-tier-progress{height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden}
+.seller-tier-fill{height:100%;background:var(--teal);border-radius:2px;width:65%}
+.seller-tier-sub{font-size:10px;color:var(--text-muted);margin-top:4px}
+
+/* MAIN */
+.dash-main{margin-left:220px;flex:1;padding:28px 24px 60px;min-width:0}
+
+/* PAGE HEADER */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--text-primary)}
+.page-title em{font-style:italic;color:var(--gold)}
+.page-subtitle{font-size:13px;color:var(--text-muted);margin-top:2px}
+.page-actions{display:flex;gap:8px;flex-shrink:0}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary);padding:8px 16px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;transition:all 0.2s;border-radius:8px}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal)}
+
+/* METRIC CARDS */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.metric-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:18px 20px;transition:border-color 0.2s}
+.metric-card:hover{border-color:var(--teal-border)}
+.metric-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;font-weight:500}
+.metric-value{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;line-height:1;color:var(--text-primary)}
+.metric-value.gold{color:var(--gold)}
+.metric-value.teal{color:var(--teal)}
+.metric-value.green{color:var(--accent-green)}
+.metric-change{font-family:'DM Mono',monospace;font-size:10px;margin-top:6px;display:flex;align-items:center;gap:4px}
+.metric-change.up{color:var(--accent-green)}
+.metric-change.dn{color:var(--accent-red)}
+.metric-change.neutral{color:var(--text-muted)}
+
+/* SECTION */
+.dash-section{margin-bottom:28px}
+.dash-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.dash-section-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300;color:var(--text-primary)}
+.dash-section-title em{font-style:italic;color:var(--gold)}
+.dash-section-link{font-size:11px;color:var(--teal);cursor:pointer;font-weight:500;letter-spacing:0.04em;transition:opacity 0.2s;text-decoration:none}
+.dash-section-link:hover{opacity:0.7}
+.dash-section-tabs{display:flex;gap:4px}
+.dash-tab{font-family:'DM Mono',monospace;font-size:11px;padding:5px 12px;border-radius:6px;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all 0.15s;font-weight:500}
+.dash-tab.active{background:var(--teal-bg);border-color:var(--teal-border);color:var(--teal)}
+.dash-tab:hover:not(.active){border-color:var(--teal-border);color:var(--teal)}
+
+/* ORDERS TABLE */
+.orders-table{width:100%;border-collapse:collapse;background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;overflow:hidden}
+.orders-table thead tr{border-bottom:0.5px solid var(--border);background:var(--bg-3)}
+.orders-table th{text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);padding:12px 16px;font-weight:500}
+.orders-table tbody tr{border-bottom:0.5px solid var(--border);transition:background 0.15s;cursor:pointer}
+.orders-table tbody tr:last-child{border-bottom:none}
+.orders-table tbody tr:hover{background:var(--bg-3)}
+.orders-table td{padding:14px 16px;font-size:13px;vertical-align:middle}
+.order-card-info{display:flex;align-items:center;gap:10px}
+.order-swatch{width:28px;height:38px;border-radius:3px;flex-shrink:0}
+.swatch-poke{background:linear-gradient(135deg,#1a3a5c,#0d2035);border:1px solid rgba(255,215,0,0.2)}
+.swatch-mtg{background:linear-gradient(135deg,#1c2a1c,#0d1a0d);border:1px solid rgba(76,175,124,0.2)}
+.swatch-op{background:linear-gradient(135deg,#2a1c1c,#1a0d0d);border:1px solid rgba(200,75,60,0.2)}
+.order-name{font-family:'Cormorant Garamond',serif;font-size:15px;line-height:1.2;color:var(--text-primary)}
+.order-meta{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:1px}
+.status-pill{font-family:'DM Mono',monospace;font-size:10px;padding:3px 10px;border-radius:20px;font-weight:500;white-space:nowrap}
+.status-awaiting{background:rgba(232,168,56,0.12);border:1px solid rgba(232,168,56,0.3);color:var(--accent-amber)}
+.status-shipped{background:rgba(60,125,200,0.12);border:1px solid rgba(60,125,200,0.3);color:var(--accent-blue)}
+.status-auth{background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.28);color:var(--gold)}
+.status-delivered{background:rgba(76,175,124,0.12);border:1px solid rgba(76,175,124,0.3);color:var(--accent-green)}
+.status-complete{background:rgba(76,175,124,0.08);border:1px solid rgba(76,175,124,0.2);color:var(--accent-green)}
+.status-dispute{background:rgba(200,75,60,0.12);border:1px solid rgba(200,75,60,0.3);color:var(--accent-red)}
+.order-price{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--gold)}
+.order-net{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:1px}
+.order-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+.order-action-btn{background:var(--teal-bg);border:1px solid var(--teal-border);color:var(--teal);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:6px 12px;border-radius:7px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+.order-action-btn:hover{background:var(--teal);color:#fff}
+[data-theme="dark"] .order-action-btn:hover{color:#0A0A0B}
+.order-action-btn.label{background:rgba(60,125,200,0.1);border-color:rgba(60,125,200,0.3);color:var(--accent-blue)}
+.order-action-btn.label:hover{background:var(--accent-blue);color:#fff}
+.order-action-btn.track{background:rgba(201,168,76,0.1);border-color:rgba(201,168,76,0.28);color:var(--gold)}
+.order-action-btn.track:hover{background:var(--gold);color:#0A0A0B}
+
+/* TRACKING PROGRESS */
+.tracking-mini{display:flex;align-items:center;gap:0;margin-top:2px}
+.track-step{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0}
+.track-step.done{background:var(--accent-green)}
+.track-step.active{background:var(--gold)}
+.track-line{flex:1;height:1px;background:var(--border)}
+.track-line.done{background:var(--accent-green)}
+
+/* LISTINGS GRID */
+.listings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.listing-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:all 0.2s}
+.listing-card:hover{border-color:var(--teal-border);transform:translateY(-2px)}
+.listing-card-img{aspect-ratio:3/4;background:var(--bg-3);position:relative;display:flex;align-items:center;justify-content:center}
+.listing-card-visual{width:65%;aspect-ratio:2.5/3.5;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:22px;opacity:0.7}
+.listing-card-status{position:absolute;top:8px;right:8px}
+.listing-card-body{padding:12px 14px}
+.listing-card-name{font-family:'Cormorant Garamond',serif;font-size:16px;line-height:1.2;margin-bottom:2px;color:var(--text-primary)}
+.listing-card-meta{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-bottom:8px}
+.listing-card-footer{display:flex;align-items:center;justify-content:space-between}
+.listing-card-price{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold)}
+.listing-card-views{font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:3px}
+.listing-card-actions{display:flex;gap:6px;margin-top:10px}
+.lc-btn{flex:1;background:var(--bg-3);border:1px solid var(--border);color:var(--text-secondary);font-size:11px;font-weight:500;padding:6px 8px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;text-align:center}
+.lc-btn:hover{border-color:var(--teal-border);color:var(--teal)}
+.lc-btn.danger:hover{border-color:rgba(200,75,60,0.4);color:var(--accent-red)}
+
+/* BOND WALLET */
+.bond-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bond-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:20px}
+.bond-card.highlight{border-color:var(--teal-border);background:var(--teal-bg)}
+.bond-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;font-weight:500}
+.bond-value{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;line-height:1;color:var(--text-primary)}
+.bond-value.gold{color:var(--gold)}
+.bond-value.teal{color:var(--teal)}
+.bond-sub{font-size:11px;color:var(--text-muted);margin-top:6px}
+.bond-history{margin-top:16px;display:flex;flex-direction:column;gap:0}
+.bond-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid var(--border);font-size:12px}
+.bond-row:last-child{border-bottom:none}
+.bond-row-label{color:var(--text-secondary)}
+.bond-row-order{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+.bond-row-amount{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600}
+.bond-row-amount.locked{color:var(--accent-amber)}
+.bond-row-amount.returned{color:var(--accent-green)}
+.bond-row-status{font-family:'DM Mono',monospace;font-size:9px;padding:2px 8px;border-radius:10px}
+.bond-locked-pill{background:rgba(232,168,56,0.12);border:1px solid rgba(232,168,56,0.3);color:var(--accent-amber)}
+.bond-returned-pill{background:rgba(76,175,124,0.1);border:1px solid rgba(76,175,124,0.25);color:var(--accent-green)}
+
+/* NEW LISTING FORM */
+.form-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:24px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);font-weight:500}
+.form-input{background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-primary);outline:none;transition:border-color 0.2s;width:100%}
+.form-input:focus{border-color:var(--teal)}
+.form-input::placeholder{color:var(--text-muted)}
+.form-select{background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-primary);outline:none;transition:border-color 0.2s;width:100%;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236C6A66' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.form-select:focus{border-color:var(--teal)}
+.form-textarea{background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-primary);outline:none;transition:border-color 0.2s;width:100%;resize:vertical;min-height:80px;line-height:1.6}
+.form-textarea:focus{border-color:var(--teal)}
+.form-textarea::placeholder{color:var(--text-muted)}
+
+/* PHOTO UPLOAD */
+.photo-upload{border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--input-bg)}
+.photo-upload:hover{border-color:var(--teal);background:var(--teal-bg)}
+.photo-upload-icon{font-size:28px;margin-bottom:8px;opacity:0.5}
+.photo-upload-text{font-size:13px;color:var(--text-secondary)}
+.photo-upload-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+.photo-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.photo-thumb{width:56px;height:56px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg-3);display:flex;align-items:center;justify-content:center;font-size:20px;position:relative;cursor:pointer}
+.photo-thumb-x{position:absolute;top:-6px;right:-6px;width:16px;height:16px;border-radius:50%;background:var(--accent-red);color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:700}
+
+/* FEE PREVIEW */
+.fee-preview{background:var(--bg-3);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:16px}
+.fee-preview-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;font-weight:500}
+.fee-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0}
+.fee-row-label{color:var(--text-secondary)}
+.fee-row-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-primary);font-weight:500}
+.fee-row-val.green{color:var(--accent-green)}
+.fee-row-val.muted{color:var(--text-muted)}
+.fee-divider{border-top:0.5px solid var(--border);margin:8px 0}
+.fee-row.total .fee-row-label{font-weight:600;color:var(--text-primary)}
+.fee-row.total .fee-row-val{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold)}
+
+/* FORM ACTIONS */
+.form-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.btn-large{padding:13px 28px;font-size:14px;border-radius:10px}
+
+/* ANALYTICS MINI */
+.analytics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.analytics-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:16px 18px}
+.analytics-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--text-primary);line-height:1;margin-bottom:4px}
+.analytics-label{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;font-weight:500;letter-spacing:0.06em}
+.analytics-bar{height:3px;background:var(--border);border-radius:2px;margin-top:10px;overflow:hidden}
+.analytics-bar-fill{height:100%;border-radius:2px;background:var(--teal)}
+
+/* NOTIFICATIONS */
+.notif-list{display:flex;flex-direction:column;gap:8px}
+.notif-item{background:var(--card-bg);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;cursor:pointer;transition:border-color 0.2s}
+.notif-item:hover{border-color:var(--teal-border)}
+.notif-item.unread{border-left:3px solid var(--teal)}
+.notif-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.notif-dot.amber{background:var(--accent-amber)}
+.notif-dot.green{background:var(--accent-green)}
+.notif-dot.blue{background:var(--accent-blue)}
+.notif-dot.red{background:var(--accent-red)}
+.notif-text{font-size:13px;color:var(--text-secondary);line-height:1.5;flex:1}
+.notif-text strong{color:var(--text-primary);font-weight:500}
+.notif-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);white-space:nowrap;margin-top:2px}
+
+/* MOBILE SIDEBAR TOGGLE */
+.mobile-sidebar-btn{display:none;align-items:center;gap:6px;background:var(--bg-2);border:1.5px solid var(--border);color:var(--text-secondary);padding:7px 12px;font-size:12px;font-weight:500;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:150;backdrop-filter:blur(4px)}
+.sidebar-overlay.open{display:block}
+
+/* RESPONSIVE */
+@media(max-width:1100px){
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .analytics-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:900px){
+  .dash-sidebar{transform:translateX(-100%);transition:transform 0.3s ease;z-index:160}
+  .dash-sidebar.open{transform:translateX(0)}
+  .dash-main{margin-left:0}
+  .mobile-sidebar-btn{display:flex}
+  .bond-grid{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .form-group.full{grid-column:1}
+}
+@media(max-width:600px){
+  .dash-main{padding:16px 12px 40px}
+  .metrics{grid-template-columns:1fr 1fr}
+  .analytics-grid{grid-template-columns:1fr}
+  .page-header{flex-direction:column}
+  .page-actions{width:100%}
+  .orders-table th:nth-child(4),.orders-table td:nth-child(4),
+  .orders-table th:nth-child(5),.orders-table td:nth-child(5){display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"></div>
+    TROVE
+  </a>
+  <div class="nav-right">
+    <button class="mobile-sidebar-btn" id="mobileSidebarBtn">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="1" y1="3" x2="13" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="11" x2="13" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Menu
+    </button>
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+    <div class="nav-user">
+      <div class="nav-avatar">CK</div>
+      <span class="nav-username">CardKing_88</span>
+      <span class="nav-badge">Elite</span>
+    </div>
+    <button class="btn-primary" onclick="showSection('new-listing')">+ List a Card</button>
+  </div>
+</nav>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="dash-sidebar" id="dashSidebar">
+
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Overview</div>
+      <a class="dash-nav-item active" onclick="showSection('overview')" href="#">
+        <span class="dash-nav-icon">◈</span> Dashboard
+      </a>
+      <a class="dash-nav-item" onclick="showSection('notifications')" href="#">
+        <span class="dash-nav-icon">◉</span> Notifications
+        <span class="dash-nav-badge">3</span>
+      </a>
+    </div>
+
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Selling</div>
+      <a class="dash-nav-item" onclick="showSection('active-orders')" href="#">
+        <span class="dash-nav-icon">⇄</span> Active Orders
+        <span class="dash-nav-badge">4</span>
+      </a>
+      <a class="dash-nav-item" onclick="showSection('my-listings')" href="#">
+        <span class="dash-nav-icon">◆</span> My Listings
+      </a>
+      <a class="dash-nav-item" onclick="showSection('new-listing')" href="#">
+        <span class="dash-nav-icon">+</span> New Listing
+      </a>
+      <a class="dash-nav-item" onclick="showSection('sales-history')" href="#">
+        <span class="dash-nav-icon">◎</span> Sales History
+      </a>
+    </div>
+
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Finances</div>
+      <a class="dash-nav-item" onclick="showSection('bond-wallet')" href="#">
+        <span class="dash-nav-icon">⬡</span> Bond Wallet
+      </a>
+      <a class="dash-nav-item" onclick="showSection('earnings')" href="#">
+        <span class="dash-nav-icon">$</span> Earnings
+      </a>
+    </div>
+
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Account</div>
+      <a class="dash-nav-item" href="#">
+        <span class="dash-nav-icon">◑</span> Profile
+      </a>
+      <a class="dash-nav-item" href="#">
+        <span class="dash-nav-icon">◻</span> Settings
+      </a>
+    </div>
+
+    <div class="dash-sidebar-bottom">
+      <div class="seller-tier-card">
+        <div class="seller-tier-label">Seller Tier</div>
+        <div class="seller-tier-name">Elite</div>
+        <div class="seller-tier-progress"><div class="seller-tier-fill"></div></div>
+        <div class="seller-tier-sub">847 / 1,000 sales · 10% bond · 0 strikes</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="dash-main">
+
+    <!-- ===== OVERVIEW ===== -->
+    <div id="section-overview">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Good morning, <em>CardKing_88</em></div>
+          <div class="page-subtitle">Tuesday, April 7, 2025 · Elite Seller · 847 sales · 0 strikes · Ship within 48hrs of sale</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-ghost">Download Report</button>
+          <button class="btn-primary" onclick="showSection('new-listing')">+ New Listing</button>
+        </div>
+      </div>
+
+      <!-- METRICS -->
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-label">Revenue This Month</div>
+          <div class="metric-value gold">$4,820</div>
+          <div class="metric-change up">▲ 18.4% vs last month</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Active Listings</div>
+          <div class="metric-value">12</div>
+          <div class="metric-change neutral">4 with offers pending</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Bond Locked</div>
+          <div class="metric-value gold">$1,240</div>
+          <div class="metric-change neutral">Returns within 5–7 days per order</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Seller Rating</div>
+          <div class="metric-value teal">4.98</div>
+          <div class="metric-change up">▲ 312 reviews · 0 disputes</div>
+        </div>
+      </div>
+
+      <!-- ACTIVE ORDERS PREVIEW -->
+      <div class="dash-section">
+        <div class="dash-section-header">
+          <div class="dash-section-title">Active <em>Orders</em></div>
+          <a class="dash-section-link" onclick="showSection('active-orders')" href="#">View all →</a>
+        </div>
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Card</th>
+              <th>Status</th>
+              <th>Tracking</th>
+              <th>Sale Price</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="order-card-info"><div class="order-swatch swatch-poke"></div><div><div class="order-name">Charizard Holo PSA 9</div><div class="order-meta">Base Set · Order #4821</div></div></div></td>
+              <td><span class="status-pill status-awaiting">Awaiting Shipment</span></td>
+              <td>
+                <div class="tracking-mini">
+                  <div class="track-step done"></div><div class="track-line done"></div>
+                  <div class="track-step active"></div><div class="track-line"></div>
+                  <div class="track-step"></div><div class="track-line"></div>
+                  <div class="track-step"></div>
+                </div>
+              </td>
+              <td><div class="order-price">$487</div><div class="order-net">You net $472</div></td>
+              <td><button class="order-action-btn label">Print Label</button></td>
+            </tr>
+            <tr>
+              <td><div class="order-card-info"><div class="order-swatch swatch-mtg"></div><div><div class="order-name">Mox Sapphire BGS 9</div><div class="order-meta">Unlimited · Order #4819</div></div></div></td>
+              <td><span class="status-pill status-shipped">In Transit</span></td>
+              <td>
+                <div class="tracking-mini">
+                  <div class="track-step done"></div><div class="track-line done"></div>
+                  <div class="track-step done"></div><div class="track-line done"></div>
+                  <div class="track-step active"></div><div class="track-line"></div>
+                  <div class="track-step"></div>
+                </div>
+              </td>
+              <td><div class="order-price">$6,800</div><div class="order-net">You net $6,785</div></td>
+              <td><button class="order-action-btn track">Track</button></td>
+            </tr>
+            <tr>
+              <td><div class="order-card-info"><div class="order-swatch swatch-poke"></div><div><div class="order-name">Blastoise PSA 10</div><div class="order-meta">Base Set · Order #4815</div></div></div></td>
+              <td><span class="status-pill status-auth">Authenticating</span></td>
+              <td>
+                <div class="tracking-mini">
+                  <div class="track-step done"></div><div class="track-line done"></div>
+                  <div class="track-step done"></div><div class="track-line done"></div>
+                  <div class="track-step done"></div><div class="track-line"></div>
+                  <div class="track-step"></div>
+                </div>
+              </td>
+              <td><div class="order-price">$3,800</div><div class="order-net">You net $3,785</div></td>
+              <td><button class="order-action-btn">Details</button></td>
+            </tr>
+            <tr>
+              <td><div class="order-card-info"><div class="order-swatch swatch-op"></div><div><div class="order-name">Luffy Alt Art PSA 10</div><div class="order-meta">OP-01 · Order #4810</div></div></div></td>
+              <td><span class="status-pill status-delivered">Auto-Releasing</span></td>
+              <td>
+                <div class="tracking-mini">
+                  <div class="track-step done"></div><div class="track-line done"></div>
+                  <div class="track-step done"></div><div class="track-line done"></div>
+                  <div class="track-step done"></div><div class="track-line done"></div>
+                  <div class="track-step done"></div>
+                </div>
+              </td>
+              <td><div class="order-price">$890</div><div class="order-net">Releases Apr 8 · You net $875</div></td>
+              <td><button class="order-action-btn track">Auto-Release 18h</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div class="dash-section">
+        <div class="dash-section-header">
+          <div class="dash-section-title">This Month's <em>Performance</em></div>
+        </div>
+        <div class="analytics-grid">
+          <div class="analytics-card">
+            <div class="analytics-val">18</div>
+            <div class="analytics-label">Cards Sold</div>
+            <div class="analytics-bar"><div class="analytics-bar-fill" style="width:72%"></div></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-val">$268</div>
+            <div class="analytics-label">Avg Sale Price</div>
+            <div class="analytics-bar"><div class="analytics-bar-fill" style="width:54%"></div></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-val">1.4d</div>
+            <div class="analytics-label">Avg Ship Time</div>
+            <div class="analytics-bar"><div class="analytics-bar-fill" style="width:88%"></div></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-val">100%</div>
+            <div class="analytics-label">Auth Pass Rate</div>
+            <div class="analytics-bar"><div class="analytics-bar-fill" style="width:100%"></div></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-val">0</div>
+            <div class="analytics-label">Disputes</div>
+            <div class="analytics-bar"><div class="analytics-bar-fill" style="width:0%"></div></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-val">4.98</div>
+            <div class="analytics-label">Avg Rating</div>
+            <div class="analytics-bar"><div class="analytics-bar-fill" style="width:99%"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===== ACTIVE ORDERS ===== -->
+    <div id="section-active-orders" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Active <em>Orders</em></div>
+          <div class="page-subtitle">4 orders in progress · $11,977 in escrow · Ship within 48hrs or buyer is auto-refunded</div>
+        </div>
+        <div class="page-actions">
+          <div class="dash-section-tabs">
+            <button class="dash-tab active">All (4)</button>
+            <button class="dash-tab" onclick="toggleTab(this)">Ship Now (1)</button>
+            <button class="dash-tab" onclick="toggleTab(this)">In Transit (1)</button>
+            <button class="dash-tab" onclick="toggleTab(this)">Auth (1)</button>
+            <button class="dash-tab" onclick="toggleTab(this)">Delivered (1)</button>
+          </div>
+        </div>
+      </div>
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>Card</th>
+            <th>Status</th>
+            <th>Tracking Progress</th>
+            <th>Sale Price</th>
+            <th>Bond</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="order-card-info"><div class="order-swatch swatch-poke"></div><div><div class="order-name">Charizard Holo PSA 9</div><div class="order-meta">Base Set Shadowless · Order #4821 · Apr 6</div></div></div></td>
+            <td><span class="status-pill status-awaiting">Awaiting Shipment</span></td>
+            <td>
+              <div class="tracking-mini">
+                <div class="track-step done"></div><div class="track-line done"></div>
+                <div class="track-step active"></div><div class="track-line"></div>
+                <div class="track-step"></div><div class="track-line"></div>
+                <div class="track-step"></div>
+              </div>
+              <div style="font-size:10px;color:var(--accent-amber);margin-top:3px;font-family:'DM Mono',monospace">⚠ Ship within 48hrs · Buyer auto-refunded if no carrier scan by Apr 8 12:00pm</div>
+            </td>
+            <td><div class="order-price">$487</div><div class="order-net">Net $472</div></td>
+            <td><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-amber)">$48.70 locked</span></td>
+            <td><button class="order-action-btn label">🖨 Print Label A</button></td>
+          </tr>
+          <tr>
+            <td><div class="order-card-info"><div class="order-swatch swatch-mtg"></div><div><div class="order-name">Mox Sapphire BGS 9</div><div class="order-meta">Unlimited Edition · Order #4819 · Apr 4</div></div></div></td>
+            <td><span class="status-pill status-shipped">In Transit</span></td>
+            <td>
+              <div class="tracking-mini">
+                <div class="track-step done"></div><div class="track-line done"></div>
+                <div class="track-step done"></div><div class="track-line done"></div>
+                <div class="track-step active"></div><div class="track-line"></div>
+                <div class="track-step"></div>
+              </div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:3px;font-family:'DM Mono',monospace">FedEx · 9Z4821K · Est. delivery Apr 8</div>
+            </td>
+            <td><div class="order-price">$6,800</div><div class="order-net">Net $6,785</div></td>
+            <td><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-amber)">$680 locked</span></td>
+            <td><button class="order-action-btn track">Track Package</button></td>
+          </tr>
+          <tr>
+            <td><div class="order-card-info"><div class="order-swatch swatch-poke"></div><div><div class="order-name">Blastoise Holo PSA 10</div><div class="order-meta">Base Set · Order #4815 · Apr 1</div></div></div></td>
+            <td><span class="status-pill status-auth">Authenticating</span></td>
+            <td>
+              <div class="tracking-mini">
+                <div class="track-step done"></div><div class="track-line done"></div>
+                <div class="track-step done"></div><div class="track-line done"></div>
+                <div class="track-step done"></div><div class="track-line"></div>
+                <div class="track-step"></div>
+              </div>
+              <div style="font-size:10px;color:var(--accent-amber);margin-top:3px;font-family:'DM Mono',monospace">At Trove HQ · Expected 24–48hrs</div>
+            </td>
+            <td><div class="order-price">$3,800</div><div class="order-net">Net $3,785</div></td>
+            <td><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-amber)">$380 locked</span></td>
+            <td><button class="order-action-btn">View Details</button></td>
+          </tr>
+          <tr>
+            <td><div class="order-card-info"><div class="order-swatch swatch-op"></div><div><div class="order-name">Monkey D. Luffy PSA 10</div><div class="order-meta">OP-01 Alt Art · Order #4810 · Mar 28</div></div></div></td>
+            <td><span class="status-pill status-delivered">Auto-Releasing Apr 8</span></td>
+            <td>
+              <div class="tracking-mini">
+                <div class="track-step done"></div><div class="track-line done"></div>
+                <div class="track-step done"></div><div class="track-line done"></div>
+                <div class="track-step done"></div><div class="track-line done"></div>
+                <div class="track-step done"></div>
+              </div>
+              <div style="font-size:10px;color:var(--accent-green);margin-top:3px;font-family:'DM Mono',monospace">Delivered Apr 5 · Funds auto-release Apr 8 12:00pm · No buyer action needed</div>
+            </td>
+            <td><div class="order-price">$890</div><div class="order-net">Net $875</div></td>
+            <td><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-amber)">$89 locked</span></td>
+            <td><button class="order-action-btn track">Auto-Release 18h</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ===== MY LISTINGS ===== -->
+    <div id="section-my-listings" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">My <em>Listings</em></div>
+          <div class="page-subtitle">12 active · 3 drafts · 2 sold today</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-ghost">Bulk Edit</button>
+          <button class="btn-primary" onclick="showSection('new-listing')">+ New Listing</button>
+        </div>
+      </div>
+      <div class="listings-grid">
+
+        <div class="listing-card">
+          <div class="listing-card-img">
+            <div class="listing-card-visual" style="background:linear-gradient(145deg,#1a3a5c,#0d2035)">⚡</div>
+            <div class="listing-card-status"><span class="status-pill status-complete">Live</span></div>
+          </div>
+          <div class="listing-card-body">
+            <div class="listing-card-name">Charizard Holo</div>
+            <div class="listing-card-meta">PSA 9 · Base Set · #4/102</div>
+            <div class="listing-card-footer">
+              <div class="listing-card-price">$487</div>
+              <div class="listing-card-views">👁 142 views</div>
+            </div>
+            <div class="listing-card-actions">
+              <button class="lc-btn">Edit</button>
+              <button class="lc-btn">Lower Price</button>
+              <button class="lc-btn danger">Remove</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <div class="listing-card-img">
+            <div class="listing-card-visual" style="background:linear-gradient(145deg,#1c2a1c,#0d1a0d)">✦</div>
+            <div class="listing-card-status"><span class="status-pill status-complete">Live</span></div>
+          </div>
+          <div class="listing-card-body">
+            <div class="listing-card-name">Mox Ruby</div>
+            <div class="listing-card-meta">BGS 8.5 · Unlimited · Rare</div>
+            <div class="listing-card-footer">
+              <div class="listing-card-price">$4,100</div>
+              <div class="listing-card-views">👁 89 views</div>
+            </div>
+            <div class="listing-card-actions">
+              <button class="lc-btn">Edit</button>
+              <button class="lc-btn">Lower Price</button>
+              <button class="lc-btn danger">Remove</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <div class="listing-card-img">
+            <div class="listing-card-visual" style="background:linear-gradient(145deg,#2a1a3e,#1a0d2a)">★</div>
+            <div class="listing-card-status"><span class="status-pill status-awaiting">Offer Pending</span></div>
+          </div>
+          <div class="listing-card-body">
+            <div class="listing-card-name">Pikachu Illustrator</div>
+            <div class="listing-card-meta">PSA 7 · 1998 Promo</div>
+            <div class="listing-card-footer">
+              <div class="listing-card-price">$4,200</div>
+              <div class="listing-card-views">👁 310 views</div>
+            </div>
+            <div class="listing-card-actions">
+              <button class="lc-btn">View Offer</button>
+              <button class="lc-btn">Edit</button>
+              <button class="lc-btn danger">Remove</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card" style="border-style:dashed;opacity:0.6;cursor:pointer" onclick="showSection('new-listing')">
+          <div class="listing-card-img" style="background:transparent">
+            <div style="text-align:center;color:var(--text-muted)">
+              <div style="font-size:32px;margin-bottom:8px">+</div>
+              <div style="font-size:12px;font-weight:500">Add Listing</div>
+            </div>
+          </div>
+          <div class="listing-card-body">
+            <div style="font-size:12px;color:var(--text-muted);text-align:center;padding:8px 0">List a new card, pack, box, or case</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== NEW LISTING ===== -->
+    <div id="section-new-listing" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">New <em>Listing</em></div>
+          <div class="page-subtitle">All listings require authentication before reaching the buyer</div>
+        </div>
+      </div>
+      <div class="form-card">
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label class="form-label">Listing Type</label>
+            <select class="form-select" id="listingType" onchange="updateListingType()">
+              <option value="graded">Single Card (Graded)</option>
+              <option value="raw">Single Card (Raw / Ungraded)</option>
+              <option value="pack">Booster Pack (Sealed)</option>
+              <option value="box">Booster Box (Sealed)</option>
+              <option value="case">Case (Sealed)</option>
+              <option value="lot">Bundle / Lot</option>
+              <option value="tin">Tin / Collection Box</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Game</label>
+            <select class="form-select">
+              <option>Pokémon TCG</option>
+              <option>Magic: The Gathering</option>
+              <option>One Piece TCG</option>
+              <option>Yu-Gi-Oh!</option>
+              <option>Sports Cards</option>
+              <option>Other</option>
+            </select>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">Card / Product Name</label>
+            <input class="form-input" type="text" placeholder="e.g. Charizard Holo, Booster Box Scarlet & Violet...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Set / Edition</label>
+            <input class="form-input" type="text" placeholder="e.g. Base Set, Scarlet & Violet">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Year</label>
+            <input class="form-input" type="text" placeholder="e.g. 1999">
+          </div>
+
+          <!-- Graded-only fields -->
+          <div class="form-group" id="field-grader">
+            <label class="form-label">Grading Company</label>
+            <select class="form-select">
+              <option>PSA</option>
+              <option>BGS / Beckett</option>
+              <option>CGC</option>
+              <option>SGC</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="field-grade">
+            <label class="form-label">Grade</label>
+            <select class="form-select">
+              <option>PSA 10 — Gem Mint</option>
+              <option>PSA 9 — Mint</option>
+              <option>PSA 8 — NM-MT</option>
+              <option>PSA 7 — Near Mint</option>
+              <option>BGS 9.5 — Gem Mint</option>
+              <option>BGS 9 — Mint</option>
+              <option>BGS 8.5 — NM-MT+</option>
+              <option>CGC 10 — Pristine</option>
+              <option>CGC 9.5 — Gem Mint</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="field-cert">
+            <label class="form-label">Cert Number <span style="color:var(--text-muted);font-size:9px">(optional)</span></label>
+            <input class="form-input" type="text" placeholder="e.g. 12847291">
+          </div>
+
+          <!-- Raw-only fields -->
+          <div class="form-group full" id="field-condition" style="display:none">
+            <label class="form-label">Condition Notes</label>
+            <textarea class="form-textarea" placeholder="Describe the card condition in detail — surface, edges, corners, centering..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Card Number</label>
+            <input class="form-input" type="text" placeholder="e.g. 4/102">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Language</label>
+            <select class="form-select">
+              <option>English</option>
+              <option>Japanese</option>
+              <option>Korean</option>
+              <option>Chinese</option>
+              <option>Other</option>
+            </select>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">Description <span style="color:var(--text-muted);font-size:9px">(optional)</span></label>
+            <textarea class="form-textarea" placeholder="Any additional details buyers should know..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Asking Price (USDC)</label>
+            <input class="form-input" type="number" placeholder="100" min="100" id="listingPrice" oninput="updateFeePreview()">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Accept Offers?</label>
+            <select class="form-select">
+              <option>Yes — accept offers above my floor</option>
+              <option>No — fixed price only</option>
+            </select>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">Photos <span style="color:var(--text-muted);font-size:9px">(upload up to 10 images)</span></label>
+            <div class="photo-upload" onclick="this.nextElementSibling.style.display='flex'">
+              <div class="photo-upload-icon">📷</div>
+              <div class="photo-upload-text">Click to upload photos</div>
+              <div class="photo-upload-sub">JPG, PNG, WEBP · Max 10MB each · First image = thumbnail</div>
+            </div>
+            <div class="photo-thumbs" style="display:none">
+              <div class="photo-thumb">📷<div class="photo-thumb-x">×</div></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- FEE PREVIEW -->
+        <div class="fee-preview">
+          <div class="fee-preview-title">Your Payout Preview</div>
+          <div class="fee-row"><span class="fee-row-label">Asking price</span><span class="fee-row-val" id="fp-price">—</span></div>
+          <div class="fee-row"><span class="fee-row-label">Seller shipping fee</span><span class="fee-row-val muted">− $15.00</span></div>
+          <div class="fee-row"><span class="fee-row-label">Collateral bond (10%) <span style="color:var(--accent-green);font-size:10px">↩ returned</span></span><span class="fee-row-val muted" id="fp-bond">— posted when buyer purchases</span></div>
+          <div class="fee-divider"></div>
+          <div class="fee-row total"><span class="fee-row-label">You receive on settlement</span><span class="fee-row-val green" id="fp-net">Enter price above</span></div>
+        </div>
+
+        <div style="background:rgba(76,175,124,0.06);border:1px solid rgba(76,175,124,0.2);border-radius:8px;padding:12px 16px;margin-top:4px;font-size:12px;color:var(--text-secondary);line-height:1.6">
+  <strong style="color:var(--accent-green);font-weight:600">About the bond:</strong> The collateral bond is only required when a buyer actually purchases your card — not when you list it. It is held in the smart contract during the transaction and returned in full within 5–7 days on successful completion. Think of it as a security deposit that cycles with each sale.
+</div>
+<div style="background:rgba(200,75,60,0.05);border:1px solid rgba(200,75,60,0.2);border-radius:8px;padding:12px 16px;margin-top:8px;font-size:12px;color:var(--text-secondary);line-height:1.6">
+  <strong style="color:var(--accent-red);font-weight:600">Ship within 48hrs of sale:</strong> When a buyer purchases your card, you have 48 hours to get it to a carrier and have it scanned. If no carrier scan is detected by the deadline, the buyer is automatically refunded in full and you receive a strike on your account. Three strikes result in a permanent ban.
+</div>
+<div class="form-actions">
+          <button class="btn-primary btn-large">Publish Listing</button>
+          <button class="btn-ghost btn-large">Save as Draft</button>
+          <button class="btn-ghost btn-large" onclick="showSection('overview')">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== BOND WALLET ===== -->
+    <div id="section-bond-wallet" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Bond <em>Wallet</em></div>
+          <div class="page-subtitle">Bonds post per transaction when a buyer purchases — not when you list. All bonds return within 5–7 days on completion.</div>
+        </div>
+      </div>
+      <div class="bond-grid">
+        <div class="bond-card highlight">
+          <div class="bond-label">Available to Withdraw</div>
+          <div class="bond-value teal">$2,840</div>
+          <div class="bond-sub">USDC on Base · No fees to withdraw</div>
+          <button class="btn-primary" style="margin-top:16px;width:100%;padding:12px;border-radius:10px;font-size:13px">Withdraw to Wallet</button>
+        </div>
+        <div class="bond-card">
+          <div class="bond-label">Currently Locked</div>
+          <div class="bond-value gold">$1,240</div>
+          <div class="bond-sub">Across 4 active orders · Returns within 5–7 days each</div>
+          <div class="bond-history">
+            <div class="bond-row">
+              <div><div class="bond-row-label">Charizard PSA 9</div><div class="bond-row-order">Order #4821</div></div>
+              <div style="text-align:right"><div class="bond-row-amount locked">$48.70</div><span class="bond-row-status bond-locked-pill">Locked</span></div>
+            </div>
+            <div class="bond-row">
+              <div><div class="bond-row-label">Mox Sapphire BGS 9</div><div class="bond-row-order">Order #4819</div></div>
+              <div style="text-align:right"><div class="bond-row-amount locked">$680.00</div><span class="bond-row-status bond-locked-pill">Locked</span></div>
+            </div>
+            <div class="bond-row">
+              <div><div class="bond-row-label">Blastoise PSA 10</div><div class="bond-row-order">Order #4815</div></div>
+              <div style="text-align:right"><div class="bond-row-amount locked">$380.00</div><span class="bond-row-status bond-locked-pill">Locked</span></div>
+            </div>
+            <div class="bond-row">
+              <div><div class="bond-row-label">Luffy Alt Art PSA 10</div><div class="bond-row-order">Order #4810</div></div>
+              <div style="text-align:right"><div class="bond-row-amount locked">$89.00</div><span class="bond-row-status bond-locked-pill">Locked</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="bond-card" style="grid-column:1/-1">
+          <div class="bond-label">Recent Bond Returns</div>
+          <div class="bond-history">
+            <div class="bond-row">
+              <div><div class="bond-row-label">Ancestral Recall BGS 9</div><div class="bond-row-order">Order #4802 · Apr 2</div></div>
+              <div style="text-align:right"><div class="bond-row-amount returned">+$920.00</div><span class="bond-row-status bond-returned-pill">Returned</span></div>
+            </div>
+            <div class="bond-row">
+              <div><div class="bond-row-label">Charizard PSA 10</div><div class="bond-row-order">Order #4798 · Mar 30</div></div>
+              <div style="text-align:right"><div class="bond-row-amount returned">+$3,600.00</div><span class="bond-row-status bond-returned-pill">Returned</span></div>
+            </div>
+            <div class="bond-row">
+              <div><div class="bond-row-label">Mox Ruby BGS 8.5</div><div class="bond-row-order">Order #4791 · Mar 26</div></div>
+              <div style="text-align:right"><div class="bond-row-amount returned">+$410.00</div><span class="bond-row-status bond-returned-pill">Returned</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== NOTIFICATIONS ===== -->
+    <div id="section-notifications" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title"><em>Notifications</em></div>
+          <div class="page-subtitle">3 unread</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-ghost">Mark all read</button>
+        </div>
+      </div>
+      <div class="notif-list">
+        <div class="notif-item unread">
+          <div class="notif-dot amber"></div>
+          <div style="flex:1">
+            <div class="notif-text"><strong>Action required — ship within 48hrs</strong> — Order #4821 (Charizard PSA 9). Buyer has funded escrow. If no carrier scan by Apr 8 12:00pm, buyer is automatically refunded and you receive Strike 1.</div>
+            <div class="notif-time">2 hours ago</div>
+          </div>
+          <button class="order-action-btn label">Print Label</button>
+        </div>
+        <div class="notif-item unread">
+          <div class="notif-dot green"></div>
+          <div style="flex:1">
+            <div class="notif-text"><strong>Offer received</strong> — $3,900 offer on your Pikachu Illustrator PSA 7. Your asking price is $4,200.</div>
+            <div class="notif-time">5 hours ago</div>
+          </div>
+          <button class="order-action-btn">View Offer</button>
+        </div>
+        <div class="notif-item unread">
+          <div class="notif-dot blue"></div>
+          <div style="flex:1">
+            <div class="notif-text"><strong>Authentication in progress</strong> — Your Blastoise PSA 10 (Order #4815) has arrived at Trove HQ. Expected 24–48hrs.</div>
+            <div class="notif-time">Yesterday</div>
+          </div>
+          <button class="order-action-btn track">Track</button>
+        </div>
+        <div class="notif-item">
+          <div class="notif-dot green"></div>
+          <div style="flex:1">
+            <div class="notif-text"><strong>Funds auto-released</strong> — Ancestral Recall BGS 9 (Order #4802). $920.00 USDC + bond sent to your wallet. 72hr window expired with no dispute.</div>
+            <div class="notif-time">Apr 2</div>
+          </div>
+        </div>
+        <div class="notif-item">
+          <div class="notif-dot green"></div>
+          <div style="flex:1">
+            <div class="notif-text"><strong>New review</strong> — CardKing_88 received a ★★★★★ review from buyer on Order #4798.</div>
+            <div class="notif-time">Mar 30</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SALES HISTORY ===== -->
+    <div id="section-sales-history" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Sales <em>History</em></div>
+          <div class="page-subtitle">847 completed sales · $142,800 lifetime revenue</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-ghost">Export CSV</button>
+        </div>
+      </div>
+      <table class="orders-table">
+        <thead>
+          <tr><th>Card</th><th>Grade</th><th>Sale Price</th><th>You Received</th><th>Date</th><th>Rating</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><div class="order-card-info"><div class="order-swatch swatch-mtg"></div><div><div class="order-name">Ancestral Recall</div><div class="order-meta">BGS 9 · Alpha · Order #4802</div></div></div></td><td><span class="status-pill badge-bgs" style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.28);color:var(--gold)">BGS 9</span></td><td class="order-price">$9,200</td><td style="color:var(--accent-green);font-family:'DM Mono',monospace;font-size:12px">$9,185</td><td class="order-time">Apr 2, 2025</td><td style="color:var(--gold)">★★★★★</td></tr>
+          <tr><td><div class="order-card-info"><div class="order-swatch swatch-poke"></div><div><div class="order-name">Charizard Holo</div><div class="order-meta">PSA 10 · 1st Ed · Order #4798</div></div></div></td><td><span class="status-pill badge-psa" style="background:rgba(60,125,200,0.1);border:1px solid rgba(60,125,200,0.3);color:var(--accent-blue)">PSA 10</span></td><td class="order-price">$36,000</td><td style="color:var(--accent-green);font-family:'DM Mono',monospace;font-size:12px">$35,985</td><td class="order-time">Mar 30, 2025</td><td style="color:var(--gold)">★★★★★</td></tr>
+          <tr><td><div class="order-card-info"><div class="order-swatch swatch-mtg"></div><div><div class="order-name">Mox Ruby</div><div class="order-meta">BGS 8.5 · Unlimited · Order #4791</div></div></div></td><td><span class="status-pill badge-bgs" style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.28);color:var(--gold)">BGS 8.5</span></td><td class="order-price">$4,100</td><td style="color:var(--accent-green);font-family:'DM Mono',monospace;font-size:12px">$4,085</td><td class="order-time">Mar 26, 2025</td><td style="color:var(--gold)">★★★★★</td></tr>
+          <tr><td><div class="order-card-info"><div class="order-swatch swatch-op"></div><div><div class="order-name">Luffy Alt Art</div><div class="order-meta">PSA 9 · OP-01 · Order #4785</div></div></div></td><td><span class="status-pill badge-psa" style="background:rgba(60,125,200,0.1);border:1px solid rgba(60,125,200,0.3);color:var(--accent-blue)">PSA 9</span></td><td class="order-price">$620</td><td style="color:var(--accent-green);font-family:'DM Mono',monospace;font-size:12px">$605</td><td class="order-time">Mar 22, 2025</td><td style="color:var(--gold)">★★★★★</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ===== EARNINGS ===== -->
+    <div id="section-earnings" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title"><em>Earnings</em></div>
+          <div class="page-subtitle">All-time: $142,800 USDC · This month: $4,820 USDC</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-ghost">Export</button>
+          <button class="btn-primary">Withdraw Funds</button>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric-card"><div class="metric-label">Available Balance</div><div class="metric-value gold">$2,840</div><div class="metric-change neutral">Ready to withdraw</div></div>
+        <div class="metric-card"><div class="metric-label">This Month</div><div class="metric-value">$4,820</div><div class="metric-change up">▲ 18.4%</div></div>
+        <div class="metric-card"><div class="metric-label">Last Month</div><div class="metric-value">$3,972</div><div class="metric-change neutral">18 sales</div></div>
+        <div class="metric-card"><div class="metric-label">All Time</div><div class="metric-value teal">$142,800</div><div class="metric-change neutral">847 sales</div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// THEME
+const toggle=document.getElementById('themeToggle');
+const html=document.documentElement;
+const saved=localStorage.getItem('trove-theme')||'dark';
+html.setAttribute('data-theme',saved);
+toggle.textContent=saved==='dark'?'🌙':'☀️';
+toggle.addEventListener('click',()=>{
+  const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  toggle.textContent=next==='dark'?'🌙':'☀️';
+  localStorage.setItem('trove-theme',next);
+});
+
+// SECTION NAVIGATION
+const sections=['overview','active-orders','my-listings','new-listing','bond-wallet','notifications','sales-history','earnings'];
+
+function showSection(id){
+  sections.forEach(s=>{
+    const el=document.getElementById('section-'+s);
+    if(el) el.style.display=s===id?'block':'none';
+  });
+  // Update active nav item
+  document.querySelectorAll('.dash-nav-item').forEach(item=>{
+    item.classList.remove('active');
+    if(item.getAttribute('onclick')&&item.getAttribute('onclick').includes("'"+id+"'")){
+      item.classList.add('active');
+    }
+  });
+  // Close mobile sidebar
+  closeMobileSidebar();
+  window.scrollTo(0,0);
+}
+
+// MOBILE SIDEBAR
+const mobileSidebarBtn=document.getElementById('mobileSidebarBtn');
+const dashSidebar=document.getElementById('dashSidebar');
+const sidebarOverlay=document.getElementById('sidebarOverlay');
+
+mobileSidebarBtn.addEventListener('click',()=>{
+  dashSidebar.classList.add('open');
+  sidebarOverlay.classList.add('open');
+  document.body.style.overflow='hidden';
+});
+function closeMobileSidebar(){
+  dashSidebar.classList.remove('open');
+  sidebarOverlay.classList.remove('open');
+  document.body.style.overflow='';
+}
+sidebarOverlay.addEventListener('click',closeMobileSidebar);
+
+// LISTING TYPE TOGGLE
+function updateListingType(){
+  const type=document.getElementById('listingType').value;
+  const graded=['graded'];
+  const raw=['raw'];
+  const sealed=['pack','box','case','tin'];
+  document.getElementById('field-grader').style.display=graded.includes(type)?'flex':'none';
+  document.getElementById('field-grade').style.display=graded.includes(type)?'flex':'none';
+  document.getElementById('field-cert').style.display=graded.includes(type)?'flex':'none';
+  document.getElementById('field-condition').style.display=(raw.includes(type)||sealed.includes(type))?'flex':'none';
+}
+
+// FEE PREVIEW
+function updateFeePreview(){
+  const price=parseFloat(document.getElementById('listingPrice').value)||0;
+  const bond=price*0.10;
+  const net=price-15;
+  document.getElementById('fp-price').textContent=price>0?'$'+price.toFixed(2):'—';
+  document.getElementById('fp-bond').textContent=price>0?'$'+bond.toFixed(2)+' (returned on completion)':'— (returned on completion)';
+  document.getElementById('fp-net').textContent=price>0&&price>=100?'$'+net.toFixed(2)+' USDC':price>0&&price<100?'Minimum listing is $100':'Enter price above';
+  document.getElementById('fp-net').style.color=price>=100?'var(--accent-green)':'var(--accent-red)';
+}
+
+// TAB TOGGLE
+function toggleTab(el){
+  el.closest('.page-actions').querySelectorAll('.dash-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>

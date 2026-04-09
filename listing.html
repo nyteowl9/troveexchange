@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Charizard Holo PSA 9 — Trove Exchange</title>
+<meta name="description" content="1999 Shadowless Base Set Charizard Holo PSA 9. Authenticated and escrow-protected on Trove Exchange.">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+[data-theme="dark"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;--gold-dim:rgba(201,168,76,0.15);
+  --primary:#C9A84C;--primary-text:#C9A84C;--primary-bg:rgba(201,168,76,0.1);--primary-border:rgba(201,168,76,0.28);
+  --bg:#0A0A0B;--bg-2:#111114;--bg-3:#18181C;--bg-4:#222228;--bg-5:#2A2A32;
+  --text-primary:#F0EDE6;--text-secondary:#B8B4AC;--text-muted:#6C6A66;
+  --accent-green:#4CAF7C;--accent-red:#C84B3C;--accent-blue:#3C7DC8;
+  --border:#2A2A32;--border-primary:rgba(201,168,76,0.28);
+  --nav-bg:rgba(10,10,11,0.94);--card-bg:#111114;--chart-line:#C9A84C;
+  --badge-psa-bg:rgba(60,125,200,0.18);--badge-psa-border:rgba(60,125,200,0.45);--badge-psa-text:#7BB4E8;
+  --badge-bgs-bg:rgba(201,168,76,0.12);--badge-bgs-border:rgba(201,168,76,0.28);--badge-bgs-text:#C9A84C;
+  --escrow-bg:#0E1A0E;--escrow-border:rgba(76,175,124,0.3);
+}
+
+[data-theme="light"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;--gold-dim:rgba(201,168,76,0.12);
+  --primary:#0D6E6E;--primary-text:#0D6E6E;--primary-bg:rgba(13,110,110,0.08);--primary-border:rgba(13,110,110,0.3);
+  --bg:#F5F2EC;--bg-2:#EDEAE3;--bg-3:#E4E0D8;--bg-4:#D8D4CC;--bg-5:#CCC8C0;
+  --text-primary:#1A1814;--text-secondary:#4A4640;--text-muted:#8A8680;
+  --accent-green:#1A6B3A;--accent-red:#B83C2C;--accent-blue:#1A5EA0;
+  --border:#C8C4BC;--border-primary:rgba(13,110,110,0.3);
+  --nav-bg:rgba(245,242,236,0.96);--card-bg:#EDEAE3;--chart-line:#0D6E6E;
+  --badge-psa-bg:rgba(26,94,160,0.1);--badge-psa-border:rgba(26,94,160,0.35);--badge-psa-text:#1A5EA0;
+  --badge-bgs-bg:rgba(13,110,110,0.1);--badge-bgs-border:rgba(13,110,110,0.3);--badge-bgs-text:#0D6E6E;
+  --escrow-bg:#E8F5E8;--escrow-border:rgba(26,107,58,0.3);
+}
+
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-weight:400;overflow-x:hidden;line-height:1.6;transition:background 0.3s,color 0.3s;padding-top:64px}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);backdrop-filter:blur(24px);border-bottom:0.5px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;letter-spacing:0.1em;color:var(--gold);display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-logo-icon{width:22px;height:22px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0}
+.nav-center{flex:1;max-width:440px;margin:0 1.5rem}
+.nav-search{background:var(--bg-3);border:1.5px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:8px;border-radius:10px;transition:border-color 0.2s}
+.nav-search:focus-within{border-color:var(--primary)}
+.nav-search input{flex:1;background:transparent;border:none;outline:none;color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 0}
+.nav-search input::placeholder{color:var(--text-muted)}
+.nav-search-icon{color:var(--text-muted);font-size:15px}
+.nav-actions{display:flex;align-items:center;gap:8px}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary);padding:7px 16px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;transition:all 0.2s;border-radius:8px}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary-text)}
+.btn-primary{background:var(--primary);border:none;color:#fff;padding:7px 16px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s}
+.btn-primary:hover{opacity:0.88}
+.theme-toggle{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:14px;transition:all 0.2s}
+.theme-toggle:hover{border-color:var(--primary);color:var(--primary-text)}
+
+/* BREADCRUMB */
+.breadcrumb{padding:14px 1.5rem;border-bottom:0.5px solid var(--border);background:var(--bg-2);display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);flex-wrap:wrap}
+.breadcrumb a{color:var(--text-muted);text-decoration:none;transition:color 0.2s}
+.breadcrumb a:hover{color:var(--primary-text)}
+.breadcrumb-sep{opacity:0.4}
+.breadcrumb-current{color:var(--text-secondary)}
+
+/* PAGE LAYOUT */
+.page-wrap{max-width:1280px;margin:0 auto;padding:32px 1.5rem 80px}
+.listing-grid{display:grid;grid-template-columns:1fr 380px;gap:32px;align-items:flex-start}
+
+/* LEFT COLUMN */
+.left-col{}
+
+/* CARD GALLERY */
+.gallery{background:var(--bg-2);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px}
+.gallery-main{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:var(--bg-3);position:relative;cursor:zoom-in}
+.card-display{width:55%;max-width:280px;aspect-ratio:2.5/3.5;border-radius:8px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4)}
+.card-display-inner{width:85%;height:80%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.card-icon-lg{font-size:36px;opacity:0.75}
+.card-bars-lg{display:flex;flex-direction:column;gap:5px;width:65%}
+.bar-lg{height:4px;border-radius:3px}
+.card-shine-lg{position:absolute;inset:0;background:linear-gradient(135deg,rgba(201,168,76,0.15) 0%,transparent 45%,rgba(201,168,76,0.08) 100%);pointer-events:none}
+.gallery-badge-psa{position:absolute;top:16px;left:16px;font-family:'DM Mono',monospace;font-size:11px;padding:4px 12px;border-radius:8px;font-weight:500;background:var(--badge-psa-bg);border:1px solid var(--badge-psa-border);color:var(--badge-psa-text)}
+.gallery-grade{position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;background:rgba(76,175,124,0.12);border:2px solid rgba(76,175,124,0.5);color:var(--accent-green)}
+.gallery-zoom{position:absolute;bottom:14px;right:14px;width:32px;height:32px;border-radius:8px;background:var(--bg-4);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:14px;cursor:pointer;transition:all 0.2s}
+.gallery-zoom:hover{border-color:var(--primary);color:var(--primary-text)}
+.gallery-thumbs{display:flex;gap:8px;padding:12px 16px;border-top:0.5px solid var(--border);overflow-x:auto}
+.gallery-thumb{width:56px;height:56px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg-4);cursor:pointer;flex-shrink:0;transition:border-color 0.2s;display:flex;align-items:center;justify-content:center;font-size:18px;opacity:0.6}
+.gallery-thumb.active,.gallery-thumb:hover{border-color:var(--primary);opacity:1}
+.gallery-thumb-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);text-align:center;margin-top:3px;letter-spacing:0.06em}
+
+/* CARD DETAILS */
+.card-details{background:var(--bg-2);border:1.5px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px}
+.detail-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;margin-bottom:4px;color:var(--text-primary)}
+.detail-title em{font-style:italic;color:var(--gold)}
+.detail-subtitle{font-size:14px;color:var(--text-secondary);margin-bottom:20px}
+.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
+.detail-cell{background:var(--bg-3);padding:14px 16px}
+.detail-cell-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;font-weight:500}
+.detail-cell-value{font-size:14px;font-weight:500;color:var(--text-primary)}
+.detail-cell-value.gold{color:var(--gold)}
+.detail-cell-value.teal{color:var(--primary-text)}
+.detail-cell-value.green{color:var(--accent-green)}
+.detail-tags{display:flex;gap:6px;flex-wrap:wrap}
+.detail-tag{font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);color:var(--text-muted);font-weight:500}
+
+/* PRICE CHART */
+.chart-section{background:var(--bg-2);border:1.5px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.chart-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--text-primary)}
+.chart-title em{font-style:italic;color:var(--primary-text)}
+.chart-stats{display:flex;gap:20px;flex-wrap:wrap}
+.chart-stat{text-align:right}
+.chart-stat-val{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--text-primary);line-height:1}
+.chart-stat-val.up{color:var(--accent-green)}
+.chart-stat-val.gold{color:var(--gold)}
+.chart-stat-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-top:2px}
+.chart-tabs{display:flex;gap:4px;margin-bottom:16px}
+.chart-tab{font-family:'DM Mono',monospace;font-size:11px;padding:6px 14px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all 0.15s;font-weight:500}
+.chart-tab.active{background:var(--primary-bg);border-color:var(--primary-border);color:var(--primary-text)}
+.chart-tab:hover:not(.active){border-color:var(--primary-border);color:var(--primary-text)}
+.chart-wrap{position:relative;height:180px;margin-bottom:8px}
+canvas{display:block}
+.chart-x-labels{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);padding:0 4px}
+
+/* RECENT SALES TABLE */
+.recent-sales{margin-top:20px}
+.recent-sales-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;font-weight:500}
+.sales-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid var(--border);gap:12px}
+.sales-row:last-child{border-bottom:none}
+.sales-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);min-width:80px}
+.sales-grade{font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:500;background:var(--badge-psa-bg);border:1px solid var(--badge-psa-border);color:var(--badge-psa-text)}
+.sales-price{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold)}
+[data-theme="light"] .sales-price{color:var(--primary-text)}
+.sales-change{font-family:'DM Mono',monospace;font-size:10px;font-weight:500}
+.sales-change.up{color:var(--accent-green)}
+.sales-change.dn{color:var(--accent-red)}
+.sales-platform{font-size:11px;color:var(--text-muted)}
+
+/* RIGHT COLUMN — PURCHASE PANEL */
+.purchase-panel{position:sticky;top:84px}
+.panel-box{background:var(--bg-2);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:16px}
+.panel-price-section{padding:24px 24px 20px;border-bottom:0.5px solid var(--border)}
+.panel-price-eyebrow{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;font-weight:500}
+.panel-price{font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:300;color:var(--gold);line-height:1;margin-bottom:4px}
+.panel-price-usdc{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted)}
+.panel-price-comp{font-size:12px;color:var(--text-secondary);margin-top:8px}
+.panel-price-comp span{color:var(--accent-green);font-weight:500}
+
+/* FEE BREAKDOWN */
+.panel-fees{padding:16px 24px;border-bottom:0.5px solid var(--border);background:var(--bg-3)}
+.fee-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px}
+.fee-label{color:var(--text-secondary)}
+.fee-label.muted{color:var(--text-muted);font-size:12px}
+.fee-value{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-primary);font-weight:500}
+.fee-value.muted{color:var(--text-muted)}
+.fee-row.total{border-top:0.5px solid var(--border);margin-top:6px;padding-top:10px}
+.fee-row.total .fee-label{font-weight:600;color:var(--text-primary)}
+.fee-row.total .fee-value{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);font-weight:600}
+
+/* ESCROW INFO */
+.escrow-box{background:var(--escrow-bg);border:1px solid var(--escrow-border);border-radius:10px;padding:14px 16px;margin:16px 24px;display:flex;gap:10px;align-items:flex-start}
+.escrow-icon{flex-shrink:0;margin-top:1px}
+.escrow-text{font-size:12px;color:var(--text-secondary);line-height:1.6}
+.escrow-text strong{display:block;color:var(--accent-green);font-size:12px;margin-bottom:2px;font-weight:600}
+[data-theme="light"] .escrow-text strong{color:var(--accent-green)}
+
+/* BUY ACTIONS */
+.panel-actions{padding:16px 24px 20px}
+.btn-buy{width:100%;background:var(--gold);border:none;color:#0A0A0B;padding:16px;font-size:15px;font-weight:700;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:0.04em;transition:all 0.2s;margin-bottom:10px}
+.btn-buy:hover{background:var(--gold-light);transform:translateY(-1px);box-shadow:0 8px 24px rgba(201,168,76,0.3)}
+.btn-offer{width:100%;background:transparent;border:1.5px solid var(--primary-border);color:var(--primary-text);padding:14px;font-size:14px;font-weight:600;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:0.04em;transition:all 0.2s;margin-bottom:10px}
+.btn-offer:hover{background:var(--primary-bg)}
+.btn-watch{width:100%;background:transparent;border:1.5px solid var(--border);color:var(--text-secondary);padding:12px;font-size:13px;font-weight:500;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-watch:hover{border-color:var(--accent-red);color:var(--accent-red)}
+.panel-actions-note{font-size:11px;color:var(--text-muted);text-align:center;margin-top:12px;line-height:1.5}
+
+/* TRANSACTION FLOW */
+.flow-box{background:var(--bg-2);border:1.5px solid var(--border);border-radius:16px;padding:20px 24px;margin-bottom:16px}
+.flow-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;font-weight:500}
+.flow-steps{display:flex;flex-direction:column;gap:0}
+.flow-step{display:flex;gap:14px;align-items:flex-start;position:relative}
+.flow-step:not(:last-child)::before{content:'';position:absolute;left:15px;top:32px;bottom:-8px;width:1px;background:var(--border)}
+.flow-dot{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);background:var(--bg-3);margin-top:2px;font-weight:500;z-index:1}
+.flow-step.done .flow-dot{border-color:var(--accent-green);color:var(--accent-green);background:rgba(76,175,124,0.08)}
+.flow-step.active .flow-dot{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.08)}
+.flow-content{padding:4px 0 16px}
+.flow-step-title{font-size:13px;font-weight:500;color:var(--text-primary);margin-bottom:2px}
+.flow-step.done .flow-step-title{color:var(--text-secondary)}
+.flow-step-desc{font-size:11px;color:var(--text-muted);line-height:1.5}
+
+/* SELLER CARD */
+.seller-box{background:var(--bg-2);border:1.5px solid var(--border);border-radius:16px;padding:20px 24px;margin-bottom:16px}
+.seller-header{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.seller-avatar{width:48px;height:48px;border-radius:50%;background:var(--primary-bg);border:2px solid var(--primary-border);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--primary-text);flex-shrink:0}
+.seller-name{font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:2px}
+.seller-tier{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:0.08em;font-weight:500}
+.seller-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.seller-stat{background:var(--bg-3);padding:12px;text-align:center}
+.seller-stat-val{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--text-primary);line-height:1}
+.seller-stat-val.teal{color:var(--primary-text)}
+.seller-stat-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-top:3px}
+.seller-reviews{display:flex;flex-direction:column;gap:6px}
+.seller-review{background:var(--bg-3);border-radius:8px;padding:10px 12px}
+.seller-review-text{font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:4px}
+.seller-review-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+.stars{color:var(--gold);font-size:11px;letter-spacing:1px}
+.btn-view-seller{width:100%;background:transparent;border:1.5px solid var(--border);color:var(--text-secondary);padding:10px;font-size:12px;font-weight:500;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;margin-top:12px}
+.btn-view-seller:hover{border-color:var(--primary-border);color:var(--primary-text)}
+
+/* AUTHENTICATION BADGE */
+.auth-box{background:var(--bg-2);border:1.5px solid var(--border-primary);border-radius:16px;padding:20px 24px}
+.auth-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.auth-icon{width:36px;height:36px;border-radius:50%;background:var(--primary-bg);border:1.5px solid var(--primary-border);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.auth-title{font-size:14px;font-weight:600;color:var(--text-primary)}
+.auth-sub{font-size:12px;color:var(--text-muted)}
+.auth-steps{display:flex;flex-direction:column;gap:6px}
+.auth-step{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)}
+.auth-step-check{width:18px;height:18px;border-radius:50%;background:var(--primary-bg);border:1px solid var(--primary-border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:var(--primary-text)}
+
+/* MODAL OVERLAY */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg-2);border:1.5px solid var(--border);border-radius:20px;padding:32px;width:100%;max-width:480px;position:relative}
+.modal-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:16px;transition:all 0.2s}
+.modal-close:hover{border-color:var(--primary);color:var(--primary-text)}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;margin-bottom:6px;color:var(--text-primary)}
+.modal-title em{font-style:italic;color:var(--gold)}
+.modal-sub{font-size:13px;color:var(--text-secondary);margin-bottom:24px;line-height:1.6}
+.modal-steps{display:flex;flex-direction:column;gap:16px;margin-bottom:24px}
+.modal-step{display:flex;gap:14px;align-items:flex-start}
+.modal-step-num{width:28px;height:28px;border-radius:50%;background:var(--primary-bg);border:1.5px solid var(--primary-border);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--primary-text);flex-shrink:0;font-weight:500}
+.modal-step-text{font-size:13px;color:var(--text-secondary);line-height:1.6;padding-top:4px}
+.modal-step-text strong{color:var(--text-primary);font-weight:500}
+.modal-total{background:var(--bg-3);border-radius:10px;padding:16px;margin-bottom:20px}
+.modal-total-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
+.modal-total-row.final{border-top:0.5px solid var(--border);margin-top:8px;padding-top:10px;font-weight:600}
+.modal-total-row .label{color:var(--text-secondary)}
+.modal-total-row .val{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-primary)}
+.modal-total-row.final .val{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold)}
+.btn-confirm{width:100%;background:var(--gold);border:none;color:#0A0A0B;padding:16px;font-size:15px;font-weight:700;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;margin-bottom:10px}
+.btn-confirm:hover{background:var(--gold-light)}
+.btn-cancel{width:100%;background:transparent;border:1.5px solid var(--border);color:var(--text-secondary);padding:12px;font-size:13px;font-weight:500;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.btn-cancel:hover{border-color:var(--primary-border);color:var(--primary-text)}
+
+@media(max-width:1024px){
+  .listing-grid{grid-template-columns:1fr}
+  .purchase-panel{position:static}
+  .panel-box{max-width:100%}
+}
+@media(max-width:768px){
+  nav{padding:0 1rem}
+  .nav-center{display:none}
+  .btn-ghost{display:none}
+  .page-wrap{padding:20px 1rem 60px}
+  .detail-grid{grid-template-columns:repeat(2,1fr)}
+  .chart-stats{gap:12px}
+  .gallery-main{aspect-ratio:1}
+  .card-display{width:45%}
+}
+@media(max-width:480px){
+  .detail-grid{grid-template-columns:1fr 1fr}
+  .panel-price{font-size:36px}
+  .chart-tab{padding:5px 10px;font-size:10px}
+}
+
+/* ===== LIGHT MODE TEAL OVERRIDES ===== */
+[data-theme="light"] .btn-primary{background:#0D6E6E}
+[data-theme="light"] .btn-primary:hover{background:#0A5A5A}
+[data-theme="light"] .btn-ghost:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .btn-buy{background:#0D6E6E;color:#fff}
+[data-theme="light"] .btn-buy:hover{background:#0A5A5A;box-shadow:0 8px 24px rgba(13,110,110,0.25)}
+[data-theme="light"] .btn-offer{border-color:rgba(13,110,110,0.35);color:#0D6E6E}
+[data-theme="light"] .btn-offer:hover{background:rgba(13,110,110,0.08)}
+[data-theme="light"] .btn-confirm{background:#0D6E6E;color:#fff}
+[data-theme="light"] .btn-confirm:hover{background:#0A5A5A}
+[data-theme="light"] .btn-cancel:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .btn-view-seller:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .theme-toggle:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .nav-search:focus-within{border-color:#0D6E6E}
+[data-theme="light"] .breadcrumb a:hover{color:#0D6E6E}
+[data-theme="light"] .chart-tab.active{background:rgba(13,110,110,0.08);border-color:rgba(13,110,110,0.3);color:#0D6E6E}
+[data-theme="light"] .chart-tab:hover:not(.active){border-color:rgba(13,110,110,0.3);color:#0D6E6E}
+[data-theme="light"] .chart-stat-val.up{color:#1A6B3A}
+[data-theme="light"] .sales-change.up{color:#1A6B3A}
+[data-theme="light"] .sales-price{color:#0D6E6E}
+[data-theme="light"] .recent-sales-title{color:#0D6E6E}
+[data-theme="light"] .detail-cell-value.teal{color:#0D6E6E}
+[data-theme="light"] .detail-tag{border-color:rgba(13,110,110,0.25);color:#0D6E6E}
+[data-theme="light"] .chart-title em{color:#0D6E6E}
+[data-theme="light"] .modal-step-num{background:rgba(13,110,110,0.08);border-color:rgba(13,110,110,0.3);color:#0D6E6E}
+[data-theme="light"] .modal-total-row.final .val{color:#0D6E6E}
+[data-theme="light"] .flow-step.active .flow-dot{border-color:#0D6E6E;color:#0D6E6E;background:rgba(13,110,110,0.08)}
+[data-theme="light"] .seller-stat-val.teal{color:#0D6E6E}
+[data-theme="light"] .stars{color:#9B6E1A}
+[data-theme="light"] .auth-icon{background:rgba(13,110,110,0.08);border-color:rgba(13,110,110,0.3)}
+[data-theme="light"] .auth-step-check{background:rgba(13,110,110,0.08);border-color:rgba(13,110,110,0.3);color:#0D6E6E}
+[data-theme="light"] .auth-box{border-color:rgba(13,110,110,0.25)}
+[data-theme="light"] .gallery-thumb.active,[data-theme="light"] .gallery-thumb:hover{border-color:#0D6E6E}
+[data-theme="light"] .gallery-zoom:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .modal-close:hover{border-color:#0D6E6E;color:#0D6E6E}
+[data-theme="light"] .seller-tier{color:#9B6E1A}
+[data-theme="light"] .panel-price-comp span{color:#1A6B3A}
+[data-theme="light"] .seller-avatar{background:rgba(13,110,110,0.08);border-color:rgba(13,110,110,0.3);color:#0D6E6E}
+[data-theme="light"] .panel-price{color:var(--gold)}
+[data-theme="light"] .chart-stat-val.gold{color:var(--gold)}
+[data-theme="light"] .modal-title em{color:var(--gold)}
+[data-theme="light"] .detail-title em{color:var(--gold)}
+[data-theme="light"] .seller-tier{color:#9B6E1A}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"></div>
+    <span>TROVE</span>
+  </a>
+  <div class="nav-center">
+    <div class="nav-search">
+      <span class="nav-search-icon">⌕</span>
+      <input type="text" placeholder="Search cards, sets, grades...">
+    </div>
+  </div>
+  <div class="nav-actions">
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+    <button class="btn-ghost">Sign In</button>
+    <button class="btn-primary">List a Card</button>
+  </div>
+</nav>
+
+<!-- BREADCRUMB -->
+<div class="breadcrumb">
+  <a href="index.html">Home</a>
+  <span class="breadcrumb-sep">›</span>
+  <a href="marketplace.html">Marketplace</a>
+  <span class="breadcrumb-sep">›</span>
+  <a href="#">Pokémon</a>
+  <span class="breadcrumb-sep">›</span>
+  <a href="#">Base Set</a>
+  <span class="breadcrumb-sep">›</span>
+  <span class="breadcrumb-current">Charizard Holo PSA 9</span>
+</div>
+
+<!-- BUY MODAL -->
+<div class="modal-overlay" id="buyModal">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <div class="modal-title">Confirm <em>Purchase</em></div>
+    <p class="modal-sub">Review your order before locking USDC into escrow. Funds are held securely until the card is authenticated and delivered.</p>
+    <div class="modal-steps">
+      <div class="modal-step">
+        <div class="modal-step-num">1</div>
+        <div class="modal-step-text"><strong>Connect your wallet</strong> — MetaMask, Coinbase Wallet, or any Base-compatible wallet</div>
+      </div>
+      <div class="modal-step">
+        <div class="modal-step-num">2</div>
+        <div class="modal-step-text"><strong>Approve USDC spend</strong> — one-time approval for the escrow contract on Base</div>
+      </div>
+      <div class="modal-step">
+        <div class="modal-step-num">3</div>
+        <div class="modal-step-text"><strong>Lock funds in escrow</strong> — USDC held by smart contract until delivery confirmed</div>
+      </div>
+      <div class="modal-step">
+        <div class="modal-step-num">4</div>
+        <div class="modal-step-text"><strong>Seller ships within 48hrs</strong> — if they miss the deadline, your USDC is automatically refunded. No disputes needed.</div>
+      </div>
+    </div>
+    <div class="modal-total">
+      <div class="modal-total-row"><span class="label">Card price</span><span class="val">$487.00</span></div>
+      <div class="modal-total-row"><span class="label">Auth + shipping fee</span><span class="val">$25.00</span></div>
+      <div class="modal-total-row"><span class="label">Buyer protection (0.5%)</span><span class="val">$2.44</span></div>
+      <div class="modal-total-row"><span class="label">Sales tax (est.)</span><span class="val">$38.96</span></div>
+      <div class="modal-total-row final"><span class="label">Total USDC to escrow</span><span class="val">$553.40</span></div>
+    </div>
+    <button class="btn-confirm">Connect Wallet & Confirm</button>
+    <button class="btn-cancel" id="modalCancel">Cancel</button>
+  </div>
+</div>
+
+<!-- PAGE -->
+<div class="page-wrap">
+  <div class="listing-grid">
+
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+
+      <!-- GALLERY -->
+      <div class="gallery">
+        <div class="gallery-main">
+          <div class="card-display" style="background:linear-gradient(145deg,#1a3a5c,#0d2035);border:2px solid rgba(255,215,0,0.25)">
+            <div class="card-display-inner">
+              <div class="card-icon-lg">⚡</div>
+              <div class="card-bars-lg">
+                <div class="bar-lg" style="background:rgba(255,215,0,0.5);width:100%"></div>
+                <div class="bar-lg" style="background:rgba(255,215,0,0.25);width:72%"></div>
+                <div class="bar-lg" style="background:rgba(255,215,0,0.12);width:50%"></div>
+              </div>
+            </div>
+            <div class="card-shine-lg"></div>
+          </div>
+          <span class="gallery-badge-psa">PSA</span>
+          <div class="gallery-grade">9</div>
+          <div class="gallery-zoom">⤢</div>
+        </div>
+        <div style="padding:8px 16px 4px">
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <div>
+              <div class="gallery-thumb active">⚡</div>
+              <div class="gallery-thumb-label">Front</div>
+            </div>
+            <div>
+              <div class="gallery-thumb">▭</div>
+              <div class="gallery-thumb-label">Back</div>
+            </div>
+            <div>
+              <div class="gallery-thumb">◎</div>
+              <div class="gallery-thumb-label">Slab</div>
+            </div>
+            <div>
+              <div class="gallery-thumb">⊡</div>
+              <div class="gallery-thumb-label">Label</div>
+            </div>
+            <div>
+              <div class="gallery-thumb">🔍</div>
+              <div class="gallery-thumb-label">Surface</div>
+            </div>
+          </div>
+        </div>
+        <div style="height:8px"></div>
+      </div>
+
+      <!-- CARD DETAILS -->
+      <div class="card-details">
+        <div class="detail-title">Charizard Holo <em>#4/102</em></div>
+        <div class="detail-subtitle">Pokémon · Base Set 1999 Shadowless · 1st Print Run</div>
+        <div class="detail-grid">
+          <div class="detail-cell">
+            <div class="detail-cell-label">Game</div>
+            <div class="detail-cell-value">Pokémon TCG</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-cell-label">Set</div>
+            <div class="detail-cell-value">Base Set</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-cell-label">Year</div>
+            <div class="detail-cell-value">1999</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-cell-label">Grader</div>
+            <div class="detail-cell-value teal">PSA</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-cell-label">Grade</div>
+            <div class="detail-cell-value green">Mint 9</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-cell-label">Cert #</div>
+            <div class="detail-cell-value" style="font-family:'DM Mono',monospace;font-size:12px">12847291</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-cell-label">Card #</div>
+            <div class="detail-cell-value">#4/102</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-cell-label">Rarity</div>
+            <div class="detail-cell-value">Holo Rare</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-cell-label">Language</div>
+            <div class="detail-cell-value">English</div>
+          </div>
+        </div>
+        <div class="detail-tags">
+          <span class="detail-tag">Shadowless</span>
+          <span class="detail-tag">1st Edition</span>
+          <span class="detail-tag">Fire Type</span>
+          <span class="detail-tag">Stage 2</span>
+          <span class="detail-tag">Base Set Holo</span>
+          <span class="detail-tag">WOTC Era</span>
+        </div>
+      </div>
+
+      <!-- PRICE CHART -->
+      <div class="chart-section">
+        <div class="chart-header">
+          <div class="chart-title">Price <em>History</em></div>
+          <div class="chart-stats">
+            <div class="chart-stat">
+              <div class="chart-stat-val gold">$487</div>
+              <div class="chart-stat-label">Current</div>
+            </div>
+            <div class="chart-stat">
+              <div class="chart-stat-val">$475</div>
+              <div class="chart-stat-label">30d Avg</div>
+            </div>
+            <div class="chart-stat">
+              <div class="chart-stat-val up">+2.5%</div>
+              <div class="chart-stat-label">30d Change</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-tabs">
+          <button class="chart-tab" onclick="setTab(this,'7d')">7D</button>
+          <button class="chart-tab active" onclick="setTab(this,'30d')">30D</button>
+          <button class="chart-tab" onclick="setTab(this,'90d')">90D</button>
+          <button class="chart-tab" onclick="setTab(this,'1y')">1Y</button>
+          <button class="chart-tab" onclick="setTab(this,'all')">All</button>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="priceChart"></canvas>
+        </div>
+        <div class="chart-x-labels" id="chartLabels"></div>
+
+        <!-- RECENT SALES -->
+        <div class="recent-sales">
+          <div class="recent-sales-title">Recent Sales on Trove Exchange</div>
+          <div class="sales-row">
+            <span class="sales-date">Apr 5, 2025</span>
+            <span class="sales-grade">PSA 9</span>
+            <span class="sales-price">$487</span>
+            <span class="sales-change up">▲ 2.5%</span>
+            <span class="sales-platform">Trove</span>
+          </div>
+          <div class="sales-row">
+            <span class="sales-date">Mar 28, 2025</span>
+            <span class="sales-grade">PSA 9</span>
+            <span class="sales-price">$475</span>
+            <span class="sales-change dn">▼ 1.0%</span>
+            <span class="sales-platform">Trove</span>
+          </div>
+          <div class="sales-row">
+            <span class="sales-date">Mar 19, 2025</span>
+            <span class="sales-grade">PSA 9</span>
+            <span class="sales-price">$480</span>
+            <span class="sales-change up">▲ 3.2%</span>
+            <span class="sales-platform">Trove</span>
+          </div>
+          <div class="sales-row">
+            <span class="sales-date">Mar 7, 2025</span>
+            <span class="sales-grade">PSA 9</span>
+            <span class="sales-price">$465</span>
+            <span class="sales-change dn">▼ 0.6%</span>
+            <span class="sales-platform">Trove</span>
+          </div>
+          <div class="sales-row">
+            <span class="sales-date">Feb 22, 2025</span>
+            <span class="sales-grade">PSA 9</span>
+            <span class="sales-price">$468</span>
+            <span class="sales-change up">▲ 1.8%</span>
+            <span class="sales-platform">Trove</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left-col -->
+
+    <!-- RIGHT COLUMN -->
+    <div class="purchase-panel">
+
+      <!-- PRICE + FEES -->
+      <div class="panel-box">
+        <div class="panel-price-section">
+          <div class="panel-price-eyebrow">Asking Price</div>
+          <div class="panel-price">$487</div>
+          <div class="panel-price-usdc">≈ 487.00 USDC on Base</div>
+          <div class="panel-price-comp">30-day average: <span>$475 · you save ~$0 vs avg</span></div>
+        </div>
+        <div class="panel-fees">
+          <div class="fee-row">
+            <span class="fee-label">Card price</span>
+            <span class="fee-value">$487.00</span>
+          </div>
+          <div class="fee-row">
+            <span class="fee-label">Auth + shipping fee</span>
+            <span class="fee-value">$25.00</span>
+          </div>
+          <div class="fee-row">
+            <span class="fee-label muted">Buyer protection (0.5%)</span>
+            <span class="fee-value muted">$2.44</span>
+          </div>
+          <div class="fee-row">
+            <span class="fee-label muted">Sales tax (est.)</span>
+            <span class="fee-value muted">$38.96</span>
+          </div>
+          <div class="fee-row total">
+            <span class="fee-label">Total</span>
+            <span class="fee-value">$553.40 USDC</span>
+          </div>
+        </div>
+
+        <div class="escrow-box">
+          <div class="escrow-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 2 L16 5.5 L16 9 C16 13 9 16.5 9 16.5 C9 16.5 2 13 2 9 L2 5.5 Z" stroke="#4CAF7C" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+              <path d="M6 9 L8 11 L12 7" stroke="#4CAF7C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="escrow-text">
+            <strong>Escrow Protected</strong>
+            Your USDC is locked in a smart contract on Base. Released to the seller only after the card is authenticated and you confirm delivery.
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <button class="btn-buy" id="buyNowBtn">Buy Now — Lock $553.40 USDC</button>
+          <button class="btn-offer">Make an Offer</button>
+          <button class="btn-watch" id="watchBtn">
+            <span id="watchIcon">♡</span> Add to Watchlist
+          </button>
+          <div class="panel-actions-note">Auto-refund if seller doesn't ship in 48hrs · 72hr inspection window after delivery · No chargebacks · On-chain</div>
+        </div>
+      </div>
+
+      <!-- TRANSACTION FLOW -->
+      <div class="flow-box">
+        <div class="flow-title">What Happens Next</div>
+        <div class="flow-steps">
+          <div class="flow-step active">
+            <div class="flow-dot">1</div>
+            <div class="flow-content">
+              <div class="flow-step-title">You lock USDC in escrow</div>
+              <div class="flow-step-desc">Smart contract holds funds on Base. Seller is notified immediately.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-dot">2</div>
+            <div class="flow-content">
+              <div class="flow-step-title">Seller ships to Trove</div>
+              <div class="flow-step-desc">Pre-paid label generated. Seller must ship within 48hrs. If no carrier scan by deadline, your USDC is automatically refunded in full.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-dot">3</div>
+            <div class="flow-content">
+              <div class="flow-step-title">Expert authentication</div>
+              <div class="flow-step-desc">Card inspected by certified authenticator. Grade and identity verified against listing.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-dot">4</div>
+            <div class="flow-content">
+              <div class="flow-step-title">Card ships to you</div>
+              <div class="flow-step-desc">Authenticated card forwarded to your address with tracking. 72-hour inspection window on arrival.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-dot">5</div>
+            <div class="flow-content">
+              <div class="flow-step-title">USDC releases to seller</div>
+              <div class="flow-step-desc">Confirm receipt or window expires → funds release on-chain. Immutable and final.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SELLER -->
+      <div class="seller-box">
+        <div class="seller-header">
+          <div class="seller-avatar">CK</div>
+          <div>
+            <div class="seller-name">CardKing_88</div>
+            <div class="seller-tier">⭐ Elite Seller · 847 Sales</div>
+          </div>
+        </div>
+        <div class="seller-stats">
+          <div class="seller-stat">
+            <div class="seller-stat-val teal">4.98</div>
+            <div class="seller-stat-label">Rating</div>
+          </div>
+          <div class="seller-stat">
+            <div class="seller-stat-val">847</div>
+            <div class="seller-stat-label">Sales</div>
+          </div>
+          <div class="seller-stat">
+            <div class="seller-stat-val">0</div>
+            <div class="seller-stat-label">Disputes</div>
+          </div>
+        </div>
+        <div class="seller-reviews">
+          <div class="seller-review">
+            <div class="seller-review-text">"Card arrived exactly as described. Fast shipping, great comms."</div>
+            <div class="seller-review-meta"><span class="stars">★★★★★</span> · PSA 10 Charizard · 3 weeks ago</div>
+          </div>
+          <div class="seller-review">
+            <div class="seller-review-text">"Flawless transaction. Would buy from again without hesitation."</div>
+            <div class="seller-review-meta"><span class="stars">★★★★★</span> · BGS 9.5 Black Lotus · 1 month ago</div>
+          </div>
+        </div>
+        <button class="btn-view-seller">View Full Profile</button>
+      </div>
+
+      <!-- AUTH BADGE -->
+      <div class="auth-box">
+        <div class="auth-header">
+          <div class="auth-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 2 L16 5.5 L16 9 C16 13 9 16.5 9 16.5 C9 16.5 2 13 2 9 L2 5.5 Z" stroke="var(--primary-text)" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <div class="auth-title">Trove Authentication</div>
+            <div class="auth-sub">What we verify before this card ships to you</div>
+          </div>
+        </div>
+        <div class="auth-steps">
+          <div class="auth-step">
+            <div class="auth-step-check">✓</div>
+            Card received matches all listing photos exactly
+          </div>
+          <div class="auth-step">
+            <div class="auth-step-check">✓</div>
+            Grade label matches listing (PSA 9 · confirmed)
+          </div>
+          <div class="auth-step">
+            <div class="auth-step-check">✓</div>
+            Cert #12847291 verified on PSA's official database
+          </div>
+          <div class="auth-step">
+            <div class="auth-step-check">✓</div>
+            Slab intact — no cracks, tampering, or re-sealing
+          </div>
+          <div class="auth-step">
+            <div class="auth-step-check">✓</div>
+            If anything doesn't match — full refund, automatically
+          </div>
+        </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);line-height:1.65">
+          The card's grade and authenticity are certified by <strong style="color:var(--text-secondary)">PSA</strong> — Trove verifies you receive exactly what was listed. <a href="index.html#how-it-works" style="color:var(--teal);text-decoration:none">How authentication works →</a>
+        </div>
+      </div>
+
+    </div><!-- /purchase-panel -->
+  </div><!-- /listing-grid -->
+</div><!-- /page-wrap -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// THEME
+const toggle=document.getElementById('themeToggle');
+const html=document.documentElement;
+const saved=localStorage.getItem('trove-theme')||'dark';
+html.setAttribute('data-theme',saved);
+toggle.textContent=saved==='dark'?'🌙':'☀️';
+toggle.addEventListener('click',()=>{
+  const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  toggle.textContent=next==='dark'?'🌙':'☀️';
+  localStorage.setItem('trove-theme',next);
+  drawChart(currentTab);
+});
+
+// WATCHLIST
+const watchBtn=document.getElementById('watchBtn');
+const watchIcon=document.getElementById('watchIcon');
+let watching=false;
+watchBtn.addEventListener('click',()=>{
+  watching=!watching;
+  watchIcon.textContent=watching?'♥':'♡';
+  watchBtn.style.borderColor=watching?'var(--accent-red)':'';
+  watchBtn.style.color=watching?'var(--accent-red)':'';
+});
+
+// BUY MODAL
+const buyModal=document.getElementById('buyModal');
+document.getElementById('buyNowBtn').addEventListener('click',()=>buyModal.classList.add('open'));
+document.getElementById('modalClose').addEventListener('click',()=>buyModal.classList.remove('open'));
+document.getElementById('modalCancel').addEventListener('click',()=>buyModal.classList.remove('open'));
+buyModal.addEventListener('click',(e)=>{if(e.target===buyModal)buyModal.classList.remove('open')});
+
+// CHART
+let chart,currentTab='30d';
+const datasets={
+  '7d':{
+    labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    data:[462,468,471,465,470,480,487]
+  },
+  '30d':{
+    labels:['Mar 6','Mar 13','Mar 20','Mar 27','Apr 3','Apr 5'],
+    data:[452,458,468,465,475,487]
+  },
+  '90d':{
+    labels:['Jan','Feb','Mar','Apr'],
+    data:[430,445,460,487]
+  },
+  '1y':{
+    labels:['Apr\'24','Jul\'24','Oct\'24','Jan\'25','Apr\'25'],
+    data:[380,410,440,455,487]
+  },
+  'all':{
+    labels:['2020','2021','2022','2023','2024','2025'],
+    data:[120,280,380,340,410,487]
+  }
+};
+
+function getChartColor(){
+  return html.getAttribute('data-theme')==='dark'?'#C9A84C':'#0D6E6E';
+}
+
+function drawChart(tab){
+  const d=datasets[tab];
+  const color=getChartColor();
+  const ctx=document.getElementById('priceChart');
+  // Update x labels
+  document.getElementById('chartLabels').innerHTML=d.labels.map(l=>`<span>${l}</span>`).join('');
+  if(chart)chart.destroy();
+  chart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:d.labels,
+      datasets:[{
+        data:d.data,
+        borderColor:color,
+        borderWidth:2,
+        pointBackgroundColor:color,
+        pointRadius:4,
+        pointHoverRadius:6,
+        fill:true,
+        backgroundColor:(context)=>{
+          const c=context.chart.ctx;
+          const g=c.createLinearGradient(0,0,0,context.chart.height||180);
+          const isDark=html.getAttribute('data-theme')==='dark';
+          g.addColorStop(0,isDark?'rgba(201,168,76,0.18)':'rgba(13,110,110,0.15)');
+          g.addColorStop(1,isDark?'rgba(201,168,76,0)':'rgba(13,110,110,0)');
+          return g;
+        },
+        tension:0.4,
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:html.getAttribute('data-theme')==='dark'?'#18181C':'#EDEAE3',
+          titleColor:html.getAttribute('data-theme')==='dark'?'#F0EDE6':'#1A1814',
+          bodyColor:color,
+          borderColor:color,
+          borderWidth:1,
+          padding:10,
+          callbacks:{label:(c)=>`$${c.raw.toLocaleString()}`}
+        }
+      },
+      scales:{
+        x:{display:false},
+        y:{
+          display:true,
+          position:'right',
+          grid:{color:html.getAttribute('data-theme')==='dark'?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.06)'},
+          ticks:{
+            color:'#6C6A66',
+            font:{family:'DM Mono',size:10},
+            callback:(v)=>`$${v.toLocaleString()}`
+          }
+        }
+      }
+    }
+  });
+}
+
+function setTab(el,tab){
+  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  currentTab=tab;
+  drawChart(tab);
+}
+
+window.addEventListener('load',()=>drawChart('30d'));
+
+// GALLERY THUMBS
+document.querySelectorAll('.gallery-thumb').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.gallery-thumb').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
