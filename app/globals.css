@@ -1,26 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --gold: #C9A84C;
+  --teal: #C9A84C;
+  --teal-bg: rgba(201,168,76,0.1);
+  --teal-border: rgba(201,168,76,0.28);
+  --bg: #0A0A0B;
+  --bg-2: #111114;
+  --bg-3: #18181C;
+  --bg-4: #222228;
+  --text-primary: #F0EDE6;
+  --text-secondary: #B8B4AC;
+  --text-muted: #6C6A66;
+  --accent-green: #4CAF7C;
+  --accent-red: #C84B3C;
+  --accent-blue: #3C7DC8;
+  --accent-amber: #E8A838;
+  --border: #2A2A32;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+[data-theme="light"] {
+  --gold: #C9A84C;
+  --teal: #0D6E6E;
+  --teal-bg: rgba(13,110,110,0.08);
+  --teal-border: rgba(13,110,110,0.28);
+  --bg: #F5F2EC;
+  --bg-2: #EDEAE3;
+  --bg-3: #E4E0D8;
+  --bg-4: #D8D4CC;
+  --text-primary: #1A1814;
+  --text-secondary: #4A4640;
+  --text-muted: #8A8680;
+  --accent-green: #1A6B3A;
+  --accent-red: #B83C2C;
+  --accent-blue: #1A5EA0;
+  --accent-amber: #9B6E1A;
+  --border: #C8C4BC;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+  transition: background 0.3s, color 0.3s;
+  overflow-x: hidden;
 }
