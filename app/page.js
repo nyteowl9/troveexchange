@@ -79,10 +79,10 @@ export default function Home() {
 
       {/* HERO */}
       <section style={{
-        minHeight: '100vh',
+        minHeight: 'auto',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        padding: '80px 2rem 40px',
+        padding: '100px 2rem 48px',
         textAlign: 'center',
         position: 'relative', overflow: 'hidden'
       }}>
