@@ -197,7 +197,49 @@ export default function Home() {
         </div>
 
       </section>
-
+{/* TICKER */}
+      <div style={{
+        background: 'var(--bg-3)',
+        borderTop: '0.5px solid var(--teal-border)',
+        borderBottom: '0.5px solid var(--teal-border)',
+        padding: '10px 0',
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
+        <div style={{
+          display: 'flex',
+          whiteSpace: 'nowrap',
+          animation: 'ticker 35s linear infinite'
+        }}>
+          {[
+            { name: 'Charizard Base Holo', grade: 'PSA 9', price: '$487', change: '▲ 2.4%', up: true },
+            { name: 'Black Lotus', grade: 'BGS 8.5', price: '$28,400', change: '▼ 1.2%', up: false },
+            { name: 'Pikachu Illustrator', grade: 'PSA 7', price: '$4,200', change: '▲ 5.1%', up: true },
+            { name: 'Mox Sapphire', grade: 'PSA 9', price: '$6,800', change: '▲ 0.8%', up: true },
+            { name: '1st Ed Shadowless Charizard', grade: 'PSA 10', price: '$36,000', change: '▼ 0.5%', up: false },
+            { name: 'Ancestral Recall', grade: 'BGS 9', price: '$9,200', change: '▲ 3.2%', up: true },
+            { name: 'Monkey D. Luffy Alt Art', grade: 'PSA 10', price: '$890', change: '▲ 1.8%', up: true },
+            { name: 'Charizard Base Holo', grade: 'PSA 9', price: '$487', change: '▲ 2.4%', up: true },
+            { name: 'Black Lotus', grade: 'BGS 8.5', price: '$28,400', change: '▼ 1.2%', up: false },
+            { name: 'Ancestral Recall', grade: 'BGS 9', price: '$9,200', change: '▲ 3.2%', up: true },
+          ].map((item, i) => (
+            <span key={i} style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '0 2rem',
+              fontFamily: 'DM Mono, monospace',
+              fontSize: '11px'
+            }}>
+              <span style={{ color: 'var(--text-secondary)' }}>{item.name}</span>
+              <span style={{ color: 'var(--text-muted)' }}>{item.grade}</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.price}</span>
+              <span style={{ color: item.up ? 'var(--accent-green)' : 'var(--accent-red)' }}>{item.change}</span>
+              <span style={{ color: 'var(--border)' }}>·</span>
+            </span>
+          ))}
+        </div>
+      </div>
       {/* TRUST STRIP */}
       <div style={{
         background: 'var(--bg-2)',
