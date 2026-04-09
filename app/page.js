@@ -82,7 +82,7 @@ export default function Home() {
         minHeight: '100vh',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        padding: '120px 2rem 60px',
+        padding: '80px 2rem 40px',
         textAlign: 'center',
         position: 'relative', overflow: 'hidden'
       }}>
@@ -136,8 +136,7 @@ export default function Home() {
           marginBottom: '2.2rem',
           position: 'relative'
         }}>
-          Every card authenticated by experts. Every USDC locked in escrow.
-          Every transaction settled on-chain — with no middlemen taking a cut.
+         Every card authenticated. Every USDC in escrow. Every transaction on-chain — no middlemen.
         </p>
 
         {/* Buttons */}
