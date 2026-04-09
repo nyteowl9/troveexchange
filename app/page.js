@@ -185,7 +185,7 @@ export default function Home() {
             </div>
             <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600, padding: '15px 28px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Search</button>
           </div>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px', marginTop: '12px' }}>
             {categories.map(cat => (
               <button key={cat.id} onClick={() => setActiveCategory(cat.id)} style={{
                 background: activeCategory === cat.id ? 'var(--bg-3)' : 'var(--bg-2)',
