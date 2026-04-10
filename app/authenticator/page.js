@@ -97,25 +97,13 @@ export default function AuthenticatorPortal() {
             <div style={{ marginBottom: '12px' }}>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', fontWeight: 500 }}>Rejection Reason</div>
               <select style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer', marginBottom: '10px' }}>
-                {card.raw ? (
-                  <>
-                    <option>Condition does not match listing description</option>
-                    <option>Undisclosed damage — creases, scratches, or staining found</option>
-                    <option>Wrong card received</option>
-                    <option>Card appears altered or trimmed</option>
-                    <option>Condition significantly worse than listed</option>
-                  </>
-                ) : (
-                  <>
-                    <option>Card does not match listing photos</option>
-                    <option>Grade label does not match listing</option>
-                    <option>Wrong card received</option>
-                    <option>Slab is damaged or tampered</option>
-                    <option>Cert number does not match {card.grader} database</option>
-                    <option>Holographic sticker missing or damaged</option>
-                    <option>Suspected counterfeit slab</option>
-                  </>
-                )}
+                <option>Card does not match listing photos</option>
+                <option>Grade label does not match listed grade</option>
+                <option>Cert number verification failed</option>
+                <option>Slab integrity compromised</option>
+                <option>Holographic sticker missing or damaged</option>
+                <option>Shipping damage occurred</option>
+                <option>Other (see notes)</option>
               </select>
               <textarea style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} placeholder="Additional notes for the seller..." />
             </div>
@@ -174,6 +162,7 @@ export default function AuthenticatorPortal() {
         @media (max-width: 768px) {
           .dash-aside { display: none !important; }
           .dash-main { margin-left: 0 !important; width: 100% !important; max-width: 100% !important; padding: 16px 1rem 40px !important; }
+          .mobile-section-nav { display: block !important; }
         }
               @media (min-width: 769px) { .mobile-section-nav { display: none !important; } }
       `}</style>
@@ -187,7 +176,7 @@ export default function AuthenticatorPortal() {
             { id: 'completed', icon: '✓', label: 'Completed Today', badge: 12 },
             { id: 'flagged', icon: '⚠', label: 'Flagged', badge: 1 },
           ].map(item => (
-            <button key={item.id} onClick={() => !item.disabled && setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', cursor: item.disabled ? 'not-allowed' : 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', border: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: item.disabled ? 'var(--text-muted)' : activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%', opacity: item.disabled ? 0.4 : 1 }}>
+            <button key={item.id} onClick={() => !item.disabled && setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', cursor: item.disabled ? 'not-allowed' : 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: item.disabled ? 'var(--text-muted)' : activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%', opacity: item.disabled ? 0.4 : 1 }}>
               <span style={{ fontSize: '13px' }}>{item.icon}</span>
               {item.label}
               {item.badge && <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.id === 'flagged' ? 'var(--accent-red)' : 'var(--teal)', color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
@@ -206,6 +195,19 @@ export default function AuthenticatorPortal() {
 
         {/* MAIN */}
         <main className="dash-main" style={{ marginLeft: '200px', flex: 1, padding: '24px 24px 60px', minWidth: 0 }}>
+          {/* MOBILE NAV DROPDOWN */}
+          <div className="mobile-section-nav" style={{ marginBottom: '20px', display: 'none' }}>
+            <select
+              value={activeSection}
+              onChange={e => setActiveSection(e.target.value)}
+              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="queue">Inspection Queue</option>
+              <option value="inspect">Current Card</option>
+              <option value="completed">Completed Today</option>
+              <option value="flagged">Flagged</option>
+            </select>
+          </div>
 
           {/* QUEUE */}
           {activeSection === 'queue' && (

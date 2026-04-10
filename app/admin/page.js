@@ -139,7 +139,7 @@ export default function AdminPanel() {
         {/* SIDEBAR */}
         <aside className="dash-aside" style={{ width: '210px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '56px', left: 0, height: 'calc(100vh - 56px)', overflowY: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
           {navItems.map(item => (
-            <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', border: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%' }}>
+            <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%' }}>
               <span style={{ fontSize: '14px', width: '16px', textAlign: 'center' }}>{item.icon}</span>
               {item.label}
               {item.badge && <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor || 'var(--teal)', color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
@@ -173,9 +173,14 @@ export default function AdminPanel() {
               onChange={e => setActiveSection(e.target.value)}
               style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
             >
-              {navItems.map(item => (
-                <option key={item.id} value={item.id}>{item.icon} {item.label}</option>
-              ))}
+              <option key="overview" value="overview">Overview</option>
+              <option key="decisions" value="decisions">Pending Decisions</option>
+              <option key="orders" value="orders">All Orders</option>
+              <option key="users" value="users">Users</option>
+              <option key="strikes" value="strikes">Strikes</option>
+              <option key="financials" value="financials">Financials</option>
+              <option key="escrow" value="escrow">Escrow Monitor</option>
+              <option key="settings" value="settings">Platform Settings</option>
             </select>
           </div>
 

@@ -119,7 +119,7 @@ export default function Checkout() {
 
 
       {/* PROGRESS BAR */}
-      <div style={{ position: 'fixed', top: '64px', left: 0, right: 0, zIndex: 90, background: 'var(--bg-2)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 2.5rem' }}>
+      <div style={{ position: 'fixed', top: '64px', left: 0, right: 0, zIndex: 90, background: 'var(--bg-2)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', padding: '14px 0' }}>
           {progressSteps.map((label, i) => {
             const n = i + 1
@@ -139,13 +139,13 @@ export default function Checkout() {
       </div>
 
       {/* MAIN LAYOUT */}
-            <style>{`
+      <style>{`
         @media (max-width: 768px) {
-          .checkout-grid { grid-template-columns: 1fr !important; padding: 110px 1rem 40px !important; }
+          .checkout-grid { grid-template-columns: 1fr !important; padding: 110px 1rem 40px !important; width: 100% !important; }
           .checkout-sidebar { position: relative !important; top: auto !important; }
         }
       `}</style>
-<div className="checkout-grid" style={{ maxWidth: '1100px', margin: '0 auto', padding: '120px 1.5rem 60px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: '28px', alignItems: 'flex-start' }}>
+      <div className="checkout-grid" style={{ maxWidth: '1100px', margin: '0 auto', padding: '120px 1.5rem 60px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: '28px', alignItems: 'flex-start' }}>
 
         {/* STEPS */}
         <div>

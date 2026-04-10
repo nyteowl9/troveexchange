@@ -200,7 +200,7 @@ export default function BuyerDashboard() {
         <aside className="dash-aside" style={{ width: '220px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '64px', left: 0, height: 'calc(100vh - 64px)', overflowY: 'auto', padding: '20px 0', display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '0 16px', marginBottom: '4px', fontWeight: 500 }}>Overview</div>
           {navItems.slice(0, 2).map(item => (
-            <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', transition: 'all 0.15s', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', border: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%' }}>
+            <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', transition: 'all 0.15s', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%' }}>
               <span style={{ width: '16px', textAlign: 'center', fontSize: '14px' }}>{item.icon}</span>
               {item.label}
               {item.badge && <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor, color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
@@ -209,7 +209,7 @@ export default function BuyerDashboard() {
 
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 16px 4px', fontWeight: 500 }}>Purchases</div>
           {navItems.slice(2, 5).map(item => (
-            <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', border: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%' }}>
+            <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%' }}>
               <span style={{ width: '16px', textAlign: 'center', fontSize: '14px' }}>{item.icon}</span>
               {item.label}
               {item.badge && <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor, color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
@@ -218,7 +218,7 @@ export default function BuyerDashboard() {
 
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 16px 4px', fontWeight: 500 }}>Activity</div>
           {navItems.slice(5).map(item => (
-            <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', border: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%' }}>
+            <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%' }}>
               <span style={{ width: '16px', textAlign: 'center', fontSize: '14px' }}>{item.icon}</span>
               {item.label}
               {item.badge && <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor, color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
@@ -244,9 +244,13 @@ export default function BuyerDashboard() {
               style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
             >
               <option key="overview" value="overview">Dashboard</option>
-              <option key="orders" value="orders">My Orders</option>
+              <option key="notifications" value="notifications">Notifications</option>
+              <option key="active" value="active">Active Purchases</option>
+              <option key="inspection" value="inspection">Auto-Release</option>
               <option key="watchlist" value="watchlist">Watchlist</option>
+              <option key="offers" value="offers">My Offers</option>
               <option key="history" value="history">Purchase History</option>
+              <option key="disputes" value="disputes">Disputes</option>
             </select>
           </div>
 

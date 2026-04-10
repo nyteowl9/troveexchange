@@ -130,6 +130,7 @@ export default function CustomerSupport() {
         @media (max-width: 768px) {
           .dash-aside { display: none !important; }
           .dash-main { margin-left: 0 !important; width: 100% !important; max-width: 100% !important; padding: 16px 1rem 40px !important; }
+          .mobile-section-nav { display: block !important; }
         }
               @media (min-width: 769px) { .mobile-section-nav { display: none !important; } }
       `}</style>
@@ -138,7 +139,7 @@ export default function CustomerSupport() {
         {/* SIDEBAR */}
         <aside className="dash-aside" style={{ width: '200px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '56px', left: 0, height: 'calc(100vh - 56px)', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
           {navItems.map(item => (
-            <button key={item.id} onClick={() => !item.disabled && setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', cursor: item.disabled ? 'not-allowed' : 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', border: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: item.disabled ? 'var(--text-muted)' : activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%', opacity: item.disabled ? 0.4 : 1 }}>
+            <button key={item.id} onClick={() => !item.disabled && setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', cursor: item.disabled ? 'not-allowed' : 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: item.disabled ? 'var(--text-muted)' : activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%', opacity: item.disabled ? 0.4 : 1 }}>
               <span style={{ fontSize: '13px' }}>{item.icon}</span>
               {item.label}
               {item.badge && <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: 'var(--accent-amber)', color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
@@ -163,6 +164,21 @@ export default function CustomerSupport() {
 
         {/* MAIN */}
         <main className="dash-main" style={{ marginLeft: '200px', flex: 1, padding: '24px 24px 60px', minWidth: 0 }}>
+          {/* MOBILE NAV DROPDOWN */}
+          <div className="mobile-section-nav" style={{ marginBottom: '20px', display: 'none' }}>
+            <select
+              value={activeSection}
+              onChange={e => setActiveSection(e.target.value)}
+              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="queue">Ticket Queue</option>
+              <option value="detail">Active Ticket</option>
+              <option value="user-lookup">User Lookup</option>
+              <option value="order-lookup">Order Lookup</option>
+              <option value="canned">Canned Responses</option>
+              <option value="escalation">Escalation Guide</option>
+            </select>
+          </div>
 
           {/* QUEUE */}
           {activeSection === 'queue' && (

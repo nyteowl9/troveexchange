@@ -7,11 +7,16 @@ export default function Listing() {
   const [activePhoto, setActivePhoto] = useState(0)
   const [activeTab, setActiveTab] = useState('7d')
   const [showBuyModal, setShowBuyModal] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
     setTheme(saved)
     document.documentElement.setAttribute('data-theme', saved)
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
   const toggleTheme = () => {
@@ -70,7 +75,22 @@ export default function Listing() {
   })
 
   return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%', overflowX: 'hidden' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .listing-grid { grid-template-columns: 1fr !important; padding: 16px 0.75rem 40px !important; gap: 16px !important; }
+          .listing-right { position: relative !important; top: auto !important; order: -1 !important; }
+          .listing-left { order: 2 !important; }
+          .listing-fee-breakdown { display: none !important; }
+          .listing-breadcrumb { padding: 68px 0.75rem 8px !important; font-size: 10px !important; overflow-x: auto !important; white-space: nowrap !important; }
+          .listing-stats { grid-template-columns: 1fr 1fr !important; }
+          .listing-tabs { overflow-x: auto !important; white-space: nowrap !important; display: flex !important; }
+          .listing-table { overflow-x: auto !important; }
+          .listing-table table { min-width: 360px !important; }
+          .listing-trust { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; padding: 12px 14px !important; }
+          .listing-actions { flex-wrap: wrap !important; gap: 8px !important; }
+        }
+      `}</style>
 
       {/* BUY MODAL */}
       {showBuyModal && (
@@ -115,7 +135,7 @@ export default function Listing() {
 
 
       {/* BREADCRUMB */}
-      <div style={{ paddingTop: '64px', background: 'var(--bg-2)', borderBottom: '0.5px solid var(--border)', padding: '12px 2.5rem', paddingTop: '76px' }}>
+      <div style={{ background: 'var(--bg-2)', borderBottom: '0.5px solid var(--border)', padding: isMobile ? '68px 1rem 8px' : '76px 2.5rem 12px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
         <div style={{ maxWidth: '1300px', margin: '0 auto', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '8px', alignItems: 'center' }}>
           <a href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Home</a>
           <span>→</span>
@@ -127,23 +147,11 @@ export default function Listing() {
         </div>
       </div>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .listing-grid { grid-template-columns: 1fr !important; }
-          .listing-right { position: relative !important; top: auto !important; order: -1 !important; }
-          .listing-left { order: 2 !important; }
-          .listing-right-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
-          .listing-buy-section { grid-column: 1 / -1; }
-          .listing-fee-breakdown { display: none !important; }
-          .listing-trust { display: none !important; }
-          .listing-seller { display: none !important; }
-        }
-      `}</style>
       {/* MAIN */}
-      <div className="listing-grid" style={{ maxWidth: '1300px', margin: '0 auto', padding: '88px 1.5rem 60px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '32px', alignItems: 'flex-start' }}>
+      <div style={{ maxWidth: '1300px', margin: '0 auto', padding: isMobile ? '12px 0.75rem 40px' : '24px 2rem 60px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 360px', gap: isMobile ? '16px' : '32px', alignItems: 'flex-start', width: '100%', boxSizing: 'border-box', minWidth: 0 }}>
 
         {/* LEFT */}
-        <div className="listing-left">
+        <div style={{ order: isMobile ? 2 : 1, minWidth: 0, width: '100%' }}>
 
           {/* PHOTO GALLERY */}
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', overflow: 'hidden', marginBottom: '24px' }}>
@@ -175,12 +183,12 @@ export default function Listing() {
           </div>
 
           {/* CARD DETAILS */}
-          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '22px', marginBottom: '24px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: isMobile ? '14px' : '24px' }}>
             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>
               Charizard Holo <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>#4/102</em>
             </div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '18px' }}>Pokémon · Base Set 1999 Shadowless · English</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '1px', background: 'var(--border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '16px' }}>
               {[
                 { label: 'Grader', val: 'PSA', color: 'var(--accent-blue)' },
                 { label: 'Grade', val: 'Mint 9', color: 'var(--accent-green)' },
@@ -207,7 +215,7 @@ export default function Listing() {
           </div>
 
           {/* PRICE HISTORY */}
-          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '22px', marginBottom: '24px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: isMobile ? '14px' : '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Price <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
               <div style={{ display: 'flex', gap: '4px' }}>
@@ -274,7 +282,7 @@ export default function Listing() {
           </div>
 
           {/* AUTHENTICATION GUARANTEE */}
-          <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '14px', padding: '22px', marginBottom: '24px' }}>
+          <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: isMobile ? '14px' : '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>✓</div>
               <div>
@@ -301,7 +309,7 @@ export default function Listing() {
           </div>
 
           {/* TRANSACTION FLOW */}
-          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '22px', marginBottom: '24px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: isMobile ? '14px' : '24px' }}>
             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, marginBottom: '20px', color: 'var(--text-primary)' }}>
               How This <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Transaction Works</em>
             </div>
@@ -325,7 +333,7 @@ export default function Listing() {
           </div>
 
           {/* SELLER REVIEWS */}
-          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '22px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>
                 Seller <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Reviews</em>
@@ -352,7 +360,7 @@ export default function Listing() {
         </div>
 
         {/* RIGHT — PURCHASE PANEL */}
-        <div className="listing-right" style={{ position: 'sticky', top: '84px' }}>
+        <div style={{ position: isMobile ? 'relative' : 'sticky', top: isMobile ? 'auto' : '84px', order: isMobile ? 1 : 2, minWidth: 0, width: '100%' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
 
             {/* Card preview */}
@@ -373,7 +381,7 @@ export default function Listing() {
             </div>
 
             {/* Fee breakdown */}
-            <div className="listing-fee-breakdown" style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)', display: isMobile ? 'none' : 'block' }}>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Fee Breakdown</div>
               {[
                 { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
@@ -408,7 +416,7 @@ export default function Listing() {
             </div>
 
             {/* Trust items */}
-            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ padding: isMobile ? '12px 14px' : '16px 20px', display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr', gap: '8px' }}>
               {[
                 { icon: '🔒', text: 'Escrow protected — funds held by smart contract' },
                 { icon: '✓', text: 'Human authenticated before delivery' },
