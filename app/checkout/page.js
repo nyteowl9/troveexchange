@@ -209,7 +209,8 @@ export default function Checkout() {
                 <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {[
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
-                    { label: 'Auth + shipping (buyer)', val: `$${authFee}` },
+                    { label: 'Auth fee', val: `$${authFee}` },
+                    { label: 'Shipping & insurance', val: 'Calculated at checkout' },
                     { label: 'Buyer protection (0.5%)', val: `$${buyerProtection}` },
                     { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
                     { label: 'Total to lock in escrow', val: `$${total} USDC`, total: true },
@@ -251,7 +252,8 @@ export default function Checkout() {
                   title: 'Payment Breakdown',
                   rows: [
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}`, gold: true },
-                    { label: 'Auth + shipping fee', val: `$${authFee}` },
+                    { label: 'Auth fee', val: `$${authFee}` },
+                    { label: 'Shipping & insurance', val: '$18.40' },
                     { label: 'Buyer protection (0.5%)', val: `$${buyerProtection}` },
                     { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
                     { label: 'Total locked in escrow', val: `$${total} USDC`, gold: true, total: true },

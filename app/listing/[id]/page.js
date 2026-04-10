@@ -84,7 +84,9 @@ export default function Listing() {
               {[
                 { label: 'Card', val: 'Charizard Holo PSA 9' },
                 { label: 'Seller', val: 'CardKing_88 · Elite' },
-                { label: 'Total to lock', val: `$${total} USDC` },
+                { label: 'Card price', val: `$$${cardPrice}` },
+                { label: 'Auth + shipping', val: 'Calculated' },
+                { label: 'Total (est.)', val: `$${total} USDC` },
                 { label: 'Network', val: 'Base (Ethereum L2)' },
                 { label: 'Gas est.', val: '~$0.04' },
               ].map((r, i) => (
@@ -380,9 +382,10 @@ export default function Listing() {
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Fee Breakdown</div>
               {[
                 { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
-                { label: 'Auth + shipping (buyer)', val: `$${authFee}` },
+                { label: 'Auth fee', val: `$${authFee}` },
+                { label: 'Shipping & insurance', val: 'Calculated at checkout' },
                 { label: 'Buyer protection (0.5%)', val: `$${buyerProtection}` },
-                { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
+                { label: 'Sales tax (varies)', val: 'Calculated at checkout' },
               ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '5px 0', borderBottom: '0.5px solid var(--border)' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>

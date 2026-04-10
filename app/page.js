@@ -139,7 +139,7 @@ export default function Home() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
           <div style={{ height: '0.5px', width: '40px', background: 'var(--border)' }} />
           <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '10px', padding: '10px 22px', textAlign: 'center', cursor: 'pointer' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', lineHeight: 1 }}>Home of the 3% Fee</div>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', lineHeight: 1 }}>Home of the 3.5% Fee</div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)', letterSpacing: '0.1em', marginTop: '3px', fontWeight: 500 }}>SELLERS KEEP MORE · PERIOD</div>
           </div>
           <div style={{ height: '0.5px', width: '40px', background: 'var(--border)' }} />
@@ -185,7 +185,7 @@ export default function Home() {
             </div>
             <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600, padding: '15px 28px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Search</button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px', marginTop: '12px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
             {categories.map(cat => (
               <button key={cat.id} onClick={() => setActiveCategory(cat.id)} style={{
                 background: activeCategory === cat.id ? 'var(--bg-3)' : 'var(--bg-2)',
@@ -226,7 +226,7 @@ export default function Home() {
                     </div>
                   </div>
                   <div style={{ position: 'absolute', top: '10px', left: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 9px', borderRadius: '6px', fontWeight: 500, background: 'rgba(201,168,76,0.12)', border: '1px solid var(--teal-border)', color: 'var(--gold)' }}>{card.grader}</div>
-                  <div style={{ position: 'absolute', top: '10px', right: '10px', width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(201,168,76,0.15)', border: '1.5px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: card.grade.length > 4 ? '9px' : '15px', fontWeight: 600, color: 'var(--gold)' }}>{card.grade}</div>
+                  <div style={{ position: 'absolute', top: '10px', right: '10px', width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(201,168,76,0.15)', border: '1.5px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: card.grade.length > 4 ? '11px' : '15px', fontWeight: 600, color: 'var(--gold)' }}>{card.grade}</div>
                 </div>
                 <div style={{ padding: '14px 16px' }}>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 500 }}>{card.game}</div>
@@ -270,7 +270,7 @@ export default function Home() {
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '12px', fontWeight: 500 }}>Why Chase Hollow</div>
             <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 300, lineHeight: 1.05, marginBottom: '12px', color: 'var(--text-primary)' }}>
-              We Charge <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>3%</em>.<br />Everyone Else Charges 13%.
+              We Charge <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>3.5%</em>.<br />Everyone Else Charges 13%.
             </h2>
             <p style={{ fontSize: '16px', color: 'var(--text-secondary)', maxWidth: '520px', margin: '0 auto', lineHeight: 1.7 }}>
               The difference isn't magic — it's blockchain. No credit card companies, no payment processors, no chargeback reserves.
@@ -287,7 +287,7 @@ export default function Home() {
               </thead>
               <tbody>
                 {[
-                  { name: 'Chase Hollow', sub: 'Blockchain · USDC · Base', fee: '3%', processing: '0%', total: '3%', keep: '$970', highlight: true },
+                  { name: 'Chase Hollow', sub: 'Blockchain · USDC · Base', fee: '3.5%', processing: '0%', total: '3.5%', keep: '$965', highlight: true },
                   { name: 'eBay', sub: 'Credit card · PayPal', fee: '12.9%', processing: '2.9%', total: '~15.8%', keep: '$842', highlight: false },
                   { name: 'TCGPlayer', sub: 'Credit card · Stripe', fee: '10.25%', processing: '2.5%', total: '~12.75%', keep: '$872', highlight: false },
                   { name: 'StockX', sub: 'Credit card · Stripe', fee: '9.5%', processing: '3%', total: '~12.5%', keep: '$875', highlight: false },
@@ -309,7 +309,7 @@ export default function Home() {
                     </td>
                     <td style={{ textAlign: 'center', padding: '16px 20px' }}>
                       <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: row.highlight ? '28px' : '24px', fontWeight: 600, color: row.highlight ? 'var(--accent-green)' : 'var(--accent-red)' }}>{row.keep}</div>
-                      {row.highlight && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-green)', marginTop: '2px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '20px', padding: '2px 8px', display: 'inline-block' }}>You keep $970</div>}
+                      {row.highlight && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-green)', marginTop: '2px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '20px', padding: '2px 8px', display: 'inline-block' }}>You keep $965</div>}
                     </td>
                   </tr>
                 ))}
@@ -339,7 +339,8 @@ export default function Home() {
                 { label: 'Payment processing', val: '0%', zero: true },
                 { label: 'Chargeback fraud reserve', val: '0%', zero: true },
                 { label: 'Platform + authentication', val: '3%', zero: false },
-                { label: 'Total cost to seller', val: '3%', zero: false, total: true },
+                      { label: 'Creator affiliate program', val: '0.5%', zero: false },
+                { label: 'Total cost to seller', val: '3.5%', zero: false, total: true },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: item.total ? '10px 0 0' : '7px 0', borderBottom: item.total ? 'none' : '0.5px solid var(--teal-border)', borderTop: item.total ? '0.5px solid var(--teal-border)' : 'none', marginTop: item.total ? '4px' : '0', fontSize: '13px' }}>
                   <span style={{ color: item.total ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: item.total ? 600 : 400 }}>{item.label}</span>
@@ -383,7 +384,7 @@ export default function Home() {
             {[
               { num: '$0', label: 'Credit card fees', sub: 'Visa and Mastercard charge 1.5–2% per transaction. We charge zero.' },
               { num: '$0', label: 'Chargeback risk', sub: 'Credit card chargebacks cost US merchants $125B annually. Blockchain transactions are final.' },
-              { num: '3%', label: 'Total seller fee', sub: 'The only thing left after removing all the intermediaries.' },
+              { num: '3.5%', label: 'Total seller fee', sub: '3% platform + 0.5% creator program. Still the lowest in the industry.' },
               { num: '~$0.05', label: 'Cost per blockchain transaction', sub: 'Base (Ethereum L2) processes transactions for cents.' },
             ].map((stat, i) => (
               <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -579,7 +580,7 @@ export default function Home() {
                 List Your Cards.<br /><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Keep More.</em>
               </h2>
               <p style={{ fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '460px', lineHeight: 1.7, marginBottom: '20px' }}>
-                We charge 3%. That's our marketplace fee — transparent, fixed, and the lowest in the industry. On a $1,000 card, you pay $30. On eBay, you'd pay $130.
+                We charge 3.5%. That's our full marketplace fee — transparent, fixed, and the lowest in the industry. On a $1,000 card, you pay $35. On eBay, you'd pay $130.
               </p>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '13px 32px', fontSize: '14px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', borderRadius: '10px' }}>Start Selling</button>

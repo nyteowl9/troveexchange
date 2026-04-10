@@ -24,7 +24,7 @@ export default function SellerDashboard() {
 
   const calcFees = (p) => {
     const num = parseFloat(p) || 0
-    const platform = (num * 0.03).toFixed(2)
+    const platform = (num * 0.035).toFixed(2)
     const shipSeller = 15
     const net = (num - parseFloat(platform) - shipSeller).toFixed(2)
     return { platform, shipSeller, net }
@@ -441,8 +441,8 @@ export default function SellerDashboard() {
                   <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px' }}>
                     {[
                       { label: 'Your listing price', val: `$${parseFloat(price).toLocaleString()}` },
-                      { label: 'Platform fee (3%)', val: `-$${fees.platform}` },
-                      { label: 'Shipping fee (seller half)', val: `-$${fees.shipSeller}` },
+                      { label: 'Platform fee (3.5%)', val: `-$${fees.platform}` },
+                      { label: 'Shipping & insurance (Label A)', val: `-$${fees.shipSeller}` },
                       { label: 'You receive on settlement', val: `$${fees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
@@ -455,8 +455,19 @@ export default function SellerDashboard() {
               </div>
 
               {/* Notices */}
-              <div style={{ background: 'rgba(76,175,124,0.05)', border: '1px solid rgba(76,175,124,0.2)', borderRadius: '8px', padding: '12px 16px', marginBottom: '8px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                <strong style={{ color: 'var(--accent-green)', fontWeight: 600 }}>Bond:</strong> Required only when a buyer purchases — not when you list. Returned within 5–7 days on completion.
+              <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', marginBottom: '8px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', fontWeight: 500 }}>Bond — Separate from fees</div>
+                {[
+                  { label: 'Bond posted at purchase', val: price ? `-$${(parseFloat(price) * 0.01).toFixed(2)} (1% Elite)` : '-1% of sale price', amber: true },
+                  { label: 'Bond returned', val: 'Within 5–7 days', green: true },
+                  { label: 'Net bond cost', val: '$0.00', green: true },
+                ].map((row, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: i < 2 ? '0.5px solid var(--border)' : 'none' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
+                    <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: row.green ? 'var(--accent-green)' : row.amber ? 'var(--accent-amber)' : 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
+                  </div>
+                ))}
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>Bond is collateral — not a fee. It posts when a buyer purchases and returns in full on successful completion.</div>
               </div>
               <div style={{ background: 'rgba(200,75,60,0.05)', border: '1px solid rgba(200,75,60,0.2)', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 <strong style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Ship within 48hrs of sale.</strong> Miss the deadline = auto-refund to buyer + Strike 1. Three strikes = permanent ban.
