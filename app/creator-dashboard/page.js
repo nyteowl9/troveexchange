@@ -60,7 +60,7 @@ export default function CreatorDashboard() {
   const pendingEarnings = conversions.filter(c => !c.paid).reduce((sum, c) => sum + parseFloat(c.commission.replace('$', '')), 0).toFixed(2)
 
   return (
-    <main style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
 
       {/* NAV */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'var(--nav-bg, rgba(10,10,11,0.94))', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
@@ -304,9 +304,9 @@ export default function CreatorDashboard() {
               </div>
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px', fontWeight: 500 }}>Notifications</div>
-                {['Email me monthly payout summary', 'Email me when payout is sent'].map((item, i) => (
+                {['Email me on every conversion', 'Email me monthly payout summary', 'Email me when payout is sent'].map((item, i) => (
                   <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    <input type="checkbox" defaultChecked={true} style={{ accentColor: 'var(--teal)', width: '15px', height: '15px' }} />
+                    <input type="checkbox" defaultChecked={i > 0} style={{ accentColor: 'var(--teal)', width: '15px', height: '15px' }} />
                     {item}
                   </label>
                 ))}
@@ -316,6 +316,6 @@ export default function CreatorDashboard() {
 
         </main>
       </div>
-    </main>
+    </div>
   )
 }

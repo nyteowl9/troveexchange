@@ -55,61 +55,7 @@ export default function Home() {
   ]
 
   return (
-    <main>
-
-      {/* NAV */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        background: 'var(--nav-bg, rgba(10,10,11,0.94))',
-        backdropFilter: 'blur(24px)',
-        borderBottom: '0.5px solid var(--border)',
-        padding: '0 2.5rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        height: '64px'
-      }}>
-        <a href="/" style={{
-          fontFamily: 'Cormorant Garamond, serif',
-          fontSize: '20px', fontWeight: 600,
-          letterSpacing: '0.1em', color: 'var(--gold)',
-          display: 'flex', alignItems: 'center', gap: '10px',
-          textDecoration: 'none'
-        }}>
-          <div style={{
-            width: '24px', height: '24px',
-            background: 'var(--gold)',
-            clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
-          }} />
-          CHASE HOLLOW
-        </a>
-        <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-          {['Marketplace', 'Recent Sales', 'How It Works', 'Fee Comparison', 'Get Started'].map((link, i) => (
-            <a key={i} href="#" style={{
-              fontSize: '12px', fontWeight: 500,
-              color: 'var(--text-secondary)', textDecoration: 'none',
-              letterSpacing: '0.06em', textTransform: 'uppercase'
-            }}>{link}</a>
-          ))}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={toggleTheme} style={{
-            width: '36px', height: '36px', borderRadius: '50%',
-            border: '1.5px solid var(--border)', background: 'transparent',
-            cursor: 'pointer', fontSize: '15px', color: 'var(--text-secondary)'
-          }}>{theme === 'dark' ? '🌙' : '☀️'}</button>
-          <button style={{
-            background: 'transparent', border: '1.5px solid var(--border)',
-            color: 'var(--text-secondary)', padding: '8px 18px', fontSize: '12px',
-            fontFamily: 'DM Sans, sans-serif', fontWeight: 500,
-            cursor: 'pointer', borderRadius: '8px'
-          }}>Sign In</button>
-          <button style={{
-            background: 'var(--teal)', border: 'none',
-            color: theme === 'dark' ? '#0A0A0B' : '#fff',
-            padding: '8px 20px', fontSize: '12px', fontWeight: 600,
-            fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', borderRadius: '8px'
-          }}>List a Card</button>
-        </div>
-      </nav>
+    <>
 
       {/* HERO */}
       <section style={{
@@ -192,7 +138,7 @@ export default function Home() {
                 border: `1.5px solid ${activeCategory === cat.id ? 'var(--teal-border)' : 'var(--border)'}`,
                 borderRadius: '10px', padding: '12px 20px', cursor: 'pointer',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
-                minWidth: '80px', transition: 'all 0.2s'
+                minWidth: '80px', flex: '1 1 auto', transition: 'all 0.2s'
               }}>
                 <span style={{ fontSize: '20px', color: activeCategory === cat.id ? 'var(--teal)' : 'var(--text-secondary)' }}>{cat.icon}</span>
                 <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: activeCategory === cat.id ? 'var(--teal)' : 'var(--text-secondary)', fontWeight: 500 }}>{cat.label}</span>
@@ -596,39 +542,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer style={{ background: 'var(--bg-2)', borderTop: '0.5px solid var(--border)', padding: '48px 2.5rem 32px' }}>
-        <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '36px', flexWrap: 'wrap', gap: '32px' }}>
-            <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--gold)', letterSpacing: '0.08em', marginBottom: '8px', fontWeight: 600 }}>CHASE HOLLOW</div>
-              <div style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '220px', lineHeight: 1.6 }}>The blockchain-secured marketplace for rare trading card collectibles.</div>
-            </div>
-            {[
-              { title: 'Marketplace', links: ['Browse All', 'Pokémon', 'Magic: The Gathering', 'One Piece', 'Price Guide'] },
-              { title: 'Platform', links: ['How It Works', 'Authentication', 'Fee Comparison', 'Sell a Card', 'Get Base USDC'] },
-              { title: 'Legal', links: ['Terms of Service', 'Privacy Policy', 'Cookie Policy', 'Contact'] },
-            ].map((col, i) => (
-              <div key={i}>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>{col.title}</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
-                  {col.links.map((link, j) => (
-                    <a key={j} href="#" style={{ fontSize: '13px', color: 'var(--text-secondary)', textDecoration: 'none' }}>{link}</a>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>© 2025 Chase Hollow · All rights reserved · chasehollow.com</div>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-green)', display: 'inline-block', animation: 'pulse 2s ease infinite' }} />
-              Live on Base · Ethereum L2
-            </div>
-          </div>
-        </div>
-      </footer>
 
-    </main>
+    </>
   )
 }

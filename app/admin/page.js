@@ -84,7 +84,7 @@ export default function AdminPanel() {
   })
 
   return (
-    <main style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
 
       {/* ACTION MODAL */}
       {showActionModal && (
@@ -574,6 +574,6 @@ export default function AdminPanel() {
 
         </main>
       </div>
-    </main>
+    </div>
   )
 }

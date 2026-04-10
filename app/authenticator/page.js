@@ -86,7 +86,7 @@ export default function AuthenticatorPortal() {
   })
 
   return (
-    <main style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
 
       {/* REJECT MODAL */}
       {showRejectModal && card && (
@@ -449,6 +449,6 @@ export default function AuthenticatorPortal() {
 
         </main>
       </div>
-    </main>
+    </div>
   )
 }

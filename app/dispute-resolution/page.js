@@ -136,7 +136,7 @@ export default function DisputeResolution() {
   )
 
   return (
-    <main style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
 
       {/* CONFIRM MODAL */}
       {showConfirmModal && (
@@ -520,6 +520,6 @@ export default function DisputeResolution() {
 
         </main>
       </div>
-    </main>
+    </div>
   )
 }

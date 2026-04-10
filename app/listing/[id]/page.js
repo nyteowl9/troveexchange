@@ -70,7 +70,7 @@ export default function Listing() {
   })
 
   return (
-    <main style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
 
       {/* BUY MODAL */}
       {showBuyModal && (
@@ -433,6 +433,6 @@ export default function Listing() {
 
       </div>
 
-    </main>
+    </div>
   )
 }

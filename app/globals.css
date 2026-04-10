@@ -59,7 +59,394 @@ body {
   transition: background 0.3s, color 0.3s;
   overflow-x: hidden;
 }
+
 @keyframes ticker {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE PASS
+   Breakpoints:
+     768px  — tablet / large phone (landscape)
+     480px  — phone (portrait)
+═══════════════════════════════════════════════════════════ */
+
+/* ── TABLES: make all tables scroll horizontally on mobile ── */
+table {
+  min-width: 500px;
+}
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Wrap all tables in a scrollable container automatically */
+@media (max-width: 768px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+}
+
+/* ── NAV ── */
+@media (max-width: 768px) {
+  /* Shared Nav — hide middle links, keep logo + actions */
+  nav a[style*="uppercase"] {
+    display: none !important;
+  }
+  nav {
+    padding: 0 1rem !important;
+    height: 56px !important;
+  }
+  /* Reduce logo font size */
+  nav a[style*="Cormorant"] {
+    font-size: 15px !important;
+  }
+  nav a[style*="Cormorant"] div {
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  nav {
+    padding: 0 0.75rem !important;
+  }
+}
+
+/* ── LAYOUT: sidebar + main content panels ── */
+@media (max-width: 768px) {
+  /* Hide fixed sidebars — dashboards, portals */
+  aside[style*="position: fixed"],
+  aside[style*="position:fixed"] {
+    display: none !important;
+  }
+
+  /* Remove sidebar margin from main content */
+  main[style*="marginLeft"] {
+    margin-left: 0 !important;
+  }
+
+  /* Stack all two-column grids */
+  div[style*="gridTemplateColumns: '1fr 1fr'"],
+  div[style*='gridTemplateColumns: "1fr 1fr"'],
+  div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Stack all three-column grids */
+  div[style*="gridTemplateColumns: 'repeat(3"],
+  div[style*='gridTemplateColumns: "repeat(3'],
+  div[style*="gridTemplateColumns: 'repeat(4"],
+  div[style*='gridTemplateColumns: "repeat(4'] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Sidebar + content two-panel layouts */
+  div[style*="gridTemplateColumns: '1fr 360px'"],
+  div[style*="gridTemplateColumns: '1fr 320px'"],
+  div[style*="gridTemplateColumns: '1fr 280px'"],
+  div[style*="gridTemplateColumns: '280px 1fr'"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* All grids go single column on small phones */
+  div[style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── GLOBAL PADDING ── */
+@media (max-width: 768px) {
+  /* Tighten horizontal padding sitewide */
+  div[style*="padding: '28px 24px"],
+  div[style*="padding: '24px 24px"],
+  div[style*="padding: '40px 2.5rem"],
+  div[style*="padding: '60px 2.5rem"],
+  div[style*="padding: '56px 2.5rem"] {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  /* Reduce section top padding on public pages */
+  section[style*="padding"] {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+}
+
+/* ── TYPOGRAPHY SCALING ── */
+@media (max-width: 768px) {
+  /* Hero headings */
+  h1[style*="clamp"],
+  h1[style*="72px"],
+  h1[style*="68px"],
+  h1[style*="64px"] {
+    font-size: clamp(32px, 8vw, 52px) !important;
+  }
+
+  /* Dashboard/page titles */
+  div[style*="fontSize: '32px'"],
+  div[style*="fontSize: '30px'"],
+  div[style*="fontSize: '28px'"] {
+    font-size: 24px !important;
+  }
+
+  /* Large value numbers */
+  div[style*="fontSize: '72px'"],
+  div[style*="fontSize: '64px'"],
+  div[style*="fontSize: '52px'"] {
+    font-size: 48px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  div[style*="fontSize: '24px'"] {
+    font-size: 20px !important;
+  }
+}
+
+/* ── HOMEPAGE SPECIFIC ── */
+@media (max-width: 768px) {
+  /* Ticker bar — let it scroll naturally */
+  .ticker-wrap {
+    overflow: hidden;
+  }
+
+  /* Fee comparison table */
+  .fee-table-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Stats row on homepage */
+  div[style*="gridTemplateColumns: 'repeat(4, 1fr)'"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* ── MARKETPLACE ── */
+@media (max-width: 768px) {
+  /* Card grid — 2 columns on tablet */
+  div[style*="minmax(220px"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Filter bar — allow wrapping */
+  div[style*="overflow: 'hidden'"][style*="filter"],
+  div[style*="gap: '8px'"][style*="flex"] {
+    flex-wrap: wrap !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Card grid — 1 column on small phone */
+  div[style*="minmax(220px"] {
+    grid-template-columns: 1fr !important;
+  }
+  div[style*="minmax(175px"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ── DASHBOARDS (buyer/seller/creator) ── */
+@media (max-width: 768px) {
+  /* Metric cards — 2 columns */
+  div[style*="repeat(4, 1fr)"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Order/listing rows — allow wrap */
+  div[style*="flexWrap: 'wrap'"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Sticky right panels — unstick and stack below */
+  div[style*="position: 'sticky'"],
+  div[style*="position:'sticky'"] {
+    position: static !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Metric cards — 1 column */
+  div[style*="repeat(4, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+  div[style*="repeat(3, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── CHECKOUT ── */
+@media (max-width: 768px) {
+  /* Stack checkout two-column layout */
+  div[style*="gridTemplateColumns: '1fr 360px'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Step indicators — compress */
+  div[style*="step"][style*="flex"] {
+    gap: 4px !important;
+  }
+}
+
+/* ── LISTING DETAIL ── */
+@media (max-width: 768px) {
+  /* Photo gallery + buy panel stack */
+  div[style*="gridTemplateColumns: '1fr 380px'"],
+  div[style*="gridTemplateColumns: '1fr 360px'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Photo thumbnails — scrollable row */
+  div[style*="thumbnail"] {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+  }
+}
+
+/* ── PROFILE PAGE ── */
+@media (max-width: 768px) {
+  /* Profile header — stack avatar and info */
+  div[style*="gridTemplateColumns: '1fr 280px'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Profile header row */
+  div[style*="alignItems: 'flex-start'"][style*="gap: '28px'"] {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  /* Rating bars section */
+  div[style*="gridTemplateColumns: '180px 1fr'"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── FOOTER ── */
+@media (max-width: 768px) {
+  /* Stack footer columns */
+  div[style*="gridTemplateColumns: '280px 1fr 1fr 1fr'"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Trust bar — stack items */
+  div[style*="alignItems: 'center'"][style*="gap: '28px'"] {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  div[style*="gridTemplateColumns: '280px 1fr 1fr 1fr'"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── MODALS ── */
+@media (max-width: 480px) {
+  /* Modals fill more screen width */
+  div[style*="maxWidth: '480px'"][style*="padding: '28px'"] {
+    padding: 20px !important;
+    margin: 0 12px !important;
+  }
+}
+
+/* ── CREATORS PAGE ── */
+@media (max-width: 768px) {
+  /* Step cards — stack */
+  div[style*="gridTemplateColumns: 'repeat(3, 1fr)'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Example creator cards */
+  div[style*="minmax(200px"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  div[style*="minmax(200px"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── BUTTONS & FLEX ROWS ── */
+@media (max-width: 480px) {
+  /* Action button rows — stack vertically */
+  div[style*="display: 'flex'"][style*="gap: '8px'"][style*="flexWrap"] {
+    flex-direction: column !important;
+  }
+
+  /* Full-width buttons on small screens */
+  button[style*="padding: '14px'"][style*="fontSize: '14px'"] {
+    width: 100% !important;
+  }
+}
+
+/* ── UTILITY CLASSES (use in pages if needed) ── */
+.mobile-hide {
+  display: block;
+}
+.mobile-only {
+  display: none;
+}
+.mobile-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .mobile-hide {
+    display: none !important;
+  }
+  .mobile-only {
+    display: block !important;
+  }
+  .mobile-pad {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+  .mobile-full {
+    width: 100% !important;
+  }
+}
+
+/* ── PORTAL PAGES: push content down for nav ── */
+@media (max-width: 768px) {
+  /* Portal pages have 56px nav */
+  div[style*="paddingTop: '56px'"] {
+    padding-top: 56px !important;
+  }
+  /* Public pages have 64px nav */
+  div[style*="paddingTop: '64px'"] {
+    padding-top: 64px !important;
+  }
+}
+
+/* ── SAFE SCROLLING ── */
+@media (max-width: 768px) {
+  /* Prevent any fixed elements from causing overflow */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Make sure inline padding doesn't cause overflow */
+  [style*="padding: '0 2.5rem'"],
+  [style*="padding: '0 2rem'"] {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
 }

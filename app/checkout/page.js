@@ -89,7 +89,7 @@ export default function Checkout() {
   })
 
   return (
-    <main style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
 
       {/* SIGNING OVERLAY */}
       {signing && (
@@ -471,6 +471,6 @@ export default function Checkout() {
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
-    </main>
+    </div>
   )
 }

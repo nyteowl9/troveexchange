@@ -27,7 +27,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className={inter.className}>
         <Nav />
-        <main>
+        <main style={{ width: '100%', minWidth: 0 }}>
           {children}
         </main>
         <Footer />
