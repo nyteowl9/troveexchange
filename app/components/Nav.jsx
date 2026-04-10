@@ -7,21 +7,14 @@ import { usePathname } from 'next/navigation'
 export default function Nav() {
   const [theme, setTheme] = useState('dark')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const pathname = usePathname()
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
     setTheme(saved)
     document.documentElement.setAttribute('data-theme', saved)
-
-    const check = () => setIsMobile(window.innerWidth <= 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Close menu on route change
   useEffect(() => { setMenuOpen(false) }, [pathname])
 
   const toggleTheme = () => {
@@ -42,21 +35,20 @@ export default function Nav() {
   const isPortal = ['/authenticator', '/dispute-resolution', '/customer-support', '/admin'].includes(pathname)
   const isCheckout = pathname === '/checkout'
 
-  const logo = (size = 20, hexSize = 24) => (
+  const logoEl = (size = 20, hexSize = 24) => (
     <Link href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: `${size}px`, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
       <div style={{ width: `${hexSize}px`, height: `${hexSize}px`, background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', flexShrink: 0 }} />
       CHASE HOLLOW
     </Link>
   )
 
-  // ── CHECKOUT NAV ──
   if (isCheckout) {
     return (
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'var(--nav-bg, rgba(10,10,11,0.94))', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-        {logo(18, 22)}
+      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, background: 'rgba(10,10,11,0.96)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
+        {logoEl(18, 22)}
         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '4px 12px', borderRadius: '20px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', color: 'var(--accent-green)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-green)', display: 'inline-block' }} />
-          {isMobile ? 'Secure · Base' : 'Secure Checkout · Base Blockchain'}
+          Secure Checkout · Base
         </div>
         <button onClick={toggleTheme} style={{ width: '34px', height: '34px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: '14px', color: 'var(--text-secondary)' }}>
           {theme === 'dark' ? '🌙' : '☀️'}
@@ -65,7 +57,6 @@ export default function Nav() {
     )
   }
 
-  // ── PORTAL NAV ──
   if (isPortal) {
     const portalLabels = {
       '/authenticator': { label: 'Auth Portal', color: 'rgba(60,125,200,0.3)', textColor: 'var(--accent-blue)', bg: 'rgba(60,125,200,0.1)' },
@@ -75,10 +66,10 @@ export default function Nav() {
     }
     const portal = portalLabels[pathname]
     return (
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(10,10,11,0.96)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px' }}>
+      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, background: 'rgba(10,10,11,0.96)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {logo(16, 18)}
-          {portal && !isMobile && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: portal.bg, border: `1px solid ${portal.color}`, color: portal.textColor, fontWeight: 500 }}>{portal.label}</div>}
+          {logoEl(16, 18)}
+          {portal && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: portal.bg, border: `1px solid ${portal.color}`, color: portal.textColor, fontWeight: 500 }}>{portal.label}</div>}
         </div>
         <button onClick={toggleTheme} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
           {theme === 'dark' ? '🌙' : '☀️'}
@@ -87,23 +78,31 @@ export default function Nav() {
     )
   }
 
-  // ── MAIN PUBLIC NAV ──
   return (
     <>
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, background: 'var(--nav-bg, rgba(10,10,11,0.96))', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
+      <style>{`
+        .nav-desktop { display: flex; gap: 2rem; align-items: center; }
+        .nav-list-btn { display: inline-block; }
+        .nav-hamburger { display: none; }
+        @media (max-width: 768px) {
+          .nav-desktop { display: none !important; }
+          .nav-list-btn { display: none !important; }
+          .nav-hamburger { display: flex !important; }
+        }
+      `}</style>
 
-        {logo(isMobile ? 16 : 20, isMobile ? 20 : 24)}
+      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, background: 'rgba(10,10,11,0.96)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
 
-        {/* Desktop links */}
-        {!isMobile && (
-          <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-            {links.map((link, i) => (
-              <Link key={i} href={link.href} style={{ fontSize: '12px', fontWeight: 500, color: pathname === link.href ? 'var(--teal)' : 'var(--text-secondary)', textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'color 0.15s' }}>
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        )}
+        {logoEl()}
+
+        {/* Desktop nav links */}
+        <div className="nav-desktop">
+          {links.map((link, i) => (
+            <Link key={i} href={link.href} style={{ fontSize: '12px', fontWeight: 500, color: pathname === link.href ? 'var(--teal)' : 'var(--text-secondary)', textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              {link.label}
+            </Link>
+          ))}
+        </div>
 
         {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
@@ -112,38 +111,34 @@ export default function Nav() {
           </button>
 
           {/* Sign In — always visible */}
-          <Link href="/sign-in" style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: isMobile ? '6px 12px' : '7px 16px', fontSize: isMobile ? '11px' : '12px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, borderRadius: '8px', textDecoration: 'none', display: 'inline-block', whiteSpace: 'nowrap' }}>
+          <Link href="/sign-in" style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '6px 14px', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, borderRadius: '8px', textDecoration: 'none', display: 'inline-block', whiteSpace: 'nowrap' }}>
             Sign In
           </Link>
 
-          {/* Desktop only — List a Card */}
-          {!isMobile && (
-            <Link href="/seller-dashboard" style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '7px 18px', fontSize: '12px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', textDecoration: 'none', display: 'inline-block' }}>
-              List a Card
-            </Link>
-          )}
+          {/* List a Card — desktop only */}
+          <Link href="/seller-dashboard" className="nav-list-btn" style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '7px 18px', fontSize: '12px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', textDecoration: 'none' }}>
+            List a Card
+          </Link>
 
-          {/* Mobile hamburger */}
-          {isMobile && (
-            <button onClick={() => setMenuOpen(!menuOpen)} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1.5px solid var(--border)', background: menuOpen ? 'var(--bg-3)' : 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '8px' }}>
-              <span style={{ display: 'block', width: '16px', height: '1.5px', background: 'var(--text-secondary)', borderRadius: '2px', transition: 'all 0.2s', transform: menuOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none' }} />
-              <span style={{ display: 'block', width: '16px', height: '1.5px', background: 'var(--text-secondary)', borderRadius: '2px', transition: 'all 0.2s', opacity: menuOpen ? 0 : 1 }} />
-              <span style={{ display: 'block', width: '16px', height: '1.5px', background: 'var(--text-secondary)', borderRadius: '2px', transition: 'all 0.2s', transform: menuOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none' }} />
-            </button>
-          )}
+          {/* Hamburger — mobile only */}
+          <button className="nav-hamburger" onClick={() => setMenuOpen(!menuOpen)} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1.5px solid var(--border)', background: menuOpen ? 'var(--bg-3)' : 'transparent', cursor: 'pointer', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '8px' }}>
+            <span style={{ display: 'block', width: '16px', height: '1.5px', background: 'var(--text-secondary)', borderRadius: '2px', transition: 'all 0.2s', transform: menuOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none' }} />
+            <span style={{ display: 'block', width: '16px', height: '1.5px', background: 'var(--text-secondary)', borderRadius: '2px', transition: 'all 0.2s', opacity: menuOpen ? 0 : 1 }} />
+            <span style={{ display: 'block', width: '16px', height: '1.5px', background: 'var(--text-secondary)', borderRadius: '2px', transition: 'all 0.2s', transform: menuOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none' }} />
+          </button>
         </div>
       </nav>
 
-      {/* Mobile menu dropdown */}
-      {isMobile && menuOpen && (
-        <div style={{ position: 'fixed', top: '64px', left: 0, right: 0, zIndex: 199, background: 'var(--bg-2)', borderBottom: '1px solid var(--border)', padding: '12px 0', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+      {/* Mobile dropdown */}
+      {menuOpen && (
+        <div style={{ position: 'fixed', top: '64px', left: 0, right: 0, zIndex: 199, background: 'var(--bg-2)', borderBottom: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
           {links.map((link, i) => (
-            <Link key={i} href={link.href} onClick={() => setMenuOpen(false)} style={{ display: 'block', padding: '13px 1.5rem', fontSize: '14px', fontWeight: 500, color: pathname === link.href ? 'var(--teal)' : 'var(--text-secondary)', textDecoration: 'none', borderBottom: i < links.length - 1 ? '0.5px solid var(--border)' : 'none', letterSpacing: '0.04em' }}>
+            <Link key={i} href={link.href} onClick={() => setMenuOpen(false)} style={{ display: 'block', padding: '14px 1.5rem', fontSize: '14px', fontWeight: 500, color: pathname === link.href ? 'var(--teal)' : 'var(--text-secondary)', textDecoration: 'none', borderBottom: i < links.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
               {link.label}
             </Link>
           ))}
-          <div style={{ display: 'flex', gap: '10px', padding: '14px 1.5rem 4px' }}>
-            <Link href="/seller-dashboard" onClick={() => setMenuOpen(false)} style={{ flex: 1, textAlign: 'center', background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', textDecoration: 'none', display: 'block' }}>
+          <div style={{ padding: '14px 1.5rem' }}>
+            <Link href="/seller-dashboard" onClick={() => setMenuOpen(false)} style={{ display: 'block', textAlign: 'center', background: 'var(--teal)', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', textDecoration: 'none' }}>
               List a Card →
             </Link>
           </div>

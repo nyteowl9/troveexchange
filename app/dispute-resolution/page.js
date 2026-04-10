@@ -188,10 +188,17 @@ export default function DisputeResolution() {
         </div>
       </nav>
 
-      <div style={{ display: 'flex', paddingTop: '56px', minHeight: '100vh' }}>
+            <style>{`
+        @media (max-width: 768px) {
+          .dash-aside { display: none !important; }
+          .dash-main { margin-left: 0 !important; width: 100% !important; max-width: 100% !important; padding: 16px 1rem 40px !important; }
+        }
+              @media (min-width: 769px) { .mobile-section-nav { display: none !important; } }
+      `}</style>
+<div style={{ display: 'flex', flexWrap: 'wrap', paddingTop: '56px', minHeight: '100vh' }}>
 
         {/* SIDEBAR */}
-        <aside style={{ width: '200px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '56px', left: 0, height: 'calc(100vh - 56px)', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
+        <aside className="dash-aside" style={{ width: '200px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '56px', left: 0, height: 'calc(100vh - 56px)', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
           {[
             { id: 'queue', icon: '⊡', label: 'Dispute Queue', badge: 2 },
             { id: 'detail', icon: '◈', label: 'Case Detail', disabled: !activeDispute },
@@ -222,7 +229,7 @@ export default function DisputeResolution() {
         </aside>
 
         {/* MAIN */}
-        <main style={{ marginLeft: '200px', flex: 1, padding: '24px 24px 60px', minWidth: 0 }}>
+        <main className="dash-main" style={{ marginLeft: '200px', flex: 1, padding: '24px 24px 60px', minWidth: 0 }}>
 
           {/* QUEUE */}
           {activeSection === 'queue' && (
@@ -293,7 +300,7 @@ export default function DisputeResolution() {
                 <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: statusColors[dispute.status]?.bg, border: `1px solid ${statusColors[dispute.status]?.border}`, color: statusColors[dispute.status]?.color, fontWeight: 500 }}>{statusColors[dispute.status]?.label}</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px', alignItems: 'flex-start' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '20px', alignItems: 'flex-start' }}>
 
                 {/* LEFT */}
                 <div>
@@ -484,8 +491,8 @@ export default function DisputeResolution() {
             <div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Resolved</em> Disputes</div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>12 resolved this month · 9 buyer · 3 seller</div>
-              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
                   <thead>
                     <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
                       {['Case', 'Card', 'Value', 'Outcome', 'Resolved'].map((h, i) => (

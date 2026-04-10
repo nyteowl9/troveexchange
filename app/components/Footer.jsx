@@ -25,7 +25,7 @@ export default function Footer() {
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
 
         {/* Top row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 1fr 1fr', gap: '48px', marginBottom: '48px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '48px', marginBottom: '48px' }}>
 
           {/* Brand */}
           <div>
@@ -116,7 +116,7 @@ export default function Footer() {
         </div>
 
         {/* On-chain trust bar */}
-        <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 20px', marginBottom: '28px', display: 'flex', alignItems: 'center', gap: '28px', flexWrap: 'wrap' }}>
+        <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 20px', marginBottom: '28px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           {[
             { icon: '🔒', label: 'Escrow on Base', sub: 'USDC locked in smart contract' },
             { icon: '✓', label: 'Every card authenticated', sub: 'Human verification before delivery' },
@@ -134,7 +134,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', fontSize: '10px' }}>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>
             © 2025 Chase Hollow · All transactions on Base (Ethereum L2) · Contract: <a href="https://basescan.org" target="_blank" rel="noreferrer" style={{ color: 'var(--teal)', textDecoration: 'none' }}>View on Basescan →</a>
           </div>

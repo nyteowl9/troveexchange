@@ -83,12 +83,21 @@ export default function Profile() {
         </div>
       </nav>
 
-      <div style={{ paddingTop: '64px' }}>
+            <style>{`
+        @media (max-width: 768px) {
+          .profile-grid { grid-template-columns: 1fr !important; padding: 16px 1rem 40px !important; }
+          .profile-sidebar { position: relative !important; top: auto !important; }
+          .rating-grid { grid-template-columns: 1fr !important; }
+          .profile-header-row { flex-direction: column !important; align-items: center !important; text-align: center !important; gap: 16px !important; }
+          .profile-tabs { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+        }
+      `}</style>
+<div style={{ paddingTop: '64px' }}>
 
         {/* PROFILE HEADER */}
         <div style={{ background: 'var(--bg-2)', borderBottom: '0.5px solid var(--border)', padding: '36px 2.5rem 0' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '28px', marginBottom: '28px', flexWrap: 'wrap' }}>
+            <div className="profile-header-row" style={{ display: 'flex', alignItems: 'flex-start', gap: '28px', marginBottom: '28px', flexWrap: 'wrap' }}>
 
               {/* Avatar */}
               <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -149,7 +158,7 @@ export default function Profile() {
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '0', borderTop: '0.5px solid var(--border)' }}>
+            <div className="profile-tabs" style={{ display: 'flex', gap: '0', borderTop: '0.5px solid var(--border)' }}>
               {[
                 { id: 'listings', label: 'Listings', count: 24 },
                 { id: 'feedback', label: 'Feedback', count: 847 },
@@ -166,7 +175,7 @@ export default function Profile() {
         </div>
 
         {/* TAB CONTENT */}
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '28px 2.5rem 60px', display: 'grid', gridTemplateColumns: '1fr 280px', gap: '24px', alignItems: 'flex-start' }}>
+        <div className="profile-grid" style={{ maxWidth: '1200px', margin: '0 auto', padding: '28px 2.5rem 60px', display: 'grid', gridTemplateColumns: '1fr 280px', gap: '24px', alignItems: 'flex-start' }}>
 
           {/* MAIN CONTENT */}
           <div>
@@ -178,7 +187,7 @@ export default function Profile() {
                   <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listings</em></div>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>24 cards · $284k total value</div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: '12px' }}>
                   {listings.map((card, i) => (
                     <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.2s' }}
                       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.borderColor = 'var(--teal-border)' }}
@@ -204,7 +213,7 @@ export default function Profile() {
             {activeTab === 'feedback' && (
               <div>
                 {/* Rating summary */}
-                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '20px', display: 'grid', gridTemplateColumns: '180px 1fr', gap: '24px', alignItems: 'center' }}>
+                <div className="rating-grid" style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '20px', display: 'grid', gridTemplateColumns: '180px 1fr', gap: '24px', alignItems: 'center' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '72px', fontWeight: 300, lineHeight: 1, color: 'var(--gold)' }}>4.98</div>
                     <div style={{ color: 'var(--gold)', fontSize: '20px', letterSpacing: '3px', margin: '4px 0' }}>★★★★★</div>
@@ -257,8 +266,8 @@ export default function Profile() {
                   <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)' }}>Sales <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>All sales publicly verifiable on Base</div>
                 </div>
-                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
                     <thead>
                       <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
                         {['Card', 'Sale Price', 'Date', 'On-Chain'].map((h, i) => (
@@ -336,7 +345,7 @@ export default function Profile() {
           </div>
 
           {/* SIDEBAR */}
-          <div style={{ position: 'sticky', top: '84px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="profile-sidebar" style={{ position: 'sticky', top: '84px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
             {/* Rep score card */}
             <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--teal-border)', borderRadius: '12px', padding: '18px' }}>

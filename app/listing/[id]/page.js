@@ -113,23 +113,6 @@ export default function Listing() {
         </div>
       )}
 
-      {/* NAV */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'var(--nav-bg, rgba(10,10,11,0.94))', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-        <a href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-          <div style={{ width: '24px', height: '24px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
-          CHASE HOLLOW
-        </a>
-        <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-          {['Marketplace', 'Recent Sales', 'How It Works', 'Fee Comparison', 'Get Started'].map((link, i) => (
-            <a key={i} href={i === 0 ? '/marketplace' : '/'} style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{link}</a>
-          ))}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={toggleTheme} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: '15px', color: 'var(--text-secondary)' }}>{theme === 'dark' ? '🌙' : '☀️'}</button>
-          <button style={btn()}>Sign In</button>
-          <button style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>List a Card</button>
-        </div>
-      </nav>
 
       {/* BREADCRUMB */}
       <div style={{ paddingTop: '64px', background: 'var(--bg-2)', borderBottom: '0.5px solid var(--border)', padding: '12px 2.5rem', paddingTop: '76px' }}>
@@ -144,11 +127,23 @@ export default function Listing() {
         </div>
       </div>
 
+      <style>{`
+        @media (max-width: 768px) {
+          .listing-grid { grid-template-columns: 1fr !important; }
+          .listing-right { position: relative !important; top: auto !important; order: -1 !important; }
+          .listing-left { order: 2 !important; }
+          .listing-right-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+          .listing-buy-section { grid-column: 1 / -1; }
+          .listing-fee-breakdown { display: none !important; }
+          .listing-trust { display: none !important; }
+          .listing-seller { display: none !important; }
+        }
+      `}</style>
       {/* MAIN */}
-      <div style={{ maxWidth: '1300px', margin: '0 auto', padding: '32px 2.5rem 60px', display: 'grid', gridTemplateColumns: '1fr 360px', gap: '32px', alignItems: 'flex-start' }}>
+      <div className="listing-grid" style={{ maxWidth: '1300px', margin: '0 auto', padding: '88px 1.5rem 60px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '32px', alignItems: 'flex-start' }}>
 
         {/* LEFT */}
-        <div>
+        <div className="listing-left">
 
           {/* PHOTO GALLERY */}
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', overflow: 'hidden', marginBottom: '24px' }}>
@@ -357,7 +352,7 @@ export default function Listing() {
         </div>
 
         {/* RIGHT — PURCHASE PANEL */}
-        <div style={{ position: 'sticky', top: '84px' }}>
+        <div className="listing-right" style={{ position: 'sticky', top: '84px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
 
             {/* Card preview */}
@@ -378,7 +373,7 @@ export default function Listing() {
             </div>
 
             {/* Fee breakdown */}
-            <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)' }}>
+            <div className="listing-fee-breakdown" style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)' }}>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Fee Breakdown</div>
               {[
                 { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },

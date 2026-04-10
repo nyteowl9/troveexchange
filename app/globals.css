@@ -450,3 +450,136 @@ table {
     padding-right: 1rem !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD & PORTAL MOBILE FIXES
+   Targets the sidebar+content layout pattern used across
+   all dashboard, portal, and detail pages
+═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* ── Hide all fixed sidebars ── */
+  aside {
+    display: none !important;
+  }
+
+  /* ── Remove sidebar margin from all main content areas ── */
+  /* Seller dashboard, buyer dashboard, creator dashboard,
+     authenticator, dispute, support, admin all use marginLeft */
+  main > div[style*="marginLeft"],
+  div[style*="marginLeft: '220px'"],
+  div[style*="marginLeft: '210px'"],
+  div[style*="marginLeft: '200px'"] {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  /* ── Remove all hardcoded nav heights from page padding ── */
+  div[style*="paddingTop: '56px'"],
+  div[style*="paddingTop: '64px'"] {
+    padding-top: 64px !important;
+  }
+
+  /* ── Tighten dashboard page padding ── */
+  div[style*="padding: '28px 24px"],
+  div[style*="padding: '24px 24px"] {
+    padding: 16px 1rem 40px !important;
+  }
+
+  /* ── Profile page: stack listings + sidebar ── */
+  /* The 1fr 280px two column layout */
+  div[style*="gridTemplateColumns: '1fr 280px'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Marketplace: hide filter sidebar, show full listings ── */
+  /* Filter panel is a fixed-width aside-like div */
+  div[style*="width: '260px'"],
+  div[style*="width: '280px'"],
+  div[style*="width: '240px'"] {
+    display: none !important;
+  }
+
+  /* Marketplace listings take full width when filter hidden */
+  div[style*="flex: 1, minWidth: 0"] {
+    width: 100% !important;
+  }
+
+  /* ── Stack all remaining 1fr 1fr grids ── */
+  div[style*="gridTemplateColumns: '1fr 1fr'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Stack repeat(3) and repeat(4) grids ── */
+  div[style*="gridTemplateColumns: 'repeat(3, 1fr)'"],
+  div[style*="gridTemplateColumns: 'repeat(4, 1fr)'"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* ── Tables: horizontal scroll ── */
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    white-space: nowrap !important;
+    width: 100% !important;
+  }
+
+  /* ── Prevent any element from overflowing horizontally ── */
+  body > * {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* ── Sticky sidebars on detail pages ── */
+  div[style*="position: 'sticky'"] {
+    position: relative !important;
+    top: auto !important;
+  }
+
+  /* ── Section padding ── */
+  section[style*="padding: '80px 2.5rem'"],
+  section[style*="padding: '60px 2.5rem'"] {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  /* ── Nav inside pages (hardcoded) — hide, use shared Nav ── */
+  /* All pages still rendering their own nav inside the page */
+  main > div > nav:not([class]) {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* ── Single column everything on small phones ── */
+  div[style*="gridTemplateColumns: 'repeat(3, 1fr)'"],
+  div[style*="gridTemplateColumns: 'repeat(4, 1fr)'"],
+  div[style*="gridTemplateColumns: 'repeat(2, 1fr)'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Metric cards ── */
+  div[style*="repeat(4, 1fr)"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* ── MARKETPLACE SPECIFIC ── */
+@media (max-width: 768px) {
+  /* Hide filter sidebar, collapse the grid to single column */
+  .marketplace-filters {
+    display: none !important;
+  }
+  div[style*="gridTemplateColumns: '240px 1fr'"] {
+    grid-template-columns: 1fr !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  /* Add a simple filter row above listings on mobile */
+  div[style*="gridTemplateColumns: '240px 1fr'"] > div:last-child {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}

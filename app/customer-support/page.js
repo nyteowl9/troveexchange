@@ -126,10 +126,17 @@ export default function CustomerSupport() {
         </div>
       </nav>
 
-      <div style={{ display: 'flex', paddingTop: '56px', minHeight: '100vh' }}>
+            <style>{`
+        @media (max-width: 768px) {
+          .dash-aside { display: none !important; }
+          .dash-main { margin-left: 0 !important; width: 100% !important; max-width: 100% !important; padding: 16px 1rem 40px !important; }
+        }
+              @media (min-width: 769px) { .mobile-section-nav { display: none !important; } }
+      `}</style>
+<div style={{ display: 'flex', flexWrap: 'wrap', paddingTop: '56px', minHeight: '100vh' }}>
 
         {/* SIDEBAR */}
-        <aside style={{ width: '200px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '56px', left: 0, height: 'calc(100vh - 56px)', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
+        <aside className="dash-aside" style={{ width: '200px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '56px', left: 0, height: 'calc(100vh - 56px)', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
           {navItems.map(item => (
             <button key={item.id} onClick={() => !item.disabled && setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', cursor: item.disabled ? 'not-allowed' : 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', border: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: item.disabled ? 'var(--text-muted)' : activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%', opacity: item.disabled ? 0.4 : 1 }}>
               <span style={{ fontSize: '13px' }}>{item.icon}</span>
@@ -155,7 +162,7 @@ export default function CustomerSupport() {
         </aside>
 
         {/* MAIN */}
-        <main style={{ marginLeft: '200px', flex: 1, padding: '24px 24px 60px', minWidth: 0 }}>
+        <main className="dash-main" style={{ marginLeft: '200px', flex: 1, padding: '24px 24px 60px', minWidth: 0 }}>
 
           {/* QUEUE */}
           {activeSection === 'queue' && (
@@ -210,7 +217,7 @@ export default function CustomerSupport() {
                 <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: statusColors[ticket.status]?.bg, border: `1px solid ${statusColors[ticket.status]?.border}`, color: statusColors[ticket.status]?.color, fontWeight: 500 }}>{statusColors[ticket.status]?.label}</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '20px', alignItems: 'flex-start' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '20px', alignItems: 'flex-start' }}>
 
                 {/* CONVERSATION */}
                 <div>

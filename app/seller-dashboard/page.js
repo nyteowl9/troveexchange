@@ -144,10 +144,18 @@ export default function SellerDashboard() {
         </div>
       </nav>
 
-      <div style={{ display: 'flex', paddingTop: '64px', minHeight: '100vh' }}>
+            <style>{`
+        @media (max-width: 768px) {
+          .dash-aside { display: none !important; }
+          .dash-main { margin-left: 0 !important; width: 100% !important; max-width: 100% !important; padding: 16px 1rem 40px !important; }
+          .mobile-section-nav { display: block !important; }
+        }
+              @media (min-width: 769px) { .mobile-section-nav { display: none !important; } }
+      `}</style>
+<div style={{ display: 'flex', flexWrap: 'wrap', paddingTop: '64px', minHeight: '100vh' }}>
 
         {/* SIDEBAR */}
-        <aside style={{ width: '220px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '64px', left: 0, height: 'calc(100vh - 64px)', overflowY: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
+        <aside className="dash-aside" style={{ width: '220px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '64px', left: 0, height: 'calc(100vh - 64px)', overflowY: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
           {navItems.map((item, i) => (
             <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', border: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%', marginTop: i === 4 ? '8px' : 0 }}>
               <span style={{ width: '16px', textAlign: 'center', fontSize: '14px' }}>{item.icon}</span>
@@ -172,7 +180,23 @@ export default function SellerDashboard() {
         </aside>
 
         {/* MAIN */}
-        <main style={{ marginLeft: '220px', flex: 1, padding: '28px 24px 60px', minWidth: 0 }}>
+        <main className="dash-main" style={{ marginLeft: '220px', flex: 1, padding: '28px 24px 60px', minWidth: 0 }}>
+          {/* MOBILE NAV DROPDOWN */}
+          <div className="mobile-section-nav" style={{ marginBottom: '20px', display: 'none' }}>
+            <select
+              value={activeSection}
+              onChange={e => setActiveSection(e.target.value)}
+              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+            >
+              <option key="overview" value="overview">Dashboard</option>
+              <option key="notifications" value="notifications">Notifications</option>
+              <option key="orders" value="orders">Active Orders</option>
+              <option key="listings" value="listings">My Listings</option>
+              <option key="new-listing" value="new-listing">New Listing</option>
+              <option key="earnings" value="earnings">Earnings</option>
+              <option key="bond" value="bond">Bond Wallet</option>
+            </select>
+          </div>
 
           {/* OVERVIEW */}
           {activeSection === 'overview' && (
@@ -232,9 +256,9 @@ export default function SellerDashboard() {
                 </div>
                 <button onClick={() => setActiveSection('new-listing')} style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>+ New Listing</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
                 {listings.map((listing, i) => (
-                  <div key={i} style={{ background: 'var(--bg-2)', border: `1.5px solid ${listing.status === 'draft' ? 'rgba(232,168,56,0.3)' : 'var(--border)'}`, borderRadius: '12px', overflow: 'hidden' }}>
+                  <div key={i} style={{ background: 'var(--bg-2)', border: `1.5px solid ${listing.status === 'draft' ? 'rgba(232,168,56,0.3)' : 'var(--border)'}`, borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
                     <div style={{ aspectRatio: '3/4', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                       <div style={{ width: '65%', aspectRatio: '2.5/3.5', borderRadius: '5px', background: listing.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', opacity: 0.7 }}>{listing.icon}</div>
                       {listing.status === 'draft' && <div style={{ position: 'absolute', top: '8px', left: '8px', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(232,168,56,0.15)', border: '1px solid rgba(232,168,56,0.3)', color: 'var(--accent-amber)', fontWeight: 500 }}>Draft</div>}
@@ -503,8 +527,8 @@ export default function SellerDashboard() {
                   </div>
                 ))}
               </div>
-              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
                   <thead>
                     <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
                       {['Card', 'Date', 'Gross', 'Fee (3%)', 'Shipping', 'Net Received'].map((h, i) => (

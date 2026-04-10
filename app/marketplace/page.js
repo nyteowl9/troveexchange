@@ -133,10 +133,16 @@ export default function Marketplace() {
       </div>
 
       {/* MAIN LAYOUT */}
-      <div style={{ maxWidth: '1300px', margin: '0 auto', padding: '24px 2.5rem 60px', display: 'grid', gridTemplateColumns: '240px 1fr', gap: '24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .mkt-layout { grid-template-columns: 1fr !important; padding: 16px 1rem 40px !important; }
+          .mkt-filters { display: none !important; }
+        }
+      `}</style>
+      <div className="mkt-layout" style={{ maxWidth: '1300px', margin: '0 auto', padding: '24px 1.5rem 60px', display: 'grid', gridTemplateColumns: '240px 1fr', gap: '24px' }}>
 
         {/* SIDEBAR FILTERS */}
-        <aside>
+        <aside className="mkt-filters">
           <div style={{ position: 'sticky', top: '84px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
             {/* Active Filters */}
@@ -234,7 +240,7 @@ export default function Marketplace() {
 
           {/* GRID VIEW */}
           {viewMode === 'grid' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
               {filteredListings.map(card => (
                 <div key={card.id} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.2s' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = 'var(--teal-border)' }}

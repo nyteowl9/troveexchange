@@ -117,18 +117,6 @@ export default function Checkout() {
         </div>
       )}
 
-      {/* NAV */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'var(--nav-bg, rgba(10,10,11,0.94))', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-        <a href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-          <div style={{ width: '24px', height: '24px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
-          CHASE HOLLOW
-        </a>
-        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '4px 14px', borderRadius: '20px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', color: 'var(--accent-green)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-green)', display: 'inline-block' }} />
-          Secure Checkout · Base Blockchain
-        </div>
-        <button onClick={toggleTheme} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: '15px', color: 'var(--text-secondary)' }}>{theme === 'dark' ? '🌙' : '☀️'}</button>
-      </nav>
 
       {/* PROGRESS BAR */}
       <div style={{ position: 'fixed', top: '64px', left: 0, right: 0, zIndex: 90, background: 'var(--bg-2)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 2.5rem' }}>
@@ -151,7 +139,13 @@ export default function Checkout() {
       </div>
 
       {/* MAIN LAYOUT */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '156px 2.5rem 60px', display: 'grid', gridTemplateColumns: '1fr 380px', gap: '28px', alignItems: 'flex-start' }}>
+            <style>{`
+        @media (max-width: 768px) {
+          .checkout-grid { grid-template-columns: 1fr !important; padding: 110px 1rem 40px !important; }
+          .checkout-sidebar { position: relative !important; top: auto !important; }
+        }
+      `}</style>
+<div className="checkout-grid" style={{ maxWidth: '1100px', margin: '0 auto', padding: '120px 1.5rem 60px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: '28px', alignItems: 'flex-start' }}>
 
         {/* STEPS */}
         <div>

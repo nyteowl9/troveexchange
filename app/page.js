@@ -157,7 +157,7 @@ export default function Home() {
             </h2>
             <a href="/marketplace" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>View all →</a>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
             {listings.map((card, i) => (
               <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer' }}
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = 'var(--teal-border)' }}
@@ -262,7 +262,7 @@ export default function Home() {
               </tbody>
             </table>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '20px' }}>
             <div style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '24px 28px' }}>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', fontWeight: 500 }}>Where eBay's 13% Goes</div>
               {[
@@ -300,7 +300,7 @@ export default function Home() {
 
       {/* WHY BLOCKCHAIN */}
       <section style={{ padding: '80px 2.5rem', borderTop: '0.5px solid var(--border)' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'center' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: '48px', alignItems: 'center' }}>
           <div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '12px', fontWeight: 500 }}>Why Blockchain</div>
             <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(34px, 4vw, 50px)', fontWeight: 300, lineHeight: 1.08, marginBottom: '16px', color: 'var(--text-primary)' }}>
@@ -354,7 +354,7 @@ export default function Home() {
             </h2>
             <p style={{ fontSize: '16px', color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto' }}>Every card authenticated. Every dollar escrowed. Neither party can get burned.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '12px' }}>
             {[
               { num: '01', title: 'Buyer Funds Escrow', desc: 'USDC locked in a smart contract on Base. Neither party can touch it. No bank, no PayPal — pure code.' },
               { num: '02', title: 'Seller Ships to Us', desc: 'Pre-paid label to our authentication center. Seller must ship within 48hrs — or your USDC is automatically refunded.' },
@@ -431,7 +431,7 @@ export default function Home() {
               Every card authenticated before it reaches you. Your money never touches the seller until you have the card in hand.
             </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '16px', marginBottom: '40px' }}>
             {[
               { icon: '🔍', iconBg: 'var(--teal-bg)', iconBorder: 'var(--teal-border)', title: 'Every Listing Matches What You Receive', desc: 'Our authenticators verify the card matches the listing — photos, grade label, cert number, and slab integrity. If anything doesn\'t match, full refund automatically.' },
               { icon: '🔒', iconBg: 'rgba(76,175,124,0.1)', iconBorder: 'rgba(76,175,124,0.3)', title: 'Your Money is Always Safe', desc: 'USDC locks in a smart contract — not with us, not with the seller — until the card passes authentication and arrives with you. Nobody can touch it in transit.' },
@@ -449,7 +449,7 @@ export default function Home() {
           </div>
           <div style={{ background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '28px 32px' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '20px', fontWeight: 500 }}>Chase Hollow vs. Buying Anywhere Else</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', background: 'var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '2px', background: 'var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
               <div style={{ background: 'var(--teal-bg)', padding: '16px 20px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '14px', fontWeight: 600 }}>Buying on Chase Hollow</div>
                 {['Card authenticated before delivery', 'Funds held in escrow — not by seller', 'Auto-refund if seller doesn\'t ship', '72hr window to dispute on delivery', 'Verified on-chain reputation scores', 'Real price history from on-chain sales', 'Card received always matches listing'].map((item, i) => (

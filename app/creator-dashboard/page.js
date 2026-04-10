@@ -78,10 +78,18 @@ export default function CreatorDashboard() {
         </div>
       </nav>
 
-      <div style={{ display: 'flex', paddingTop: '64px', minHeight: '100vh' }}>
+            <style>{`
+        @media (max-width: 768px) {
+          .dash-aside { display: none !important; }
+          .dash-main { margin-left: 0 !important; width: 100% !important; max-width: 100% !important; padding: 16px 1rem 40px !important; }
+          .mobile-section-nav { display: block !important; }
+        }
+              @media (min-width: 769px) { .mobile-section-nav { display: none !important; } }
+      `}</style>
+<div style={{ display: 'flex', flexWrap: 'wrap', paddingTop: '64px', minHeight: '100vh' }}>
 
         {/* SIDEBAR */}
-        <aside style={{ width: '210px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '64px', left: 0, height: 'calc(100vh - 64px)', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
+        <aside className="dash-aside" style={{ width: '210px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '64px', left: 0, height: 'calc(100vh - 64px)', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
           {navItems.map(item => (
             <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', border: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%' }}>
               <span style={{ fontSize: '14px', width: '16px', textAlign: 'center' }}>{item.icon}</span>
@@ -98,7 +106,21 @@ export default function CreatorDashboard() {
         </aside>
 
         {/* MAIN */}
-        <main style={{ marginLeft: '210px', flex: 1, padding: '28px 24px 60px', minWidth: 0 }}>
+        <main className="dash-main" style={{ marginLeft: '210px', flex: 1, padding: '28px 24px 60px', minWidth: 0 }}>
+          {/* MOBILE NAV DROPDOWN */}
+          <div className="mobile-section-nav" style={{ marginBottom: '20px', display: 'none' }}>
+            <select
+              value={activeSection}
+              onChange={e => setActiveSection(e.target.value)}
+              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+            >
+              <option key="overview" value="overview">Dashboard</option>
+              <option key="conversions" value="conversions">Conversions</option>
+              <option key="payouts" value="payouts">Payouts</option>
+              <option key="assets" value="assets">Assets & Links</option>
+              <option key="settings" value="settings">Settings</option>
+            </select>
+          </div>
 
           {/* OVERVIEW */}
           {activeSection === 'overview' && (
@@ -145,8 +167,8 @@ export default function CreatorDashboard() {
                 <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Recent <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Conversions</em></div>
                 <button onClick={() => setActiveSection('conversions')} style={{ fontSize: '11px', color: 'var(--teal)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 500 }}>View all →</button>
               </div>
-              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
                   <thead>
                     <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
                       {['Date', 'Card Purchased', 'Sale Value', 'Your Commission', 'Status'].map((h, i) => (
@@ -179,8 +201,8 @@ export default function CreatorDashboard() {
             <div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>All <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Conversions</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Every purchase attributed to your link · Buyer identity kept anonymous</div>
-              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
                   <thead>
                     <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
                       {['Date', 'Card Purchased', 'Sale Value', 'Your 0.5%', 'Status'].map((h, i) => (
@@ -226,8 +248,8 @@ export default function CreatorDashboard() {
                 </div>
               </div>
 
-              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
                   <thead>
                     <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
                       {['Month', 'Amount', 'Paid', 'Transaction'].map((h, i) => (
