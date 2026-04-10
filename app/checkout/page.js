@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 export default function Checkout() {
   const [theme, setTheme] = useState('dark')
   const [step, setStep] = useState(1)
+  const [isMobile, setIsMobile] = useState(false)
   const [selectedWallet, setSelectedWallet] = useState(null)
   const [ack1, setAck1] = useState(false)
   const [ack2, setAck2] = useState(false)
@@ -129,7 +130,7 @@ export default function Checkout() {
               <div key={i} style={{ display: 'flex', alignItems: 'center', flex: i < progressSteps.length - 1 ? 1 : 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ width: '26px', height: '26px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 600, flexShrink: 0, background: done ? 'var(--accent-green)' : active ? 'var(--teal)' : 'var(--bg-4)', color: done || active ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', border: done || active ? 'none' : '1.5px solid var(--border)', transition: 'all 0.3s' }}>{done ? '✓' : n}</div>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500, color: done ? 'var(--accent-green)' : active ? 'var(--teal)' : 'var(--text-muted)' }}>{label}</div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500, color: done ? 'var(--accent-green)' : active ? 'var(--teal)' : 'var(--text-muted)', maxWidth: active ? '80px' : '0px', overflow: 'hidden', whiteSpace: 'nowrap', transition: 'max-width 0.3s' }}>{label}</div>
                 </div>
                 {i < progressSteps.length - 1 && <div style={{ flex: 1, height: '1px', background: done ? 'var(--accent-green)' : 'var(--border)', margin: '0 12px', transition: 'background 0.3s' }} />}
               </div>
@@ -156,15 +157,15 @@ export default function Checkout() {
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Connect Your <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Wallet</em></div>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>Your USDC lives in your wallet. Connect it to lock funds into escrow — the only movement of money in this transaction.</p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
                 {wallets.filter(w => !w.full).map(wallet => (
-                  <div key={wallet.id} onClick={() => setSelectedWallet(wallet.id)} style={{ background: 'var(--bg-2)', border: `1.5px solid ${selectedWallet === wallet.id ? 'var(--teal)' : wallet.featured ? 'var(--teal-border)' : 'var(--border)'}`, borderRadius: '12px', padding: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '14px', position: 'relative', background: selectedWallet === wallet.id ? 'var(--teal-bg)' : 'var(--bg-2)', transition: 'all 0.2s' }}>
+                  <div key={wallet.id} onClick={() => setSelectedWallet(wallet.id)} style={{ background: 'var(--bg-2)', border: `1.5px solid ${selectedWallet === wallet.id ? 'var(--teal)' : wallet.featured ? 'var(--teal-border)' : 'var(--border)'}`, borderRadius: '12px', padding: isMobile ? '14px' : '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', background: selectedWallet === wallet.id ? 'var(--teal-bg)' : 'var(--bg-2)', transition: 'all 0.2s' }}>
                     <div style={{ width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0, border: '1px solid var(--border)' }}>{wallet.icon}</div>
                     <div>
                       <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{wallet.name}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4 }}>{wallet.desc}</div>
                     </div>
-                    {wallet.featured && <div style={{ position: 'absolute', top: '10px', right: '10px', fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 8px', borderRadius: '10px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', color: 'var(--teal)', fontWeight: 600 }}>Popular</div>}
+                    {wallet.featured && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 8px', borderRadius: '10px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', color: 'var(--teal)', fontWeight: 600, alignSelf: 'flex-start', flexShrink: 0, marginLeft: 'auto' }}>Popular</div>}
                   </div>
                 ))}
                 <div onClick={() => setSelectedWallet('walletconnect')} style={{ background: selectedWallet === 'walletconnect' ? 'var(--teal-bg)' : 'var(--bg-3)', border: `1.5px dashed ${selectedWallet === 'walletconnect' ? 'var(--teal)' : 'var(--border)'}`, borderRadius: '12px', padding: '16px', textAlign: 'center', cursor: 'pointer', fontSize: '13px', color: 'var(--text-muted)', gridColumn: '1/-1' }}>
