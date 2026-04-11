@@ -255,7 +255,7 @@ export default function Marketplace() {
                       </div>
                     </div>
                     <div style={{ position: 'absolute', top: '10px', left: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 8px', borderRadius: '5px', fontWeight: 500, background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)' }}>{card.grader}</div>
-                    <div style={{ position: 'absolute', top: '10px', right: '10px', width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(201,168,76,0.15)', border: '1.5px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: card.grade.length > 4 ? '9px' : '15px', fontWeight: 600, color: 'var(--gold)' }}>{card.grade}</div>
+                    <div style={{ position: 'absolute', top: '10px', right: '10px', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: 600, background: 'rgba(201,168,76,0.15)', border: '1.5px solid var(--gold)', color: 'var(--gold)', whiteSpace: 'nowrap' }}>{card.grade.replace(card.grader, '').trim()}</div>
                     <div style={{ position: 'absolute', bottom: '10px', right: '10px', fontSize: '16px', cursor: 'pointer', opacity: card.wishlist ? 1 : 0.4 }}>♡</div>
                   </div>
                   <div style={{ padding: '12px 14px' }}>

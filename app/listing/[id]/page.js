@@ -56,10 +56,10 @@ export default function Listing() {
   ]
 
   const cardPrice = 487
-  const authFee = 25
-  const buyerProtection = parseFloat((cardPrice * 0.005).toFixed(2))
+  const authFee = cardPrice <= 300 ? 10 : 25
+  const authTier = cardPrice <= 300 ? 'remote' : 'physical'
   const salesTax = parseFloat((cardPrice * 0.095).toFixed(2))
-  const total = (cardPrice + authFee + buyerProtection + salesTax).toFixed(2)
+  const total = (cardPrice + authFee + parseFloat(salesTax)).toFixed(2)
 
   const currentPrices = priceHistory[activeTab]
   const maxPrice = Math.max(...currentPrices)
@@ -118,7 +118,7 @@ export default function Listing() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-              {['Card received matches listing exactly', 'Auto-refund if seller misses 48hr ship deadline', 'Human authentication before card ships to you', '72hr inspection window after delivery'].map((item, i) => (
+              {['Card received matches listing exactly', 'Auto-refund if seller misses 48hr ship deadline', authTier === 'remote' ? 'Photo reviewed by Chase Hollow staff in transit' : 'Human authentication before card ships to you', '72hr inspection window after delivery'].map((item, i) => (
                 <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                   <span style={{ color: 'var(--accent-green)', flexShrink: 0 }}>✓</span>{item}
                 </div>
@@ -316,8 +316,8 @@ export default function Listing() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
               {[
                 { num: '01', title: 'You Lock USDC in Escrow', desc: `$${total} USDC locked in smart contract on Base. Neither party can touch it. Seller is notified immediately.`, done: false },
-                { num: '02', title: 'Seller Ships to Trove HQ', desc: 'Seller has 48hrs to get the card to a carrier. If they miss the deadline, your USDC auto-refunds. No dispute needed.', done: false },
-                { num: '03', title: 'Expert Authentication', desc: 'Our authenticator verifies the card matches this listing — photos, grade label, cert number, slab integrity. Pass = ships to you.', done: false },
+                { num: '02', title: authTier === 'remote' ? 'Seller Ships Direct + Photos' : 'Seller Ships to Chase Hollow', desc: authTier === 'remote' ? 'Seller uploads 3 photos and ships directly to you within 48hrs. Photos reviewed during transit. Miss the deadline — auto-refund.' : 'Seller ships to our auth center within 48hrs. Miss the deadline — your USDC auto-refunds automatically.', done: false },
+                { num: '03', title: authTier === 'remote' ? 'Photo Review In Transit' : 'Expert Authentication', desc: authTier === 'remote' ? 'Our staff reviews the 3 uploaded photos while your card is in transit. Pass = card continues to you. Fail = full refund.' : 'Our authenticator physically verifies the card — photos, grade label, cert number, slab integrity. Pass = ships to you.', done: false },
                 { num: '04', title: 'Delivered · Auto-Release', desc: 'Card ships to your address via FedEx. 72hrs after delivery, USDC releases to seller automatically. You can release early anytime.', done: false },
               ].map((step, i) => (
                 <div key={i} style={{ display: 'flex', gap: '14px', position: 'relative', paddingBottom: i < 3 ? '20px' : '0' }}>
@@ -385,9 +385,8 @@ export default function Listing() {
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Fee Breakdown</div>
               {[
                 { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
-                { label: 'Auth fee', val: `$${authFee}` },
+                { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
                 { label: 'Shipping & insurance', val: 'Calculated at checkout' },
-                { label: 'Buyer protection (0.5%)', val: `$${buyerProtection}` },
                 { label: 'Sales tax (varies)', val: 'Calculated at checkout' },
               ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '5px 0', borderBottom: '0.5px solid var(--border)' }}>
@@ -411,7 +410,7 @@ export default function Listing() {
               </button>
               <button style={btn({ width: '100%', padding: '11px', borderRadius: '10px', textAlign: 'center' })}>♡ Add to Watchlist</button>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px', lineHeight: 1.6 }}>
-                Auto-refund if seller misses 48hr deadline · 72hr inspection window after delivery · On-chain
+                Auto-refund if seller misses 48hr deadline · 72hr inspection window · On-chain
               </div>
             </div>
 
@@ -419,7 +418,7 @@ export default function Listing() {
             <div style={{ padding: isMobile ? '12px 14px' : '16px 20px', display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr', gap: '8px' }}>
               {[
                 { icon: '🔒', text: 'Escrow protected — funds held by smart contract' },
-                { icon: '✓', text: 'Human authenticated before delivery' },
+                { icon: '✓', text: authTier === 'remote' ? 'Photo authenticated in transit' : 'Human authenticated before delivery' },
                 { icon: '↩', text: 'Auto-refund if seller doesn\'t ship in 48hrs' },
                 { icon: '⏱', text: '72hr inspection window after delivery' },
                 { icon: '⬡', text: 'Permanent on-chain record on Base' },

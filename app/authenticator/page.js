@@ -119,8 +119,8 @@ export default function AuthenticatorPortal() {
       {showLabelModal && card && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--teal-border)', borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '100%' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Print <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Label B</em></div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>Label B ships the authenticated card from Chase Hollow to the buyer. Print, attach, and drop with FedEx.</div>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Print <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Shipping Label</em></div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>Label ships the authenticated card to the buyer. Print, attach, and drop with FedEx.</div>
             <div style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '16px', marginBottom: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', lineHeight: 2 }}>
               {[
                 { label: 'FROM', val: 'Chase Hollow Auth Center · San Francisco CA 94105' },
@@ -136,7 +136,7 @@ export default function AuthenticatorPortal() {
               ))}
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button style={{ flex: 1, background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>🖨 Print Label B</button>
+              <button style={{ flex: 1, background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>🖨 Print Label</button>
               <button onClick={() => setShowLabelModal(false)} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Cancel</button>
             </div>
           </div>
@@ -214,8 +214,37 @@ export default function AuthenticatorPortal() {
             <div>
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)' }}>Inspection <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Queue</em></div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{queue.length} cards awaiting · FIFO order · High value flagged</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{queue.length} physical · 3 remote photo reviews pending</div>
               </div>
+
+              {/* Remote Photo Review — NEW */}
+              <div style={{ background: 'rgba(60,125,200,0.06)', border: '1.5px solid rgba(60,125,200,0.3)', borderRadius: '12px', padding: '16px 18px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-blue)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px' }}>Remote Photo Review Queue</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Cards under $300 · Seller shipped direct to buyer · Review photos in transit</div>
+                  </div>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(60,125,200,0.1)', border: '1px solid rgba(60,125,200,0.3)', color: 'var(--accent-blue)', fontWeight: 600 }}>3 Pending</span>
+                </div>
+                {[
+                  { id: 'RPH-1021', name: 'Pikachu Base Set Common', value: '$18', seller: 'NewSeller_42', submitted: '14min ago', transit: 'In transit · Est. delivery Apr 10' },
+                  { id: 'RPH-1020', name: 'Squirtle 1st Ed Raw', value: '$85', seller: 'CardKing_88', submitted: '2hr ago', transit: 'In transit · Est. delivery Apr 9' },
+                  { id: 'RPH-1019', name: 'Mewtwo Holo Base Set Raw', value: '$220', seller: 'RareVault_99', submitted: '4hr ago', transit: 'In transit · Est. delivery Apr 9' },
+                ].map((item, i) => (
+                  <div key={i} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: i < 2 ? '8px' : '0', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '120px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{item.name}</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{item.id} · {item.seller} · {item.transit}</div>
+                    </div>
+                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{item.value}</div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', flexShrink: 0 }}>{item.submitted}</div>
+                    <button style={{ background: 'var(--accent-blue)', border: 'none', color: '#fff', padding: '7px 14px', fontSize: '11px', fontWeight: 600, borderRadius: '7px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>Review Photos →</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Physical Queue */}
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Physical Inspection Queue — {queue.length} Cards at Auth Center</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {queue.map((item, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: `1.5px solid ${item.priority === 'high' ? 'rgba(201,168,76,0.3)' : 'var(--border)'}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', flexWrap: 'wrap' }}
@@ -367,7 +396,7 @@ export default function AuthenticatorPortal() {
                     {!decision && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <button disabled={!allChecked} onClick={() => setDecision('pass')} style={{ width: '100%', background: allChecked ? 'var(--accent-green)' : 'var(--bg-4)', border: 'none', color: allChecked ? '#fff' : 'var(--text-muted)', padding: '14px', fontSize: '14px', fontWeight: 700, borderRadius: '10px', cursor: allChecked ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: allChecked ? 1 : 0.5 }}>
-                          ✓ Pass — Print Label B &amp; Ship to Buyer
+                          ✓ Pass — Print Label & Ship to Buyer
                         </button>
                         <button onClick={() => setShowRejectModal(true)} style={{ width: '100%', background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '14px', fontSize: '14px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
                           ✕ Reject — Refund Buyer
@@ -382,10 +411,10 @@ export default function AuthenticatorPortal() {
                         <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                           <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(76,175,124,0.12)', border: '2px solid rgba(76,175,124,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 12px' }}>✓</div>
                           <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--accent-green)' }}>Authentication Passed</div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Print Label B and ship to buyer.</div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Print label and ship to buyer.</div>
                         </div>
                         <button onClick={() => setShowLabelModal(true)} style={{ width: '100%', background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '14px', fontSize: '14px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '8px' }}>
-                          🖨 Print Label B — Ship to Buyer
+                          🖨 Print Label — Ship to Buyer
                         </button>
                         <button onClick={() => { setActiveSection('queue'); setActiveCard(null); setDecision(null); setChecklist({}); setUploadedPhotos({}) }} style={btn({ width: '100%', padding: '10px', borderRadius: '10px', textAlign: 'center' })}>← Next Card in Queue</button>
                       </div>

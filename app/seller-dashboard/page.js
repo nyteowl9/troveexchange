@@ -113,8 +113,14 @@ export default function SellerDashboard() {
             {order.urgent ? `⚠ Ship within deadline · ${order.deadline} · Auto-refund + Strike 1 if missed` : order.deadline}
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {order.status === 'ship' && (
-              <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>🖨 Print Label A</button>
+            {order.status === 'ship' && (order.priceNum || 9999) <= 300 && (
+              <>
+                <button style={{ background: 'rgba(60,125,200,0.15)', border: '1.5px solid rgba(60,125,200,0.4)', color: 'var(--accent-blue)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>📷 Upload 3 Photos</button>
+                <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>🖨 Print Label</button>
+              </>
+            )}
+            {order.status === 'ship' && (order.priceNum || 9999) > 300 && (
+              <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>🖨 Print Label → Ship to Auth Center</button>
             )}
             <button style={btn()}>View Details</button>
             <button style={btn()}>Message Buyer</button>
@@ -188,13 +194,14 @@ export default function SellerDashboard() {
               onChange={e => setActiveSection(e.target.value)}
               style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
             >
-              <option key="overview" value="overview">Dashboard</option>
-              <option key="notifications" value="notifications">Notifications</option>
-              <option key="orders" value="orders">Active Orders</option>
-              <option key="listings" value="listings">My Listings</option>
-              <option key="new-listing" value="new-listing">New Listing</option>
-              <option key="earnings" value="earnings">Earnings</option>
-              <option key="bond" value="bond">Bond Wallet</option>
+              <option value="overview">Dashboard</option>
+              <option value="notifications">Notifications</option>
+              <option value="orders">Active Orders</option>
+              <option value="listings">My Listings</option>
+              <option value="new-listing">New Listing</option>
+              <option value="earnings">Earnings</option>
+              <option value="bond">Bond Wallet</option>
+              <option value="profile">Profile</option>
             </select>
           </div>
 
@@ -241,7 +248,7 @@ export default function SellerDashboard() {
           {activeSection === 'orders' && (
             <div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>4 orders in progress · Ship within 48hrs of sale or buyer auto-refunded</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>4 orders in progress · Ship within 48hrs of sale (1 extension available) or buyer auto-refunded</div>
               {orders.map((order, i) => <OrderRow key={i} order={order} />)}
             </div>
           )}
@@ -460,13 +467,13 @@ export default function SellerDashboard() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Price & Fee Calculator</div>
                 <Label text="LISTING PRICE (USDC)" />
-                <input type="number" placeholder="Minimum $100" value={price} onChange={e => setPrice(e.target.value)} style={{ ...inputStyle, marginBottom: '14px', fontSize: '18px', fontFamily: 'Cormorant Garamond, serif' }} />
+                <input type="number" placeholder="Minimum $1" value={price} onChange={e => setPrice(e.target.value)} style={{ ...inputStyle, marginBottom: '14px', fontSize: '18px', fontFamily: 'Cormorant Garamond, serif' }} />
                 {price && (
                   <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px' }}>
                     {[
                       { label: 'Your listing price', val: `$${parseFloat(price).toLocaleString()}` },
                       { label: 'Platform fee (3.5%)', val: `-$${fees.platform}` },
-                      { label: 'Shipping & insurance (Label A)', val: `-$${fees.shipSeller}` },
+                      { label: 'Shipping & insurance', val: `-$${fees.shipSeller}` },
                       { label: 'You receive on settlement', val: `$${fees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
@@ -494,7 +501,7 @@ export default function SellerDashboard() {
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>Bond is collateral — not a fee. It posts when a buyer purchases and returns in full on successful completion.</div>
               </div>
               <div style={{ background: 'rgba(200,75,60,0.05)', border: '1px solid rgba(200,75,60,0.2)', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                <strong style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Ship within 48hrs of sale.</strong> Miss the deadline = auto-refund to buyer + Strike 1. Three strikes = permanent ban.
+                <strong style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Ship within 48hrs of sale.</strong> One free extension available. Miss deadline = auto-refund to buyer + Strike 1. Three strikes = permanent ban.
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>

@@ -172,7 +172,7 @@ export default function Home() {
                     </div>
                   </div>
                   <div style={{ position: 'absolute', top: '10px', left: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 9px', borderRadius: '6px', fontWeight: 500, background: 'rgba(201,168,76,0.12)', border: '1px solid var(--teal-border)', color: 'var(--gold)' }}>{card.grader}</div>
-                  <div style={{ position: 'absolute', top: '10px', right: '10px', width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(201,168,76,0.15)', border: '1.5px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: card.grade.length > 4 ? '11px' : '15px', fontWeight: 600, color: 'var(--gold)' }}>{card.grade}</div>
+                  <div style={{ position: 'absolute', top: '10px', right: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 8px', borderRadius: '6px', fontWeight: 600, background: 'rgba(201,168,76,0.15)', border: '1.5px solid var(--gold)', color: 'var(--gold)', whiteSpace: 'nowrap' }}>{card.grade.replace(card.grader, '').trim()}</div>
                 </div>
                 <div style={{ padding: '14px 16px' }}>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 500 }}>{card.game}</div>
@@ -357,7 +357,7 @@ export default function Home() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '12px' }}>
             {[
               { num: '01', title: 'Buyer Funds Escrow', desc: 'USDC locked in a smart contract on Base. Neither party can touch it. No bank, no PayPal — pure code.' },
-              { num: '02', title: 'Seller Ships to Us', desc: 'Pre-paid label to our authentication center. Seller must ship within 48hrs — or your USDC is automatically refunded.' },
+              { num: '02', title: 'Seller Ships', desc: 'Under $300: seller ships direct to you with 3 photos uploaded. Over $300: pre-paid label to our auth center. 48hrs to ship — miss it and your USDC auto-refunds.' },
               { num: '03', title: 'Expert Authentication', desc: 'Certified human verifies grade, condition, and cert number match the listing exactly. Card ships to buyer on pass.' },
               { num: '04', title: 'Auto Settlement', desc: '72hrs after delivery, USDC releases automatically. No action needed. All on-chain. Final.' },
             ].map((step, i) => (
@@ -435,7 +435,7 @@ export default function Home() {
             {[
               { icon: '🔍', iconBg: 'var(--teal-bg)', iconBorder: 'var(--teal-border)', title: 'Every Listing Matches What You Receive', desc: 'Our authenticators verify the card matches the listing — photos, grade label, cert number, and slab integrity. If anything doesn\'t match, full refund automatically.' },
               { icon: '🔒', iconBg: 'rgba(76,175,124,0.1)', iconBorder: 'rgba(76,175,124,0.3)', title: 'Your Money is Always Safe', desc: 'USDC locks in a smart contract — not with us, not with the seller — until the card passes authentication and arrives with you. Nobody can touch it in transit.' },
-              { icon: '↩', iconBg: 'rgba(232,168,56,0.1)', iconBorder: 'rgba(232,168,56,0.3)', title: 'Automatic Protection', desc: 'Seller doesn\'t ship in 48hrs? You\'re automatically refunded — no dispute needed, no waiting, no chasing. Smart contract enforces it.' },
+              { icon: '↩', iconBg: 'rgba(232,168,56,0.1)', iconBorder: 'rgba(232,168,56,0.3)', title: 'Automatic Protection', desc: 'Seller doesn\'t ship within 48hrs? You\'re automatically refunded — no dispute needed, no waiting. Smart contract enforces it. One free extension allowed.' },
               { icon: '⬡', iconBg: 'rgba(60,125,200,0.1)', iconBorder: 'rgba(60,125,200,0.3)', title: 'Verified Seller Reputation', desc: 'Every review is tied to a real on-chain transaction. Sellers can\'t delete feedback or game ratings. What you see is permanently recorded on Base.' },
               { icon: '✓', iconBg: 'rgba(200,75,60,0.1)', iconBorder: 'rgba(200,75,60,0.3)', title: 'Grade Certified by PSA/BGS/CGC', desc: 'Our authenticators verify you receive what was listed. The card\'s grade and authenticity are certified by the grading company — we verify the match.' },
               { icon: '📊', iconBg: 'var(--teal-bg)', iconBorder: 'var(--teal-border)', title: 'Real Price History', desc: 'Every sale on Chase Hollow is verifiable on-chain. No fake sold listings, no inflated comps. Price history is real transaction data.' },
@@ -452,7 +452,7 @@ export default function Home() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '2px', background: 'var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
               <div style={{ background: 'var(--teal-bg)', padding: '16px 20px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '14px', fontWeight: 600 }}>Buying on Chase Hollow</div>
-                {['Card authenticated before delivery', 'Funds held in escrow — not by seller', 'Auto-refund if seller doesn\'t ship', '72hr window to dispute on delivery', 'Verified on-chain reputation scores', 'Real price history from on-chain sales', 'Card received always matches listing'].map((item, i) => (
+                {['Every card photo or physically authenticated', 'Funds held in escrow — not by seller', 'Auto-refund if seller doesn\'t ship', '72hr window to dispute on delivery', 'Verified on-chain reputation scores', 'Real price history from on-chain sales', 'Card received always matches listing'].map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '8px' }}>
                     <span style={{ color: 'var(--accent-green)', flexShrink: 0 }}>✓</span>{item}
                   </div>

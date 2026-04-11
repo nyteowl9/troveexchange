@@ -30,10 +30,10 @@ export default function Checkout() {
   }
 
   const cardPrice = 487
-  const authFee = 25
-  const buyerProtection = parseFloat((cardPrice * 0.005).toFixed(2))
+  const authTier = cardPrice <= 300 ? 'remote' : 'physical'
+  const authFee = authTier === 'remote' ? 10 : 25
   const salesTax = parseFloat((cardPrice * 0.095).toFixed(2))
-  const total = (cardPrice + authFee + buyerProtection + salesTax).toFixed(2)
+  const total = (cardPrice + authFee + parseFloat(salesTax)).toFixed(2)
 
   const wallets = [
     { id: 'metamask', icon: '🦊', name: 'MetaMask', desc: 'Most popular · Browser extension', featured: true },
@@ -204,10 +204,9 @@ export default function Checkout() {
                 <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {[
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
-                    { label: 'Auth fee', val: `$${authFee}` },
+                    { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
                     { label: 'Shipping & insurance', val: 'Calculated at checkout' },
-                    { label: 'Buyer protection (0.5%)', val: `$${buyerProtection}` },
-                    { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
+                        { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
                     { label: 'Total to lock in escrow', val: `$${total} USDC`, total: true },
                     { label: 'Remaining after purchase', val: `$${(2840 - parseFloat(total)).toFixed(2)} USDC`, green: true },
                   ].map((row, i) => (
@@ -247,19 +246,19 @@ export default function Checkout() {
                   title: 'Payment Breakdown',
                   rows: [
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}`, gold: true },
-                    { label: 'Auth fee', val: `$${authFee}` },
+                    { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
                     { label: 'Shipping & insurance', val: '$18.40' },
-                    { label: 'Buyer protection (0.5%)', val: `$${buyerProtection}` },
-                    { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
+                        { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
                     { label: 'Total locked in escrow', val: `$${total} USDC`, gold: true, total: true },
                   ]
                 },
                 {
                   title: 'Delivery & Protection',
                   rows: [
-                    { label: 'Seller ship deadline', val: '48hrs after purchase' },
+                    { label: 'Auth type', val: authTier === 'remote' ? 'Remote Photo Auth' : 'Physical Auth at Chase Hollow' },
+                    { label: 'Seller deadline', val: '48hrs (1 extension available)' },
                     { label: 'If seller misses deadline', val: 'Auto-refund · 100% USDC returned', green: true },
-                    { label: 'Auth window', val: '24–48hrs at Chase Hollow HQ' },
+                    { label: authTier === 'remote' ? 'Photo review' : 'Auth window', val: authTier === 'remote' ? 'Reviewed in transit (same day)' : '24–48hrs at Chase Hollow HQ' },
                     { label: 'Auto-release after delivery', val: '72hrs · No action needed' },
                   ]
                 }
@@ -298,8 +297,8 @@ export default function Checkout() {
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>⬡ How Your Money is Protected</div>
                 {[
                   `Your $${total} USDC locks into a smart contract — not held by Chase Hollow, not held by the seller. By code.`,
-                  'Seller ships card to our authentication center within 48hrs or your USDC auto-refunds.',
-                  'Our expert verifies the card matches the listing exactly — grade, condition, cert number.',
+                  authTier === 'remote' ? 'Seller uploads 3 photos and ships direct to you within 48hrs. Miss deadline = auto-refund.' : 'Seller ships to our authentication center within 48hrs or your USDC auto-refunds.',
+                  authTier === 'remote' ? 'Our staff reviews the uploaded photos while your card is in transit.' : 'Our expert physically verifies the card matches the listing exactly — grade, condition, cert number.',
                   'Card ships to you. 72hrs after delivery, USDC releases to seller automatically.',
                 ].map((text, i) => (
                   <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '8px' }}>
@@ -342,7 +341,7 @@ export default function Checkout() {
                 {[
                   'Funds go to escrow — not to us, not to the seller yet',
                   'Auto-refund if seller misses 48hr shipping deadline',
-                  'Card authenticated by experts before it reaches you',
+                  authTier === 'remote' ? 'Card photo-authenticated by staff during transit' : 'Card physically authenticated by experts before it reaches you',
                   '72hr inspection window after delivery — dispute if needed',
                   'Transaction recorded permanently on Base blockchain',
                   'No chargebacks possible — irreversible but fully protected',
@@ -382,7 +381,7 @@ export default function Checkout() {
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '20px' }}>Live tracking · Updates automatically</div>
                 {[
                   { title: 'Escrow Funded', desc: `$${total} USDC locked in smart contract on Base. Transaction confirmed.`, done: true, active: false },
-                  { title: 'Awaiting Seller Shipment', desc: 'CardKing_88 has been notified. They have 48hrs to ship to Chase Hollow Auth Center.', done: false, active: true, time: '⏱ Deadline: Apr 8 at 2:14pm · 47hrs 42min remaining' },
+                  { title: 'Awaiting Seller Photos & Shipment', desc: 'CardKing_88 has been notified. They have 48hrs to upload 3 photos and ship directly to your address.', done: false, active: true, time: '⏱ Deadline: Apr 8 at 2:14pm · 47hrs 42min remaining' },
                   { title: 'In Transit to Authenticator', desc: 'Card en route to Chase Hollow authentication center. Tracking will appear here.', done: false, active: false },
                   { title: 'Authentication', desc: 'Expert verifies grade, condition, and cert number match listing exactly.', done: false, active: false },
                   { title: 'Shipped to You', desc: 'Card ships from auth center to your address. FedEx tracking provided.', done: false, active: false },
@@ -426,9 +425,9 @@ export default function Checkout() {
             <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)' }}>
               {[
                 { label: 'Card price', val: `$${cardPrice}` },
-                { label: 'Auth + shipping', val: `$${authFee}` },
-                { label: 'Buyer protection', val: `$${buyerProtection}` },
-                { label: 'Sales tax (CA)', val: `$${salesTax}` },
+                { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
+                { label: 'Shipping & insurance', val: 'Calculated at checkout' },
+                { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
               ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '0.5px solid var(--border)' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
@@ -436,18 +435,18 @@ export default function Checkout() {
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', marginTop: '4px' }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Total</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Subtotal (est.)</div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 600, color: 'var(--gold)' }}>${total}</div>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>USDC · Base Network</div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>+ shipping · USDC · Base</div>
                 </div>
               </div>
             </div>
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
                 { icon: '🔒', text: 'Escrow protected — not held by us' },
-                { icon: '✓', text: 'Human authenticated before delivery' },
-                { icon: '↩', text: 'Auto-refund if seller misses 48hr deadline' },
+                { icon: '✓', text: authTier === 'remote' ? 'Photo authenticated in transit' : 'Human authenticated before delivery' },
+                { icon: '↩', text: 'Auto-refund if seller misses 48hr deadline (1 extension allowed)' },
                 { icon: '⏱', text: '72hr inspection window after delivery' },
                 { icon: '⬡', text: 'Permanent on-chain record on Base' },
               ].map((item, i) => (
