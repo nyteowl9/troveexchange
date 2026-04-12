@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buyer Dashboard — Trove Exchange</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+[data-theme="dark"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;
+  --teal:#C9A84C;--teal-hover:#E8C97A;--teal-bg:rgba(201,168,76,0.1);--teal-border:rgba(201,168,76,0.28);
+  --bg:#0A0A0B;--bg-2:#111114;--bg-3:#18181C;--bg-4:#222228;
+  --text-primary:#F0EDE6;--text-secondary:#B8B4AC;--text-muted:#6C6A66;
+  --accent-green:#4CAF7C;--accent-red:#C84B3C;--accent-blue:#3C7DC8;--accent-amber:#E8A838;
+  --border:#2A2A32;--border-gold:rgba(201,168,76,0.28);
+  --nav-bg:rgba(10,10,11,0.94);--sidebar-bg:#0E0E11;
+  --card-bg:#111114;--input-bg:#18181C;
+}
+[data-theme="light"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;
+  --teal:#0D6E6E;--teal-hover:#0A5A5A;--teal-bg:rgba(13,110,110,0.08);--teal-border:rgba(13,110,110,0.28);
+  --bg:#F5F2EC;--bg-2:#EDEAE3;--bg-3:#E4E0D8;--bg-4:#D8D4CC;
+  --text-primary:#1A1814;--text-secondary:#4A4640;--text-muted:#8A8680;
+  --accent-green:#1A6B3A;--accent-red:#B83C2C;--accent-blue:#1A5EA0;--accent-amber:#9B6E1A;
+  --border:#C8C4BC;--border-gold:rgba(13,110,110,0.25);
+  --nav-bg:rgba(245,242,236,0.96);--sidebar-bg:#E4E0D8;
+  --card-bg:#EDEAE3;--input-bg:#E4E0D8;
+}
+
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-weight:400;overflow-x:hidden;line-height:1.6;transition:background 0.3s,color 0.3s}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--nav-bg);backdrop-filter:blur(24px);border-bottom:0.5px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;letter-spacing:0.1em;color:var(--gold);display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-logo-icon{width:22px;height:22px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-user{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color 0.2s}
+.nav-user:hover{border-color:var(--teal-border)}
+.nav-avatar{width:28px;height:28px;border-radius:50%;background:var(--teal-bg);border:1.5px solid var(--teal-border);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:600;color:var(--teal)}
+.nav-username{font-size:12px;font-weight:500;color:var(--text-secondary)}
+.nav-badge{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:20px;background:var(--teal-bg);border:1px solid var(--teal-border);color:var(--teal);font-weight:500}
+.theme-toggle{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:14px;transition:all 0.2s}
+.theme-toggle:hover{border-color:var(--teal);color:var(--teal)}
+.btn-primary{background:var(--teal);border:none;color:#fff;padding:8px 18px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s}
+.btn-primary:hover{background:var(--teal-hover)}
+[data-theme="dark"] .btn-primary{color:#0A0A0B}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary);padding:8px 16px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;transition:all 0.2s;border-radius:8px}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal)}
+
+/* LAYOUT */
+.layout{display:flex;padding-top:64px;min-height:100vh}
+
+/* SIDEBAR */
+.dash-sidebar{width:220px;flex-shrink:0;background:var(--sidebar-bg);border-right:0.5px solid var(--border);position:fixed;top:64px;left:0;height:calc(100vh - 64px);overflow-y:auto;padding:20px 0;display:flex;flex-direction:column}
+.dash-nav-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);padding:0 16px;margin-bottom:4px;margin-top:16px;font-weight:500}
+.dash-nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;transition:all 0.15s;border-left:2px solid transparent;text-decoration:none;color:var(--text-secondary);font-size:13px;font-weight:500}
+.dash-nav-item:hover{color:var(--text-primary);background:var(--bg-3)}
+.dash-nav-item.active{color:var(--teal);background:var(--teal-bg);border-left-color:var(--teal)}
+.dash-nav-icon{width:16px;text-align:center;font-size:14px;flex-shrink:0}
+.dash-nav-badge{margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:10px;background:var(--accent-amber);color:#fff;font-weight:600}
+.dash-nav-badge.red{background:var(--accent-red)}
+.dash-nav-badge.green{background:var(--accent-green)}
+.dash-sidebar-bottom{margin-top:auto;padding:16px;border-top:0.5px solid var(--border)}
+.rep-card{background:var(--teal-bg);border:1px solid var(--teal-border);border-radius:10px;padding:12px}
+.rep-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:4px;font-weight:500}
+.rep-score{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--text-primary);line-height:1}
+.rep-sub{font-size:10px;color:var(--text-muted);margin-top:4px}
+.rep-stars{color:var(--gold);font-size:12px;letter-spacing:1px;margin-top:3px}
+
+/* MAIN */
+.dash-main{margin-left:220px;flex:1;padding:28px 24px 60px;min-width:0}
+
+/* PAGE HEADER */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--text-primary)}
+.page-title em{font-style:italic;color:var(--gold)}
+.page-subtitle{font-size:13px;color:var(--text-muted);margin-top:2px}
+.page-actions{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.metric-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:18px 20px;transition:border-color 0.2s}
+.metric-card:hover{border-color:var(--teal-border)}
+.metric-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;font-weight:500}
+.metric-value{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;line-height:1;color:var(--text-primary)}
+.metric-value.gold{color:var(--gold)}
+.metric-value.teal{color:var(--teal)}
+.metric-value.green{color:var(--accent-green)}
+.metric-change{font-family:'DM Mono',monospace;font-size:10px;margin-top:6px}
+.metric-change.up{color:var(--accent-green)}
+.metric-change.neutral{color:var(--text-muted)}
+
+/* SECTION */
+.dash-section{margin-bottom:28px}
+.dash-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.dash-section-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300}
+.dash-section-title em{font-style:italic;color:var(--gold)}
+.dash-section-link{font-size:11px;color:var(--teal);cursor:pointer;font-weight:500;text-decoration:none;transition:opacity 0.2s}
+.dash-section-link:hover{opacity:0.7}
+
+/* INSPECTION ALERT */
+.inspection-alert{background:rgba(232,168,56,0.08);border:1.5px solid rgba(232,168,56,0.35);border-radius:12px;padding:20px 24px;margin-bottom:24px;display:flex;align-items:flex-start;gap:16px}
+.inspection-alert-icon{width:40px;height:40px;border-radius:10px;background:rgba(232,168,56,0.15);border:1px solid rgba(232,168,56,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.inspection-alert-body{flex:1}
+.inspection-alert-title{font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px}
+.inspection-alert-sub{font-size:13px;color:var(--text-secondary);line-height:1.5}
+.inspection-alert-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.btn-confirm-receipt{background:var(--accent-green);border:none;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.btn-confirm-receipt:hover{opacity:0.88}
+.btn-raise-dispute{background:transparent;border:1.5px solid rgba(200,75,60,0.4);color:var(--accent-red);padding:10px 20px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.btn-raise-dispute:hover{background:rgba(200,75,60,0.08)}
+.inspection-timer{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent-amber);margin-top:8px;display:flex;align-items:center;gap:6px}
+.timer-dot{width:6px;height:6px;border-radius:50%;background:var(--accent-amber);animation:pulse 1.5s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ORDER CARDS */
+.orders-list{display:flex;flex-direction:column;gap:12px}
+.order-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color 0.2s;cursor:pointer}
+.order-card:hover{border-color:var(--teal-border)}
+.order-card-header{padding:16px 20px;display:flex;align-items:center;gap:14px;border-bottom:0.5px solid var(--border)}
+.order-swatch{width:36px;height:50px;border-radius:4px;flex-shrink:0}
+.swatch-poke{background:linear-gradient(135deg,#1a3a5c,#0d2035);border:1px solid rgba(255,215,0,0.2)}
+.swatch-mtg{background:linear-gradient(135deg,#1c2a1c,#0d1a0d);border:1px solid rgba(76,175,124,0.2)}
+.swatch-op{background:linear-gradient(135deg,#2a1c1c,#1a0d0d);border:1px solid rgba(200,75,60,0.2)}
+.swatch-sport{background:linear-gradient(135deg,#1a2a1a,#0d1a0d);border:1px solid rgba(76,175,124,0.2)}
+.order-card-info{flex:1}
+.order-card-name{font-family:'Cormorant Garamond',serif;font-size:18px;line-height:1.2;color:var(--text-primary);margin-bottom:2px}
+.order-card-meta{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace}
+.order-card-price{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--gold);margin-left:auto;text-align:right;flex-shrink:0}
+.order-card-price-sub{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace;text-align:right;margin-top:1px}
+.status-pill{font-family:'DM Mono',monospace;font-size:10px;padding:3px 10px;border-radius:20px;font-weight:500;white-space:nowrap;display:inline-block}
+.status-escrow{background:rgba(60,125,200,0.12);border:1px solid rgba(60,125,200,0.3);color:var(--accent-blue)}
+.status-shipped{background:rgba(60,125,200,0.12);border:1px solid rgba(60,125,200,0.3);color:var(--accent-blue)}
+.status-auth{background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.28);color:var(--gold)}
+.status-inspect{background:rgba(232,168,56,0.12);border:1px solid rgba(232,168,56,0.3);color:var(--accent-amber)}
+.status-complete{background:rgba(76,175,124,0.1);border:1px solid rgba(76,175,124,0.25);color:var(--accent-green)}
+.status-dispute{background:rgba(200,75,60,0.12);border:1px solid rgba(200,75,60,0.3);color:var(--accent-red)}
+
+/* ORDER PROGRESS */
+.order-card-body{padding:16px 20px}
+.order-progress{margin-bottom:16px}
+.progress-track{display:flex;align-items:center;gap:0;margin-bottom:8px}
+.progress-step{display:flex;flex-direction:column;align-items:center;flex:1;position:relative}
+.progress-dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--border);background:var(--bg-3);z-index:1;transition:all 0.3s;flex-shrink:0}
+.progress-dot.done{background:var(--accent-green);border-color:var(--accent-green)}
+.progress-dot.active{background:var(--accent-amber);border-color:var(--accent-amber);box-shadow:0 0 0 3px rgba(232,168,56,0.2)}
+.progress-dot.check{background:var(--teal);border-color:var(--teal)}
+.progress-line{flex:1;height:2px;background:var(--border)}
+.progress-line.done{background:var(--accent-green)}
+.progress-labels{display:flex;justify-content:space-between;margin-top:6px}
+.progress-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);text-align:center;flex:1;letter-spacing:0.04em}
+.progress-label.done{color:var(--accent-green)}
+.progress-label.active{color:var(--accent-amber)}
+.progress-label.check{color:var(--teal)}
+.order-tracking-detail{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-secondary);margin-bottom:12px;padding:10px 12px;background:var(--bg-3);border-radius:8px;line-height:1.6}
+.order-tracking-detail span{color:var(--teal)}
+.order-actions{display:flex;gap:8px;flex-wrap:wrap}
+.order-btn{padding:8px 16px;font-size:12px;font-weight:500;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;white-space:nowrap}
+.order-btn.primary{background:var(--teal);border:none;color:#fff}
+.order-btn.primary:hover{background:var(--teal-hover)}
+[data-theme="dark"] .order-btn.primary{color:#0A0A0B}
+.order-btn.secondary{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary)}
+.order-btn.secondary:hover{border-color:var(--teal);color:var(--teal)}
+.order-btn.danger{background:transparent;border:1.5px solid rgba(200,75,60,0.35);color:var(--accent-red)}
+.order-btn.danger:hover{background:rgba(200,75,60,0.08)}
+.order-btn.green{background:var(--accent-green);border:none;color:#fff}
+.order-btn.green:hover{opacity:0.88}
+
+/* WATCHLIST */
+.watchlist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.watch-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:all 0.2s;position:relative}
+.watch-card:hover{border-color:var(--teal-border);transform:translateY(-2px)}
+.watch-card-img{aspect-ratio:3/4;background:var(--bg-3);display:flex;align-items:center;justify-content:center;position:relative}
+.watch-card-visual{width:65%;aspect-ratio:2.5/3.5;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:20px;opacity:0.7}
+.watch-remove{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:var(--bg-4);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:11px;cursor:pointer;transition:all 0.2s;z-index:2}
+.watch-remove:hover{border-color:var(--accent-red);color:var(--accent-red);background:rgba(200,75,60,0.1)}
+.watch-card-body{padding:12px 14px}
+.watch-card-name{font-family:'Cormorant Garamond',serif;font-size:15px;line-height:1.2;margin-bottom:2px;color:var(--text-primary)}
+.watch-card-meta{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-bottom:8px}
+.watch-price{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold)}
+.watch-change{font-family:'DM Mono',monospace;font-size:10px;margin-top:2px}
+.watch-change.up{color:var(--accent-green)}
+.watch-change.dn{color:var(--accent-red)}
+.watch-btn{width:100%;background:var(--teal-bg);border:1px solid var(--teal-border);color:var(--teal);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:7px;border-radius:7px;cursor:pointer;margin-top:8px;transition:all 0.2s}
+.watch-btn:hover{background:var(--teal);color:#fff}
+[data-theme="dark"] .watch-btn:hover{color:#0A0A0B}
+
+/* OFFERS */
+.offers-list{display:flex;flex-direction:column;gap:10px}
+.offer-row{background:var(--card-bg);border:1.5px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.offer-row:hover{border-color:var(--teal-border)}
+.offer-card-info{flex:1;min-width:140px}
+.offer-card-name{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--text-primary);margin-bottom:2px}
+.offer-card-meta{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace}
+.offer-amounts{display:flex;gap:16px;align-items:center}
+.offer-amount-block{text-align:center}
+.offer-amount-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px}
+.offer-amount-val{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600}
+.offer-amount-val.listing{color:var(--text-secondary)}
+.offer-amount-val.offer{color:var(--gold)}
+.offer-arrow{color:var(--text-muted);font-size:16px}
+.offer-status{font-family:'DM Mono',monospace;font-size:10px;padding:3px 10px;border-radius:20px;font-weight:500}
+.offer-pending{background:rgba(232,168,56,0.12);border:1px solid rgba(232,168,56,0.3);color:var(--accent-amber)}
+.offer-accepted{background:rgba(76,175,124,0.1);border:1px solid rgba(76,175,124,0.25);color:var(--accent-green)}
+.offer-declined{background:rgba(200,75,60,0.1);border:1px solid rgba(200,75,60,0.25);color:var(--accent-red)}
+.offer-actions{display:flex;gap:8px;margin-left:auto}
+
+/* PURCHASE HISTORY TABLE */
+.history-table{width:100%;border-collapse:collapse;background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;overflow:hidden}
+.history-table thead tr{border-bottom:0.5px solid var(--border);background:var(--bg-3)}
+.history-table th{text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);padding:12px 16px;font-weight:500}
+.history-table tbody tr{border-bottom:0.5px solid var(--border);transition:background 0.15s;cursor:pointer}
+.history-table tbody tr:last-child{border-bottom:none}
+.history-table tbody tr:hover{background:var(--bg-3)}
+.history-table td{padding:13px 16px;font-size:13px;vertical-align:middle}
+.h-card-info{display:flex;align-items:center;gap:10px}
+.h-swatch{width:26px;height:36px;border-radius:3px;flex-shrink:0}
+.h-name{font-family:'Cormorant Garamond',serif;font-size:15px;color:var(--text-primary);line-height:1.2}
+.h-meta{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:1px}
+.h-price{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--gold)}
+.h-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+.h-rating{color:var(--gold);font-size:12px;letter-spacing:1px}
+.h-action{font-size:11px;color:var(--teal);cursor:pointer;font-weight:500;transition:opacity 0.2s}
+.h-action:hover{opacity:0.7}
+
+/* DISPUTE SECTION */
+.dispute-card{background:rgba(200,75,60,0.05);border:1.5px solid rgba(200,75,60,0.25);border-radius:12px;padding:20px 24px}
+.dispute-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.dispute-icon{width:36px;height:36px;border-radius:10px;background:rgba(200,75,60,0.1);border:1px solid rgba(200,75,60,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.dispute-title{font-size:15px;font-weight:600;color:var(--text-primary)}
+.dispute-sub{font-size:12px;color:var(--text-muted)}
+.dispute-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.dispute-step{display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--text-secondary);line-height:1.5}
+.dispute-step-num{width:20px;height:20px;border-radius:50%;background:rgba(200,75,60,0.1);border:1px solid rgba(200,75,60,0.3);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--accent-red);flex-shrink:0;font-weight:500}
+.dispute-warning{font-size:12px;color:var(--text-muted);background:var(--bg-3);border-radius:8px;padding:10px 12px;line-height:1.6}
+
+/* NOTIFICATIONS */
+.notif-list{display:flex;flex-direction:column;gap:8px}
+.notif-item{background:var(--card-bg);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border-color 0.2s}
+.notif-item:hover{border-color:var(--teal-border)}
+.notif-item.unread{border-left:3px solid var(--teal)}
+.notif-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.notif-dot.amber{background:var(--accent-amber)}
+.notif-dot.green{background:var(--accent-green)}
+.notif-dot.blue{background:var(--accent-blue)}
+.notif-dot.red{background:var(--accent-red)}
+.notif-dot.teal{background:var(--teal)}
+.notif-text{font-size:13px;color:var(--text-secondary);line-height:1.5;flex:1}
+.notif-text strong{color:var(--text-primary);font-weight:500}
+.notif-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);white-space:nowrap}
+
+/* TABS */
+.dash-tab{font-family:'DM Mono',monospace;font-size:11px;padding:5px 12px;border-radius:6px;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all 0.15s;font-weight:500}
+.dash-tab.active{background:var(--teal-bg);border-color:var(--teal-border);color:var(--teal)}
+.dash-tab:hover:not(.active){border-color:var(--teal-border);color:var(--teal)}
+
+/* MOBILE */
+.mobile-sidebar-btn{display:none;align-items:center;gap:6px;background:var(--bg-2);border:1.5px solid var(--border);color:var(--text-secondary);padding:7px 12px;font-size:12px;font-weight:500;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:150;backdrop-filter:blur(4px)}
+.sidebar-overlay.open{display:block}
+
+@media(max-width:900px){
+  .dash-sidebar{transform:translateX(-100%);transition:transform 0.3s ease;z-index:160}
+  .dash-sidebar.open{transform:translateX(0)}
+  .dash-main{margin-left:0}
+  .mobile-sidebar-btn{display:flex}
+  .metrics{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  .dash-main{padding:16px 12px 40px}
+  .metrics{grid-template-columns:1fr 1fr}
+  .page-header{flex-direction:column}
+  .watchlist-grid{grid-template-columns:repeat(2,1fr)}
+  .inspection-alert{flex-direction:column}
+  .offer-row{flex-direction:column;align-items:flex-start}
+  .offer-actions{width:100%}
+  .history-table th:nth-child(5),.history-table td:nth-child(5){display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"></div>
+    TROVE
+  </a>
+  <div class="nav-right">
+    <button class="mobile-sidebar-btn" id="mobileSidebarBtn">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="1" y1="3" x2="13" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="11" x2="13" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Menu
+    </button>
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+    <div class="nav-user">
+      <div class="nav-avatar">RV</div>
+      <span class="nav-username">RareVault_99</span>
+      <span class="nav-badge">Trusted</span>
+    </div>
+    <button class="btn-primary" onclick="window.location.href='marketplace.html'">Browse Cards</button>
+  </div>
+</nav>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="dash-sidebar" id="dashSidebar">
+
+    <div>
+      <div class="dash-nav-label">Overview</div>
+      <a class="dash-nav-item active" onclick="showSection('overview')" href="#">
+        <span class="dash-nav-icon">◈</span> Dashboard
+      </a>
+      <a class="dash-nav-item" onclick="showSection('notifications')" href="#">
+        <span class="dash-nav-icon">◉</span> Notifications
+        <span class="dash-nav-badge">2</span>
+      </a>
+    </div>
+
+    <div>
+      <div class="dash-nav-label">Purchases</div>
+      <a class="dash-nav-item" onclick="showSection('active-purchases')" href="#">
+        <span class="dash-nav-icon">⇄</span> Active Purchases
+        <span class="dash-nav-badge">3</span>
+      </a>
+      <a class="dash-nav-item" onclick="showSection('inspection')" href="#">
+        <span class="dash-nav-icon">⏱</span> Auto-Release
+        <span class="dash-nav-badge amber" style="background:var(--accent-amber)">1</span>
+      </a>
+      <a class="dash-nav-item" onclick="showSection('purchase-history')" href="#">
+        <span class="dash-nav-icon">◎</span> Purchase History
+      </a>
+    </div>
+
+    <div>
+      <div class="dash-nav-label">Activity</div>
+      <a class="dash-nav-item" onclick="showSection('watchlist')" href="#">
+        <span class="dash-nav-icon">♡</span> Watchlist
+        <span class="dash-nav-badge green">8</span>
+      </a>
+      <a class="dash-nav-item" onclick="showSection('offers')" href="#">
+        <span class="dash-nav-icon">◆</span> My Offers
+        <span class="dash-nav-badge">2</span>
+      </a>
+      <a class="dash-nav-item" onclick="showSection('disputes')" href="#">
+        <span class="dash-nav-icon">⚠</span> Disputes
+      </a>
+    </div>
+
+    <div>
+      <div class="dash-nav-label">Account</div>
+      <a class="dash-nav-item" href="#">
+        <span class="dash-nav-icon">◑</span> Profile
+      </a>
+      <a class="dash-nav-item" href="#">
+        <span class="dash-nav-icon">◻</span> Settings
+      </a>
+    </div>
+
+    <div class="dash-sidebar-bottom">
+      <div class="rep-card">
+        <div class="rep-label">Buyer Reputation</div>
+        <div class="rep-score">4.92</div>
+        <div class="rep-stars">★★★★★</div>
+        <div class="rep-sub">38 transactions · 0 disputes</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="dash-main">
+
+    <!-- ===== OVERVIEW ===== -->
+    <div id="section-overview">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Welcome back, <em>RareVault_99</em></div>
+          <div class="page-subtitle">Tuesday, April 7, 2025 · Trusted Buyer · 38 purchases · Fully protected by auto-refund</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-ghost">Download History</button>
+          <button class="btn-primary" onclick="window.location.href='marketplace.html'">Browse Marketplace</button>
+        </div>
+      </div>
+
+      <!-- INSPECTION ALERT -->
+      <div class="inspection-alert">
+        <div class="inspection-alert-icon">⏱</div>
+        <div class="inspection-alert-body">
+          <div class="inspection-alert-title">Delivery Confirmed — Funds Auto-Release in 18hrs</div>
+          <div class="inspection-alert-sub">Your Luffy Alt Art PSA 10 (Order #4810) was delivered Apr 5. <strong>$875 USDC releases automatically to the seller on Apr 8 at 12:00pm</strong> — no action needed. If anything is wrong with the card, raise a dispute before then. You can also release funds early if everything looks good.</div>
+          <div class="inspection-timer"><div class="timer-dot"></div> 18 hours 42 minutes remaining</div>
+          <div class="inspection-alert-actions">
+            <button class="btn-confirm-receipt" onclick="showSection('inspection')">Release Funds Early</button>
+            <button class="btn-raise-dispute" onclick="showSection('disputes')">Something is Wrong — Dispute</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- METRICS -->
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-label">Total Spent</div>
+          <div class="metric-value gold">$48,200</div>
+          <div class="metric-change neutral">Lifetime · 38 purchases</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Active Orders</div>
+          <div class="metric-value">3</div>
+          <div class="metric-change neutral">1 auto-releasing · 1 auto-refund protected</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Watchlist</div>
+          <div class="metric-value teal">8</div>
+          <div class="metric-change up">2 price drops this week</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Buyer Rating</div>
+          <div class="metric-value teal">4.92</div>
+          <div class="metric-change neutral">38 reviews · 0 disputes</div>
+        </div>
+      </div>
+
+      <!-- ACTIVE ORDERS PREVIEW -->
+      <div class="dash-section">
+        <div class="dash-section-header">
+          <div class="dash-section-title">Active <em>Orders</em></div>
+          <a class="dash-section-link" onclick="showSection('active-purchases')" href="#">View all →</a>
+        </div>
+        <div class="orders-list">
+
+          <div class="order-card">
+            <div class="order-card-header">
+              <div class="order-swatch swatch-op"></div>
+              <div class="order-card-info">
+                <div class="order-card-name">Monkey D. Luffy Alt Art PSA 10</div>
+                <div class="order-card-meta">One Piece · OP-01 · Order #4810 · Apr 1</div>
+              </div>
+              <span class="status-pill status-inspect">Auto-Release in 18h</span>
+              <div style="margin-left:12px">
+                <div class="order-card-price">$890</div>
+                <div class="order-card-price-sub">Escrowed USDC</div>
+              </div>
+            </div>
+            <div class="order-card-body">
+              <div class="order-tracking-detail">📦 Delivered Apr 5 · <span>Auto-release Apr 8 12:00pm</span> · Funds release automatically — dispute only if there's an issue</div>
+              <div class="order-actions">
+                <button class="order-btn green" onclick="showSection('inspection')">Release Early</button>
+                <button class="order-btn danger" onclick="showSection('disputes')">Raise Dispute</button>
+                <button class="order-btn secondary">View Order</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="order-card">
+            <div class="order-card-header">
+              <div class="order-swatch swatch-poke"></div>
+              <div class="order-card-info">
+                <div class="order-card-name">Charizard Holo PSA 9</div>
+                <div class="order-card-meta">Pokémon · Base Set Shadowless · Order #4821 · Apr 6</div>
+              </div>
+              <span class="status-pill status-escrow">Awaiting Shipment</span>
+              <div style="margin-left:12px">
+                <div class="order-card-price">$487</div>
+                <div class="order-card-price-sub">Escrowed USDC</div>
+              </div>
+            </div>
+            <div class="order-card-body">
+              <div class="order-progress">
+                <div class="progress-track">
+                  <div class="progress-dot done"></div>
+                  <div class="progress-line done"></div>
+                  <div class="progress-dot active"></div>
+                  <div class="progress-line"></div>
+                  <div class="progress-dot"></div>
+                  <div class="progress-line"></div>
+                  <div class="progress-dot"></div>
+                  <div class="progress-line"></div>
+                  <div class="progress-dot"></div>
+                </div>
+                <div class="progress-labels">
+                  <span class="progress-label done">Funded</span>
+                  <span class="progress-label active">Shipping</span>
+                  <span class="progress-label">In Transit</span>
+                  <span class="progress-label">Auth</span>
+                  <span class="progress-label">Delivered</span>
+                </div>
+              </div>
+              <div class="order-tracking-detail">🔒 USDC locked in escrow · Seller has 48hrs to ship · You'll be notified when label is printed</div>
+              <div class="order-actions">
+                <button class="order-btn secondary">View Order Details</button>
+                <button class="order-btn secondary">Message Seller</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="order-card">
+            <div class="order-card-header">
+              <div class="order-swatch swatch-mtg"></div>
+              <div class="order-card-info">
+                <div class="order-card-name">Mox Sapphire BGS 9</div>
+                <div class="order-card-meta">MTG · Unlimited Edition · Order #4819 · Apr 4</div>
+              </div>
+              <span class="status-pill status-auth">Authenticating</span>
+              <div style="margin-left:12px">
+                <div class="order-card-price">$6,800</div>
+                <div class="order-card-price-sub">Escrowed USDC</div>
+              </div>
+            </div>
+            <div class="order-card-body">
+              <div class="order-progress">
+                <div class="progress-track">
+                  <div class="progress-dot done"></div>
+                  <div class="progress-line done"></div>
+                  <div class="progress-dot done"></div>
+                  <div class="progress-line done"></div>
+                  <div class="progress-dot done"></div>
+                  <div class="progress-line done"></div>
+                  <div class="progress-dot active"></div>
+                  <div class="progress-line"></div>
+                  <div class="progress-dot"></div>
+                </div>
+                <div class="progress-labels">
+                  <span class="progress-label done">Funded</span>
+                  <span class="progress-label done">Shipped</span>
+                  <span class="progress-label done">Arrived</span>
+                  <span class="progress-label active">Auth</span>
+                  <span class="progress-label">Delivered</span>
+                </div>
+              </div>
+              <div class="order-tracking-detail">🔍 At Trove HQ · <span>Authentication in progress</span> · Expected to ship to you within 24–48hrs · FedEx tracking will appear here</div>
+              <div class="order-actions">
+                <button class="order-btn secondary">View Order</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===== INSPECTION WINDOW ===== -->
+    <div id="section-inspection" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Auto-Release <em>Window</em></div>
+          <div class="page-subtitle">Funds release automatically when the window expires — only act if something is wrong</div>
+        </div>
+      </div>
+
+      <div class="inspection-alert" style="margin-bottom:24px">
+        <div class="inspection-alert-icon">⏱</div>
+        <div class="inspection-alert-body">
+          <div class="inspection-alert-title">Order #4810 — Monkey D. Luffy Alt Art PSA 10</div>
+          <div class="inspection-alert-sub">Your card was delivered April 5, 2025. <strong>$875 USDC releases automatically to the seller at Apr 8, 12:00pm</strong> — you don't need to do anything if everything is fine. Only raise a dispute if there is a genuine issue with your order.</div>
+          <div class="inspection-timer"><div class="timer-dot"></div> <span id="countdown">18:42:33</span> remaining · Expires Apr 8 at 12:00pm</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div style="background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:20px">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;font-weight:500">What to Check</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:10px;font-size:13px;color:var(--text-secondary);align-items:flex-start">
+              <span style="color:var(--teal);flex-shrink:0;margin-top:1px">✓</span> Card matches listing photos exactly
+            </div>
+            <div style="display:flex;gap:10px;font-size:13px;color:var(--text-secondary);align-items:flex-start">
+              <span style="color:var(--teal);flex-shrink:0;margin-top:1px">✓</span> Slab is intact — no cracks or tampering
+            </div>
+            <div style="display:flex;gap:10px;font-size:13px;color:var(--text-secondary);align-items:flex-start">
+              <span style="color:var(--teal);flex-shrink:0;margin-top:1px">✓</span> Grade label matches what was listed (PSA 10)
+            </div>
+            <div style="display:flex;gap:10px;font-size:13px;color:var(--text-secondary);align-items:flex-start">
+              <span style="color:var(--teal);flex-shrink:0;margin-top:1px">✓</span> No shipping damage to the card or slab
+            </div>
+            <div style="display:flex;gap:10px;font-size:13px;color:var(--text-secondary);align-items:flex-start">
+              <span style="color:var(--teal);flex-shrink:0;margin-top:1px">✓</span> Cert number matches listing (ref: 88291047)
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:20px">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;font-weight:500">Order Summary</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span style="color:var(--text-secondary)">Card</span>
+              <span style="font-family:'Cormorant Garamond',serif;font-size:15px">Luffy Alt Art PSA 10</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span style="color:var(--text-secondary)">Seller</span>
+              <span style="color:var(--teal)">CardKing_88 ⭐ Elite</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span style="color:var(--text-secondary)">You paid</span>
+              <span style="font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--gold)">$967.45 USDC</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span style="color:var(--text-secondary)">Seller receives</span>
+              <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent-green)">$875.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <button class="btn-confirm-receipt" style="padding:14px 28px;font-size:14px;border-radius:10px">✓ Release Funds Early — Everything is Good</button>
+        <button class="btn-raise-dispute" style="padding:14px 28px;font-size:14px;border-radius:10px" onclick="showSection('disputes')">⚠ Something is Wrong — Raise Dispute</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.6">Funds release automatically at Apr 8, 12:00pm with no action needed. Releasing early sends $875.00 USDC to the seller immediately. Your $25 dispute bond is returned either way if no dispute is filed. All settlements are final and on-chain.</div>
+      <div style="font-size:11px;color:var(--accent-green);margin-top:8px;line-height:1.6;background:rgba(76,175,124,0.06);border:1px solid rgba(76,175,124,0.2);border-radius:8px;padding:10px 12px">✓ <strong>Buyer protection:</strong> If the seller had failed to ship within 48hrs of your purchase, your USDC would have been automatically refunded in full by the smart contract — no dispute needed, no admin required.</div>
+    </div>
+
+    <!-- ===== ACTIVE PURCHASES ===== -->
+    <div id="section-active-purchases" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Active <em>Purchases</em></div>
+          <div class="page-subtitle">3 orders in progress · $8,177 in escrow</div>
+        </div>
+        <div class="page-actions">
+          <div style="display:flex;gap:4px">
+            <button class="dash-tab active">All (3)</button>
+            <button class="dash-tab" onclick="tabActive(this)">Inspect (1)</button>
+            <button class="dash-tab" onclick="tabActive(this)">In Progress (2)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="orders-list">
+        <div class="order-card" style="border-color:rgba(232,168,56,0.4)">
+          <div class="order-card-header">
+            <div class="order-swatch swatch-op"></div>
+            <div class="order-card-info">
+              <div class="order-card-name">Monkey D. Luffy Alt Art PSA 10</div>
+              <div class="order-card-meta">One Piece · OP-01 · Order #4810 · Apr 1</div>
+            </div>
+            <span class="status-pill status-inspect">⚡ Auto-Release in 18h</span>
+            <div style="margin-left:12px"><div class="order-card-price">$890</div><div class="order-card-price-sub">Escrowed</div></div>
+          </div>
+          <div class="order-card-body">
+            <div class="order-tracking-detail">📦 Delivered Apr 5 · <span>Auto-release Apr 8 12:00pm</span> · 18h 42m remaining · No action needed unless disputing</div>
+            <div class="order-actions">
+              <button class="order-btn green" onclick="showSection('inspection')">Release Early</button>
+              <button class="order-btn danger" onclick="showSection('disputes')">Raise Dispute</button>
+              <button class="order-btn secondary">View Details</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="order-card">
+          <div class="order-card-header">
+            <div class="order-swatch swatch-poke"></div>
+            <div class="order-card-info">
+              <div class="order-card-name">Charizard Holo PSA 9</div>
+              <div class="order-card-meta">Pokémon · Base Set Shadowless · Order #4821 · Apr 6</div>
+            </div>
+            <span class="status-pill status-escrow">Awaiting Ship</span>
+            <div style="margin-left:12px"><div class="order-card-price">$487</div><div class="order-card-price-sub">Escrowed</div></div>
+          </div>
+          <div class="order-card-body">
+            <div class="order-progress">
+              <div class="progress-track">
+                <div class="progress-dot done"></div><div class="progress-line done"></div>
+                <div class="progress-dot active"></div><div class="progress-line"></div>
+                <div class="progress-dot"></div><div class="progress-line"></div>
+                <div class="progress-dot"></div><div class="progress-line"></div>
+                <div class="progress-dot"></div>
+              </div>
+              <div class="progress-labels">
+                <span class="progress-label done">Funded</span>
+                <span class="progress-label active">Ship</span>
+                <span class="progress-label">Transit</span>
+                <span class="progress-label">Auth</span>
+                <span class="progress-label">Done</span>
+              </div>
+            </div>
+            <div class="order-tracking-detail">🔒 Your USDC is locked securely · <span>Auto-refund Apr 8 12:00pm if seller doesn't ship</span> · No action needed on your part</div>
+            <div class="order-actions">
+              <button class="order-btn secondary">View Details</button>
+              <button class="order-btn secondary">Message Seller</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="order-card">
+          <div class="order-card-header">
+            <div class="order-swatch swatch-mtg"></div>
+            <div class="order-card-info">
+              <div class="order-card-name">Mox Sapphire BGS 9</div>
+              <div class="order-card-meta">MTG · Unlimited · Order #4819 · Apr 4</div>
+            </div>
+            <span class="status-pill status-auth">Authenticating</span>
+            <div style="margin-left:12px"><div class="order-card-price">$6,800</div><div class="order-card-price-sub">Escrowed</div></div>
+          </div>
+          <div class="order-card-body">
+            <div class="order-progress">
+              <div class="progress-track">
+                <div class="progress-dot done"></div><div class="progress-line done"></div>
+                <div class="progress-dot done"></div><div class="progress-line done"></div>
+                <div class="progress-dot done"></div><div class="progress-line done"></div>
+                <div class="progress-dot active"></div><div class="progress-line"></div>
+                <div class="progress-dot"></div>
+              </div>
+              <div class="progress-labels">
+                <span class="progress-label done">Funded</span>
+                <span class="progress-label done">Shipped</span>
+                <span class="progress-label done">Arrived</span>
+                <span class="progress-label active">Auth</span>
+                <span class="progress-label">Done</span>
+              </div>
+            </div>
+            <div class="order-tracking-detail">🔍 <span>At Trove HQ · Auth in progress</span> · Estimated delivery Apr 9–10 · FedEx tracking updates here</div>
+            <div class="order-actions">
+              <button class="order-btn secondary">View Details</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== WATCHLIST ===== -->
+    <div id="section-watchlist" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">My <em>Watchlist</em></div>
+          <div class="page-subtitle">8 cards watched · 2 price drops this week</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-primary" onclick="window.location.href='marketplace.html'">Browse More</button>
+        </div>
+      </div>
+      <div class="watchlist-grid">
+
+        <div class="watch-card">
+          <div class="watch-card-img">
+            <div class="watch-card-visual" style="background:linear-gradient(145deg,#1a3a5c,#0d2035)">⚡</div>
+            <div class="watch-remove">×</div>
+          </div>
+          <div class="watch-card-body">
+            <div class="watch-card-name">Charizard PSA 10</div>
+            <div class="watch-card-meta">Base Set · 1st Edition</div>
+            <div class="watch-price">$36,000</div>
+            <div class="watch-change dn">▼ $400 since added</div>
+            <button class="watch-btn">Buy Now</button>
+          </div>
+        </div>
+
+        <div class="watch-card" style="border-color:rgba(76,175,124,0.4)">
+          <div class="watch-card-img">
+            <div class="watch-card-visual" style="background:linear-gradient(145deg,#2a1a3e,#1a0d2a)">★</div>
+            <div class="watch-remove">×</div>
+            <div style="position:absolute;bottom:8px;left:8px;background:rgba(76,175,124,0.9);color:#fff;font-family:'DM Mono',monospace;font-size:9px;padding:3px 8px;border-radius:20px;font-weight:600">▼ Price Drop</div>
+          </div>
+          <div class="watch-card-body">
+            <div class="watch-card-name">Pikachu Illustrator</div>
+            <div class="watch-card-meta">PSA 8 · 1998 Promo</div>
+            <div class="watch-price">$6,200</div>
+            <div class="watch-change up">▼ $300 drop — was $6,500</div>
+            <button class="watch-btn">Buy Now</button>
+          </div>
+        </div>
+
+        <div class="watch-card">
+          <div class="watch-card-img">
+            <div class="watch-card-visual" style="background:linear-gradient(145deg,#1c2a1c,#0d1a0d)">✦</div>
+            <div class="watch-remove">×</div>
+          </div>
+          <div class="watch-card-body">
+            <div class="watch-card-name">Black Lotus BGS 9</div>
+            <div class="watch-card-meta">MTG · Alpha · Power Nine</div>
+            <div class="watch-price">$22,000</div>
+            <div class="watch-change up">▲ $800 since added</div>
+            <button class="watch-btn">Buy Now</button>
+          </div>
+        </div>
+
+        <div class="watch-card" style="border-color:rgba(76,175,124,0.4)">
+          <div class="watch-card-img">
+            <div class="watch-card-visual" style="background:linear-gradient(145deg,#2a1c1c,#1a0d0d)">☠</div>
+            <div class="watch-remove">×</div>
+            <div style="position:absolute;bottom:8px;left:8px;background:rgba(76,175,124,0.9);color:#fff;font-family:'DM Mono',monospace;font-size:9px;padding:3px 8px;border-radius:20px;font-weight:600">▼ Price Drop</div>
+          </div>
+          <div class="watch-card-body">
+            <div class="watch-card-name">Luffy SEC Alt Art</div>
+            <div class="watch-card-meta">PSA 10 · OP-01</div>
+            <div class="watch-price">$820</div>
+            <div class="watch-change up">▼ $70 drop — was $890</div>
+            <button class="watch-btn">Buy Now</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== OFFERS ===== -->
+    <div id="section-offers" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">My <em>Offers</em></div>
+          <div class="page-subtitle">2 pending · 1 accepted · 3 declined</div>
+        </div>
+      </div>
+      <div class="offers-list">
+
+        <div class="offer-row">
+          <div class="order-swatch swatch-poke" style="flex-shrink:0"></div>
+          <div class="offer-card-info">
+            <div class="offer-card-name">Pikachu Illustrator PSA 7</div>
+            <div class="offer-card-meta">1998 CoroCoro Trophy · Seller: CardKing_88 · Offered Apr 5</div>
+          </div>
+          <div class="offer-amounts">
+            <div class="offer-amount-block">
+              <div class="offer-amount-label">Asking</div>
+              <div class="offer-amount-val listing">$4,200</div>
+            </div>
+            <div class="offer-arrow">→</div>
+            <div class="offer-amount-block">
+              <div class="offer-amount-label">Your Offer</div>
+              <div class="offer-amount-val offer">$3,900</div>
+            </div>
+          </div>
+          <span class="offer-status offer-pending">Pending</span>
+          <div class="offer-actions">
+            <button class="order-btn secondary">Withdraw</button>
+            <button class="order-btn primary">Increase Offer</button>
+          </div>
+        </div>
+
+        <div class="offer-row">
+          <div class="order-swatch swatch-mtg" style="flex-shrink:0"></div>
+          <div class="offer-card-info">
+            <div class="offer-card-name">Mox Emerald PSA 8</div>
+            <div class="offer-card-meta">MTG · Unlimited · Seller: PowerNine_Pro · Offered Apr 3</div>
+          </div>
+          <div class="offer-amounts">
+            <div class="offer-amount-block">
+              <div class="offer-amount-label">Asking</div>
+              <div class="offer-amount-val listing">$3,200</div>
+            </div>
+            <div class="offer-arrow">→</div>
+            <div class="offer-amount-block">
+              <div class="offer-amount-label">Your Offer</div>
+              <div class="offer-amount-val offer">$2,800</div>
+            </div>
+          </div>
+          <span class="offer-status offer-declined">Declined</span>
+          <div class="offer-actions">
+            <button class="order-btn primary">Counter Offer</button>
+            <button class="order-btn secondary">Buy at $3,200</button>
+          </div>
+        </div>
+
+        <div class="offer-row" style="border-color:rgba(76,175,124,0.3)">
+          <div class="order-swatch swatch-op" style="flex-shrink:0"></div>
+          <div class="offer-card-info">
+            <div class="offer-card-name">Zoro SEC PSA 9.5</div>
+            <div class="offer-card-meta">One Piece · OP-05 · Seller: SlabMaster · Offered Mar 30</div>
+          </div>
+          <div class="offer-amounts">
+            <div class="offer-amount-block">
+              <div class="offer-amount-label">Asking</div>
+              <div class="offer-amount-val listing">$420</div>
+            </div>
+            <div class="offer-arrow">→</div>
+            <div class="offer-amount-block">
+              <div class="offer-amount-label">Your Offer</div>
+              <div class="offer-amount-val offer">$380</div>
+            </div>
+          </div>
+          <span class="offer-status offer-accepted">Accepted!</span>
+          <div class="offer-actions">
+            <button class="order-btn green">Proceed to Buy</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== DISPUTES ===== -->
+    <div id="section-disputes" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Raise a <em>Dispute</em></div>
+          <div class="page-subtitle">Only open a dispute if there is a genuine issue with your order</div>
+        </div>
+      </div>
+
+      <div class="dispute-card">
+        <div class="dispute-header">
+          <div class="dispute-icon">⚠</div>
+          <div>
+            <div class="dispute-title">Order #4810 — Monkey D. Luffy Alt Art PSA 10</div>
+            <div class="dispute-sub">Delivered April 5, 2025 · Inspection window expires Apr 8 12:00pm</div>
+          </div>
+        </div>
+
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;font-weight:500">How the dispute process works</div>
+        <div class="dispute-steps">
+          <div class="dispute-step"><div class="dispute-step-num">1</div>You submit your dispute with photos and description of the issue</div>
+          <div class="dispute-step"><div class="dispute-step-num">2</div>A $25 dispute bond is deducted from your escrow — returned if you win</div>
+          <div class="dispute-step"><div class="dispute-step-num">3</div>Seller has 48hrs to respond with their evidence</div>
+          <div class="dispute-step"><div class="dispute-step-num">4</div>Trove admin reviews both sides and makes a binding decision within 72hrs</div>
+          <div class="dispute-step"><div class="dispute-step-num">5</div>If you win: full refund + dispute bond returned. If you lose: funds release to seller, you forfeit $25 bond</div>
+        </div>
+
+        <div class="dispute-warning">⚠ Only raise a dispute if there is a genuine problem. False disputes result in losing your $25 bond and a negative mark on your buyer reputation. Our authenticator already verified this card before shipping.</div>
+
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:14px">
+          <div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:6px;font-weight:500">Reason for dispute</div>
+            <select style="background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-primary);outline:none;width:100%;cursor:pointer">
+              <option>Card does not match listing description</option>
+              <option>Slab is damaged or cracked</option>
+              <option>Wrong card received</option>
+              <option>Card not delivered</option>
+              <option>Grade label does not match</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:6px;font-weight:500">Description</div>
+            <textarea style="background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-primary);outline:none;width:100%;resize:vertical;min-height:100px;line-height:1.6" placeholder="Describe the issue in detail. Be specific about what is wrong and how it differs from the listing..."></textarea>
+          </div>
+          <div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:6px;font-weight:500">Supporting Photos</div>
+            <div style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;background:var(--input-bg)">
+              <div style="font-size:24px;margin-bottom:6px;opacity:0.4">📷</div>
+              <div style="font-size:12px;color:var(--text-secondary)">Upload photos showing the issue</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn-raise-dispute" style="padding:13px 24px;font-size:14px;border-radius:10px;flex:1">Submit Dispute — $25 Bond Required</button>
+          <button class="btn-ghost" style="padding:13px 24px;font-size:14px;border-radius:10px" onclick="showSection('inspection')">Cancel — Go Back</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PURCHASE HISTORY ===== -->
+    <div id="section-purchase-history" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Purchase <em>History</em></div>
+          <div class="page-subtitle">38 completed purchases · $48,200 total spent</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-ghost">Export CSV</button>
+        </div>
+      </div>
+      <table class="history-table">
+        <thead>
+          <tr><th>Card</th><th>Grade</th><th>Paid</th><th>Date</th><th>Rating Given</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="h-card-info"><div class="h-swatch swatch-mtg"></div><div><div class="h-name">Ancestral Recall</div><div class="h-meta">BGS 9 · Alpha · Order #4802</div></div></div></td>
+            <td><span class="status-pill" style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.28);color:var(--gold)">BGS 9</span></td>
+            <td class="h-price">$9,200</td>
+            <td class="h-date">Apr 2, 2025</td>
+            <td class="h-rating">★★★★★</td>
+            <td><span class="h-action">View</span></td>
+          </tr>
+          <tr>
+            <td><div class="h-card-info"><div class="h-swatch swatch-poke"></div><div><div class="h-name">Charizard Holo</div><div class="h-meta">PSA 10 · 1st Ed · Order #4798</div></div></div></td>
+            <td><span class="status-pill" style="background:rgba(60,125,200,0.1);border:1px solid rgba(60,125,200,0.3);color:var(--accent-blue)">PSA 10</span></td>
+            <td class="h-price">$36,000</td>
+            <td class="h-date">Mar 30, 2025</td>
+            <td class="h-rating">★★★★★</td>
+            <td><span class="h-action">View</span></td>
+          </tr>
+          <tr>
+            <td><div class="h-card-info"><div class="h-swatch swatch-sport"></div><div><div class="h-name">Mickey Mantle RC</div><div class="h-meta">PSA 8 · 1952 Topps · Order #4780</div></div></div></td>
+            <td><span class="status-pill" style="background:rgba(60,125,200,0.1);border:1px solid rgba(60,125,200,0.3);color:var(--accent-blue)">PSA 8</span></td>
+            <td class="h-price">$2,100</td>
+            <td class="h-date">Mar 14, 2025</td>
+            <td class="h-rating">★★★★☆</td>
+            <td><span class="h-action">View</span></td>
+          </tr>
+          <tr>
+            <td><div class="h-card-info"><div class="h-swatch swatch-op"></div><div><div class="h-name">Luffy SEC Alt Art</div><div class="h-meta">CGC 9.5 · OP-01 · Order #4760</div></div></div></td>
+            <td><span class="status-pill" style="background:rgba(76,175,124,0.1);border:1px solid rgba(76,175,124,0.3);color:var(--accent-green)">CGC 9.5</span></td>
+            <td class="h-price">$740</td>
+            <td class="h-date">Feb 28, 2025</td>
+            <td class="h-rating">★★★★★</td>
+            <td><span class="h-action">View</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ===== NOTIFICATIONS ===== -->
+    <div id="section-notifications" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title"><em>Notifications</em></div>
+          <div class="page-subtitle">2 unread</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn-ghost">Mark all read</button>
+        </div>
+      </div>
+      <div class="notif-list">
+        <div class="notif-item unread">
+          <div class="notif-dot red"></div>
+          <div style="flex:1">
+            <div class="notif-text"><strong>Auto-release in 18 hours</strong> — Order #4810 (Luffy Alt Art PSA 10). Funds release automatically Apr 8. Dispute now if there's an issue.</div>
+            <div class="notif-time">2 hours ago</div>
+          </div>
+          <button class="order-btn primary" onclick="showSection('inspection')" style="flex-shrink:0;padding:7px 14px;font-size:11px">Review Now</button>
+        </div>
+        <div class="notif-item unread">
+          <div class="notif-dot green"></div>
+          <div style="flex:1">
+            <div class="notif-text"><strong>Price drop on watchlist</strong> — Luffy SEC Alt Art PSA 10 dropped from $890 to $820. You're watching this card.</div>
+            <div class="notif-time">5 hours ago</div>
+          </div>
+          <button class="order-btn primary" onclick="showSection('watchlist')" style="flex-shrink:0;padding:7px 14px;font-size:11px">View</button>
+        </div>
+        <div class="notif-item">
+          <div class="notif-dot teal"></div>
+          <div style="flex:1">
+            <div class="notif-text"><strong>Authentication complete</strong> — Your Mox Sapphire BGS 9 (Order #4819) passed authentication. Shipping to you within 24hrs.</div>
+            <div class="notif-time">Yesterday</div>
+          </div>
+        </div>
+        <div class="notif-item">
+          <div class="notif-dot amber"></div>
+          <div style="flex:1">
+            <div class="notif-text"><strong>Offer declined</strong> — Your $2,800 offer on Mox Emerald PSA 8 was declined by the seller. Counter offer or buy at asking price.</div>
+            <div class="notif-time">Apr 4</div>
+          </div>
+          <button class="order-btn secondary" onclick="showSection('offers')" style="flex-shrink:0;padding:7px 14px;font-size:11px">View Offer</button>
+        </div>
+        <div class="notif-item">
+          <div class="notif-dot green"></div>
+          <div style="flex:1">
+            <div class="notif-text"><strong>Offer accepted!</strong> — Your $380 offer on Zoro SEC PSA 9.5 was accepted. Proceed to purchase to lock escrow.</div>
+            <div class="notif-time">Mar 30</div>
+          </div>
+          <button class="order-btn green" onclick="showSection('offers')" style="flex-shrink:0;padding:7px 14px;font-size:11px">Buy Now</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// THEME
+const toggle=document.getElementById('themeToggle');
+const html=document.documentElement;
+const saved=localStorage.getItem('trove-theme')||'dark';
+html.setAttribute('data-theme',saved);
+toggle.textContent=saved==='dark'?'🌙':'☀️';
+toggle.addEventListener('click',()=>{
+  const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  toggle.textContent=next==='dark'?'🌙':'☀️';
+  localStorage.setItem('trove-theme',next);
+});
+
+// SECTIONS
+const sections=['overview','active-purchases','inspection','watchlist','offers','disputes','purchase-history','notifications'];
+function showSection(id){
+  sections.forEach(s=>{
+    const el=document.getElementById('section-'+s);
+    if(el) el.style.display=s===id?'block':'none';
+  });
+  document.querySelectorAll('.dash-nav-item').forEach(item=>{
+    item.classList.remove('active');
+    if(item.getAttribute('onclick')&&item.getAttribute('onclick').includes("'"+id+"'")){
+      item.classList.add('active');
+    }
+  });
+  closeMobile();
+  window.scrollTo(0,0);
+}
+
+// MOBILE SIDEBAR
+const mobileSidebarBtn=document.getElementById('mobileSidebarBtn');
+const dashSidebar=document.getElementById('dashSidebar');
+const sidebarOverlay=document.getElementById('sidebarOverlay');
+mobileSidebarBtn.addEventListener('click',()=>{
+  dashSidebar.classList.add('open');
+  sidebarOverlay.classList.add('open');
+  document.body.style.overflow='hidden';
+});
+function closeMobile(){
+  dashSidebar.classList.remove('open');
+  sidebarOverlay.classList.remove('open');
+  document.body.style.overflow='';
+}
+sidebarOverlay.addEventListener('click',closeMobile);
+
+// COUNTDOWN TIMER
+function updateCountdown(){
+  const deadline=new Date();
+  deadline.setHours(deadline.getHours()+18,deadline.getMinutes()+42,deadline.getSeconds()+33);
+  const el=document.getElementById('countdown');
+  if(!el) return;
+  setInterval(()=>{
+    const now=new Date();
+    const diff=deadline-now;
+    if(diff<=0){el.textContent='EXPIRED';return}
+    const h=Math.floor(diff/3600000);
+    const m=Math.floor((diff%3600000)/60000);
+    const s=Math.floor((diff%60000)/1000);
+    el.textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  },1000);
+}
+updateCountdown();
+
+// TAB ACTIVE
+function tabActive(el){
+  el.closest('.page-actions').querySelectorAll('.dash-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>

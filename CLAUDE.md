@@ -234,29 +234,33 @@ physicalAuthFee      = 25     // USDC
 ```
 Priority order:
 
-1. SUPABASE SETUP
-   □ PostgreSQL schema (users, listings, orders, auth_inspections,
-     disputes, strikes, creators, referral_clicks, referral_conversions,
-     creator_payouts)
-   □ Supabase Auth (email + wallet linking)
-   □ Row Level Security policies
-   □ Realtime subscriptions (order status updates)
-   □ Supabase Storage (listing photos, auth photos)
+1. SUPABASE SETUP ✅ COMPLETE
+   ✓ PostgreSQL schema (users, listings, orders, auth_inspections,
+     disputes, strikes, creators, referral_conversions)
+   ✓ username + full_name columns added (migration 001)
+   ✓ Supabase Auth (email + wallet linking)
+   ✓ Row Level Security policies
+   ✓ Supabase Storage (listing-photos public, auth-photos private)
+   □ Realtime subscriptions (order status updates — Phase 2 later)
 
-2. NEXT.JS MIDDLEWARE
-   □ Role-based route protection
-   □ /authenticator  → role: authenticator
-   □ /admin          → role: owner
-   □ /dispute-*      → role: staff | owner
-   □ /customer-*     → role: staff | owner
-   □ Unauthorized    → redirect to /
+2. NEXT.JS MIDDLEWARE ✅ COMPLETE
+   ✓ Role-based route protection (proxy.js)
+   ✓ /authenticator  → role: authenticator
+   ✓ /admin          → role: owner
+   ✓ /dispute-*      → role: staff | owner
+   ✓ /customer-*     → role: staff | owner
+   ✓ Unauthorized    → redirect to /
 
-3. WALLETCONNECT / PRIVY
-   □ Real wallet connection
-   □ Wallet address stored in Supabase user profile
-   □ Base network requirement enforced
+3. WALLETCONNECT / PRIVY ✅ COMPLETE
+   ✓ Privy SDK installed + PrivyProvider configured
+   ✓ Base mainnet locked as default + only chain
+   ✓ Embedded wallets auto-created for non-crypto users
+   ✓ External wallets: MetaMask, Coinbase, WalletConnect, Phantom
+   ✓ Wallet address synced to Supabase on connect
+   ✓ ConnectWalletButton component (app/components/ConnectWallet.jsx)
+   ✓ Wallet connection deferred to transaction time (not signup)
 
-4. EASYPOST INTEGRATION
+4. EASYPOST INTEGRATION ← NEXT
    □ Label generation (Tier 1: 1 label, Tier 2: Label A + Label B)
    □ Declared value insurance (automatic, = sale price)
    □ Webhooks → carrier scan triggers 48hr deadline check
@@ -281,6 +285,13 @@ Priority order:
    □ Listing expiry jobs (Day 75/85/90/97/100)
    □ Bond return automation (T+7 days after settlement)
    □ Auto-release escrow (T+72hrs after delivery)
+
+## Auth & Wallet Notes
+- Email confirmation OFF in Supabase (re-enable before launch)
+- Google OAuth: needs Google Cloud credentials (Privy dashboard ready)
+- Privy wallet order: MetaMask, Phantom, Coinbase, Rainbow, Backpack, WalletConnect
+- MetaMask does not support programmatic disconnect (by design)
+- Checkout Step 1 uses real Privy connection — "Switch Wallet" re-opens modal
 ```
 
 ### Phase 3 — Blockchain

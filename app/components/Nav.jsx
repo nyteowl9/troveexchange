@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useAuth } from '@/app/context/AuthContext'
 
 export default function Nav() {
   const [theme, setTheme] = useState('dark')
   const [menuOpen, setMenuOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, profile, signOut } = useAuth()
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
@@ -110,10 +113,21 @@ export default function Nav() {
             {theme === 'dark' ? '🌙' : '☀️'}
           </button>
 
-          {/* Sign In — always visible */}
-          <Link href="/sign-in" style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '6px 14px', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, borderRadius: '8px', textDecoration: 'none', display: 'inline-block', whiteSpace: 'nowrap' }}>
-            Sign In
-          </Link>
+          {/* Auth buttons */}
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link href={profile?.role === 'owner' ? '/admin' : profile?.role === 'authenticator' ? '/authenticator' : profile?.role === 'staff' ? '/customer-support' : '/buyer-dashboard'} style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', textDecoration: 'none', fontFamily: 'DM Sans, sans-serif', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {profile?.username ? `@${profile.username}` : user.email}
+              </Link>
+              <button onClick={async () => { await signOut(); router.push('/') }} style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '6px 14px', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <Link href="/sign-in" style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '6px 14px', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, borderRadius: '8px', textDecoration: 'none', display: 'inline-block', whiteSpace: 'nowrap' }}>
+              Sign In
+            </Link>
+          )}
 
           {/* List a Card — desktop only */}
           <Link href="/seller-dashboard" className="nav-list-btn" style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '7px 18px', fontSize: '12px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', textDecoration: 'none' }}>

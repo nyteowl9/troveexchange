@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CardKing_88 — Trove Exchange</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+[data-theme="dark"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;
+  --teal:#C9A84C;--teal-hover:#E8C97A;--teal-bg:rgba(201,168,76,0.1);--teal-border:rgba(201,168,76,0.28);
+  --bg:#0A0A0B;--bg-2:#111114;--bg-3:#18181C;--bg-4:#222228;
+  --text-primary:#F0EDE6;--text-secondary:#B8B4AC;--text-muted:#6C6A66;
+  --accent-green:#4CAF7C;--accent-red:#C84B3C;--accent-blue:#3C7DC8;--accent-amber:#E8A838;
+  --border:#2A2A32;--border-gold:rgba(201,168,76,0.28);
+  --nav-bg:rgba(10,10,11,0.94);--card-bg:#111114;
+}
+[data-theme="light"]{
+  --gold:#C9A84C;--gold-light:#E8C97A;
+  --teal:#0D6E6E;--teal-hover:#0A5A5A;--teal-bg:rgba(13,110,110,0.08);--teal-border:rgba(13,110,110,0.28);
+  --bg:#F5F2EC;--bg-2:#EDEAE3;--bg-3:#E4E0D8;--bg-4:#D8D4CC;
+  --text-primary:#1A1814;--text-secondary:#4A4640;--text-muted:#8A8680;
+  --accent-green:#1A6B3A;--accent-red:#B83C2C;--accent-blue:#1A5EA0;--accent-amber:#9B6E1A;
+  --border:#C8C4BC;--border-gold:rgba(13,110,110,0.25);
+  --nav-bg:rgba(245,242,236,0.96);--card-bg:#EDEAE3;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-weight:400;overflow-x:hidden;line-height:1.6;transition:background 0.3s,color 0.3s}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--nav-bg);backdrop-filter:blur(24px);border-bottom:0.5px solid var(--border);padding:0 2.5rem;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:0.1em;color:var(--gold);display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-icon{width:24px;height:24px;background:var(--gold);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0}
+.nav-actions{display:flex;align-items:center;gap:10px}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary);padding:8px 18px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;transition:all 0.2s;border-radius:8px;text-decoration:none;display:inline-flex;align-items:center}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal)}
+.btn-primary{background:var(--teal);border:none;color:#fff;padding:8px 20px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:8px;transition:all 0.2s}
+.btn-primary:hover{opacity:0.88}
+[data-theme="dark"] .btn-primary{color:#0A0A0B}
+.theme-toggle{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:15px;transition:all 0.2s}
+.theme-toggle:hover{border-color:var(--teal);color:var(--teal)}
+
+/* HERO */
+.profile-hero{padding:100px 2.5rem 0;max-width:1300px;margin:0 auto}
+.profile-hero-inner{display:grid;grid-template-columns:auto 1fr auto;gap:32px;align-items:flex-start;padding-bottom:32px;border-bottom:0.5px solid var(--border)}
+.profile-avatar{width:100px;height:100px;border-radius:20px;background:var(--teal-bg);border:2px solid var(--teal-border);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;color:var(--gold);flex-shrink:0;position:relative}
+.profile-online{position:absolute;bottom:6px;right:6px;width:12px;height:12px;border-radius:50%;background:var(--accent-green);border:2px solid var(--bg)}
+.profile-info{flex:1}
+.profile-username{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;line-height:1;margin-bottom:8px;color:var(--text-primary)}
+.profile-username em{font-style:italic;color:var(--gold)}
+.profile-badges{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.tier-badge{font-family:'DM Mono',monospace;font-size:10px;padding:4px 14px;border-radius:20px;font-weight:600;letter-spacing:0.06em}
+.tier-elite{background:rgba(201,168,76,0.15);border:1.5px solid var(--border-gold);color:var(--gold)}
+.tier-pro{background:rgba(232,168,56,0.1);border:1.5px solid rgba(232,168,56,0.3);color:var(--accent-amber)}
+.tier-trusted{background:rgba(60,125,200,0.1);border:1.5px solid rgba(60,125,200,0.3);color:var(--accent-blue)}
+.tier-new{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-muted)}
+.verified-badge{font-family:'DM Mono',monospace;font-size:10px;padding:4px 12px;border-radius:20px;background:rgba(76,175,124,0.1);border:1.5px solid rgba(76,175,124,0.3);color:var(--accent-green);font-weight:500}
+.onchain-badge{font-family:'DM Mono',monospace;font-size:10px;padding:4px 12px;border-radius:20px;background:var(--teal-bg);border:1.5px solid var(--teal-border);color:var(--teal);font-weight:500}
+.profile-bio{font-size:14px;color:var(--text-secondary);line-height:1.6;max-width:540px;margin-bottom:10px}
+.profile-meta{display:flex;gap:20px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);flex-wrap:wrap}
+.profile-meta-item{display:flex;align-items:center;gap:5px}
+
+/* REPUTATION CARD */
+.rep-card{background:var(--card-bg);border:1.5px solid var(--teal-border);border-radius:16px;padding:24px 28px;min-width:220px;text-align:center}
+.rep-score-big{font-family:'Cormorant Garamond',serif;font-size:72px;font-weight:300;line-height:1;color:var(--text-primary)}
+.rep-stars{color:var(--gold);font-size:18px;letter-spacing:3px;margin:6px 0}
+.rep-count{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);margin-bottom:14px}
+.rep-breakdown{display:flex;flex-direction:column;gap:6px}
+.rep-bar-row{display:flex;align-items:center;gap:8px}
+.rep-bar-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);width:8px;flex-shrink:0}
+.rep-bar-wrap{flex:1;height:5px;background:var(--bg-4);border-radius:3px;overflow:hidden}
+.rep-bar-fill{height:100%;border-radius:3px;background:var(--gold)}
+.rep-bar-count{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);width:20px;text-align:right;flex-shrink:0}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:24px 0;max-width:1300px;margin-left:auto;margin-right:auto;padding:0 2.5rem}
+.stat-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;transition:border-color 0.2s}
+.stat-card:hover{border-color:var(--teal-border)}
+.stat-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;font-weight:500}
+.stat-value{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;line-height:1;color:var(--text-primary)}
+.stat-value.gold{color:var(--gold)}
+.stat-value.green{color:var(--accent-green)}
+.stat-value.teal{color:var(--teal)}
+.stat-sub{font-size:10px;color:var(--text-muted);margin-top:4px;font-family:'DM Mono',monospace}
+
+/* MAIN LAYOUT */
+.profile-main{max-width:1300px;margin:0 auto;padding:0 2.5rem 60px;display:grid;grid-template-columns:1fr 320px;gap:24px}
+
+/* TABS */
+.tab-bar{display:flex;gap:0;border-bottom:0.5px solid var(--border);margin-bottom:20px}
+.tab{font-family:'DM Mono',monospace;font-size:11px;padding:10px 18px;border-bottom:2px solid transparent;cursor:pointer;color:var(--text-muted);font-weight:500;transition:all 0.15s;letter-spacing:0.06em;text-transform:uppercase}
+.tab:hover{color:var(--text-primary)}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+
+/* LISTINGS GRID */
+.listings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.listing-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:all 0.2s}
+.listing-card:hover{border-color:var(--teal-border);transform:translateY(-3px);box-shadow:0 16px 40px rgba(0,0,0,0.25)}
+.lc-img{aspect-ratio:3/4;background:var(--bg-3);display:flex;align-items:center;justify-content:center;position:relative}
+.lc-visual{width:68%;aspect-ratio:2.5/3.5;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.lc-icon{font-size:22px;opacity:0.7}
+.lc-bars{width:60%;display:flex;flex-direction:column;gap:3px}
+.lc-bar{height:3px;border-radius:2px}
+.lc-grade{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:600}
+.grade-gem{background:rgba(201,168,76,0.15);border:1.5px solid var(--gold);color:var(--gold)}
+.grade-nm{background:rgba(76,175,124,0.1);border:1.5px solid rgba(76,175,124,0.4);color:var(--accent-green)}
+.lc-badge{position:absolute;top:8px;left:8px;font-family:'DM Mono',monospace;font-size:9px;padding:2px 8px;border-radius:5px;font-weight:500}
+.badge-psa{background:rgba(60,125,200,0.18);border:1px solid rgba(60,125,200,0.4);color:#7BB4E8}
+.badge-bgs{background:rgba(201,168,76,0.12);border:1px solid var(--border-gold);color:var(--gold)}
+.badge-cgc{background:rgba(76,175,124,0.12);border:1px solid rgba(76,175,124,0.3);color:var(--accent-green)}
+.lc-body{padding:12px 14px}
+.lc-game{font-family:'DM Mono',monospace;font-size:8px;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:3px;font-weight:500}
+.lc-name{font-family:'Cormorant Garamond',serif;font-size:17px;line-height:1.2;margin-bottom:8px;color:var(--text-primary)}
+.lc-footer{display:flex;align-items:center;justify-content:space-between}
+.lc-price{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--gold)}
+.lc-arrow{width:26px;height:26px;border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;transition:all 0.2s}
+.listing-card:hover .lc-arrow{border-color:var(--teal);color:var(--teal)}
+
+/* FEEDBACK */
+.feedback-list{display:flex;flex-direction:column;gap:12px}
+.feedback-item{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:18px 20px;transition:border-color 0.2s}
+.feedback-item:hover{border-color:var(--teal-border)}
+.fi-header{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.fi-avatar{width:32px;height:32px;border-radius:50%;background:var(--teal-bg);border:1.5px solid var(--teal-border);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:600;color:var(--teal);flex-shrink:0}
+.fi-user{font-size:13px;font-weight:600;color:var(--text-primary)}
+.fi-role{font-family:'DM Mono',monospace;font-size:9px;padding:2px 8px;border-radius:10px;font-weight:500}
+.fi-role.buyer{background:rgba(60,125,200,0.1);border:1px solid rgba(60,125,200,0.3);color:var(--accent-blue)}
+.fi-role.seller{background:var(--teal-bg);border:1px solid var(--teal-border);color:var(--teal)}
+.fi-stars{color:var(--gold);font-size:13px;letter-spacing:1px;margin-left:auto}
+.fi-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+.fi-card{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);margin-bottom:8px}
+.fi-text{font-size:13px;color:var(--text-secondary);line-height:1.65}
+.fi-verified{font-family:'DM Mono',monospace;font-size:9px;color:var(--accent-green);margin-top:6px;display:flex;align-items:center;gap:4px}
+
+/* SALES HISTORY TABLE */
+.history-table{width:100%;border-collapse:collapse}
+.history-table thead tr{border-bottom:0.5px solid var(--border)}
+.history-table th{text-align:left;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);padding:10px 14px;font-weight:500}
+.history-table tbody tr{border-bottom:0.5px solid var(--border);transition:background 0.15s;cursor:pointer}
+.history-table tbody tr:last-child{border-bottom:none}
+.history-table tbody tr:hover{background:var(--bg-3)}
+.history-table td{padding:12px 14px;font-size:12px;vertical-align:middle}
+.ht-card{display:flex;align-items:center;gap:8px}
+.ht-swatch{width:24px;height:34px;border-radius:3px;flex-shrink:0}
+.sw-poke{background:linear-gradient(135deg,#1a3a5c,#0d2035);border:1px solid rgba(255,215,0,0.2)}
+.sw-mtg{background:linear-gradient(135deg,#1c2a1c,#0d1a0d);border:1px solid rgba(76,175,124,0.2)}
+.sw-op{background:linear-gradient(135deg,#2a1c1c,#1a0d0d);border:1px solid rgba(200,75,60,0.2)}
+.ht-name{font-family:'Cormorant Garamond',serif;font-size:15px;line-height:1.2;color:var(--text-primary)}
+.ht-meta{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace}
+.ht-price{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--gold)}
+.ht-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+.ht-rating{color:var(--gold);font-size:11px}
+
+/* PILL */
+.pill{font-family:'DM Mono',monospace;font-size:9px;padding:3px 9px;border-radius:20px;font-weight:500;white-space:nowrap;display:inline-block}
+.pill-green{background:rgba(76,175,124,0.1);border:1px solid rgba(76,175,124,0.3);color:var(--accent-green)}
+.pill-gold{background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.28);color:var(--gold)}
+.pill-muted{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-muted)}
+.pill-blue{background:rgba(60,125,200,0.1);border:1px solid rgba(60,125,200,0.3);color:var(--accent-blue)}
+
+/* RIGHT SIDEBAR */
+.profile-sidebar{}
+.sidebar-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
+.sc-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px;font-weight:500}
+.sc-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px}
+.sc-row:last-child{border-bottom:none}
+.sc-label{color:var(--text-secondary)}
+.sc-val{font-weight:500;color:var(--text-primary);font-family:'DM Mono',monospace;font-size:11px;text-align:right}
+.sc-val.green{color:var(--accent-green)}
+.sc-val.gold{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--gold)}
+.on-chain-info{background:var(--teal-bg);border:1.5px solid var(--teal-border);border-radius:10px;padding:14px}
+.oci-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;font-weight:500}
+.oci-addr{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-secondary);word-break:break-all;line-height:1.6}
+.oci-link{font-family:'DM Mono',monospace;font-size:10px;color:var(--teal);cursor:pointer;margin-top:6px;display:block}
+.oci-link:hover{text-decoration:underline}
+.contact-btn{width:100%;background:var(--teal);border:none;color:#fff;padding:13px;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;margin-bottom:8px}
+.contact-btn:hover{opacity:0.88}
+[data-theme="dark"] .contact-btn{color:#0A0A0B}
+.report-btn{width:100%;background:transparent;border:1.5px solid var(--border);color:var(--text-muted);padding:10px;font-size:12px;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.report-btn:hover{border-color:rgba(200,75,60,0.4);color:var(--accent-red)}
+
+/* SPECIALTIES */
+.specialty-tags{display:flex;flex-wrap:wrap;gap:6px}
+.spec-tag{font-family:'DM Mono',monospace;font-size:9px;padding:4px 12px;border-radius:20px;background:var(--bg-3);border:1px solid var(--border);color:var(--text-secondary);font-weight:500}
+
+/* ACHIEVEMENT BADGES */
+.achievement-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.achievement{background:var(--bg-3);border:1.5px solid var(--border);border-radius:10px;padding:12px;text-align:center;transition:border-color 0.2s}
+.achievement:hover{border-color:var(--teal-border)}
+.ach-icon{font-size:22px;margin-bottom:4px}
+.ach-label{font-family:'DM Mono',monospace;font-size:8px;color:var(--text-muted);line-height:1.3;font-weight:500}
+.ach-earned{border-color:var(--teal-border);background:var(--teal-bg)}
+.ach-earned .ach-label{color:var(--teal)}
+
+/* CARD VISUALS */
+.poke-v{background:linear-gradient(145deg,#1a3a5c,#0d2035);border:2px solid rgba(255,215,0,0.2);width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.mtg-v{background:linear-gradient(160deg,#1c2a1c,#0d1a0d);border:2px solid rgba(76,175,124,0.25);width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.op-v{background:linear-gradient(160deg,#2a1c1c,#1a0d0d);border:2px solid rgba(200,75,60,0.25);width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.sport-v{background:linear-gradient(160deg,#1a2a1a,#0d1a0d);border:2px solid rgba(76,175,124,0.2);width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-muted)}
+.empty-icon{font-size:36px;margin-bottom:12px;opacity:0.4}
+.empty-text{font-size:14px}
+
+@media(max-width:1100px){.profile-main{grid-template-columns:1fr}.profile-sidebar{display:grid;grid-template-columns:1fr 1fr;gap:14px}.profile-sidebar .sidebar-card{margin-bottom:0}}
+@media(max-width:900px){.profile-hero-inner{grid-template-columns:auto 1fr;gap:20px}.rep-card{display:none}.stats-row{grid-template-columns:repeat(3,1fr)}.listings-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){nav{padding:0 1rem}.profile-hero{padding:88px 1rem 0}.stats-row{grid-template-columns:1fr 1fr;padding:0 1rem}.profile-main{padding:0 1rem 40px}.stats-row{margin:16px 0}.profile-hero-inner{grid-template-columns:1fr;text-align:center}.profile-avatar{margin:0 auto}.profile-badges{justify-content:center}.profile-meta{justify-content:center}.listings-grid{grid-template-columns:repeat(2,1fr)}.achievement-grid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"></div>
+    TROVE EXCHANGE
+  </a>
+  <div class="nav-actions">
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+    <a href="marketplace.html" class="btn-ghost">Browse</a>
+    <button class="btn-primary">List a Card</button>
+  </div>
+</nav>
+
+<!-- PROFILE HERO -->
+<div class="profile-hero">
+  <div class="profile-hero-inner">
+
+    <!-- AVATAR -->
+    <div class="profile-avatar">
+      CK
+      <div class="profile-online"></div>
+    </div>
+
+    <!-- INFO -->
+    <div class="profile-info">
+      <div class="profile-username">CardKing_<em>88</em></div>
+      <div class="profile-badges">
+        <span class="tier-badge tier-elite">⭐ Elite Seller</span>
+        <span class="verified-badge">✓ Identity Verified</span>
+        <span class="onchain-badge">⬡ On-Chain Reputation</span>
+      </div>
+      <p class="profile-bio">Specializing in vintage Pokémon and MTG Power 9. Every card personally inspected before listing. 847 sales, zero misrepresentations. Been collecting since 1999.</p>
+      <div class="profile-meta">
+        <span class="profile-meta-item">📍 Los Angeles, CA</span>
+        <span class="profile-meta-item">📅 Member since April 2024</span>
+        <span class="profile-meta-item">⚡ Usually ships same day</span>
+        <span class="profile-meta-item">◎ Last active 2hrs ago</span>
+      </div>
+    </div>
+
+    <!-- REPUTATION CARD -->
+    <div class="rep-card">
+      <div class="rep-score-big">4.98</div>
+      <div class="rep-stars">★★★★★</div>
+      <div class="rep-count">847 ratings · 0 disputes</div>
+      <div class="rep-breakdown">
+        <div class="rep-bar-row">
+          <span class="rep-bar-label">5</span>
+          <div class="rep-bar-wrap"><div class="rep-bar-fill" style="width:96%"></div></div>
+          <span class="rep-bar-count">813</span>
+        </div>
+        <div class="rep-bar-row">
+          <span class="rep-bar-label">4</span>
+          <div class="rep-bar-wrap"><div class="rep-bar-fill" style="width:3%;opacity:0.6"></div></div>
+          <span class="rep-bar-count">29</span>
+        </div>
+        <div class="rep-bar-row">
+          <span class="rep-bar-label">3</span>
+          <div class="rep-bar-wrap"><div class="rep-bar-fill" style="width:1%;opacity:0.4"></div></div>
+          <span class="rep-bar-count">5</span>
+        </div>
+        <div class="rep-bar-row">
+          <span class="rep-bar-label">2</span>
+          <div class="rep-bar-wrap"><div class="rep-bar-fill" style="width:0%"></div></div>
+          <span class="rep-bar-count">0</span>
+        </div>
+        <div class="rep-bar-row">
+          <span class="rep-bar-label">1</span>
+          <div class="rep-bar-wrap"><div class="rep-bar-fill" style="width:0%"></div></div>
+          <span class="rep-bar-count">0</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- STATS ROW -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Total Sales</div>
+    <div class="stat-value gold">847</div>
+    <div class="stat-sub">Since Apr 2024</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Total Volume</div>
+    <div class="stat-value gold">$1.24M</div>
+    <div class="stat-sub">Verified on-chain</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Rep Score</div>
+    <div class="stat-value teal">4.98</div>
+    <div class="stat-sub">847 reviews · Top 1%</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Avg Ship Time</div>
+    <div class="stat-value green">0.8d</div>
+    <div class="stat-sub">Usually same day</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Active Listings</div>
+    <div class="stat-value">24</div>
+    <div class="stat-sub">$284,000 total value</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="profile-main">
+
+  <!-- LEFT — TABS + CONTENT -->
+  <div>
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab(this,'listings')">Listings (24)</div>
+      <div class="tab" onclick="switchTab(this,'feedback')">Feedback (847)</div>
+      <div class="tab" onclick="switchTab(this,'history')">Sales History</div>
+      <div class="tab" onclick="switchTab(this,'about')">About</div>
+    </div>
+
+    <!-- LISTINGS TAB -->
+    <div id="tab-listings">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13px;color:var(--text-muted)">24 active listings · $284,000 total</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select style="background:var(--bg-3);border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-secondary);outline:none;cursor:pointer">
+            <option>All Games</option>
+            <option>Pokémon</option>
+            <option>MTG</option>
+            <option>One Piece</option>
+          </select>
+          <select style="background:var(--bg-3);border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-secondary);outline:none;cursor:pointer">
+            <option>All Grades</option>
+            <option>PSA 10</option>
+            <option>PSA 9</option>
+            <option>BGS 9.5</option>
+          </select>
+          <select style="background:var(--bg-3);border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-secondary);outline:none;cursor:pointer">
+            <option>Price: Low → High</option>
+            <option>Price: High → Low</option>
+            <option>Newest First</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="listings-grid">
+
+        <div class="listing-card" onclick="window.location.href='listing.html'">
+          <div class="lc-img"><div class="lc-visual poke-v"><div class="lc-icon">⚡</div><div class="lc-bars"><div class="lc-bar" style="background:rgba(255,215,0,0.5);width:100%"></div><div class="lc-bar" style="background:rgba(255,215,0,0.25);width:70%"></div></div></div><span class="lc-badge badge-psa">PSA</span><div class="lc-grade grade-gem">10</div></div>
+          <div class="lc-body"><div class="lc-game">Pokémon · 1st Ed</div><div class="lc-name">Charizard Holo</div><div class="lc-footer"><div class="lc-price">$36,000</div><div class="lc-arrow">→</div></div></div>
+        </div>
+
+        <div class="listing-card" onclick="window.location.href='listing.html'">
+          <div class="lc-img"><div class="lc-visual mtg-v"><div class="lc-icon">✦</div><div class="lc-bars"><div class="lc-bar" style="background:rgba(76,175,124,0.5);width:100%"></div><div class="lc-bar" style="background:rgba(76,175,124,0.25);width:65%"></div></div></div><span class="lc-badge badge-bgs">BGS</span><div class="lc-grade grade-gem" style="font-size:11px">9.5</div></div>
+          <div class="lc-body"><div class="lc-game">MTG · Alpha</div><div class="lc-name">Black Lotus</div><div class="lc-footer"><div class="lc-price">$28,400</div><div class="lc-arrow">→</div></div></div>
+        </div>
+
+        <div class="listing-card" onclick="window.location.href='listing.html'">
+          <div class="lc-img"><div class="lc-visual poke-v" style="background:linear-gradient(145deg,#2a1a3e,#1a0d2a);border-color:rgba(180,100,255,0.25)"><div class="lc-icon">★</div><div class="lc-bars"><div class="lc-bar" style="background:rgba(180,100,255,0.5);width:100%"></div><div class="lc-bar" style="background:rgba(180,100,255,0.25);width:75%"></div></div></div><span class="lc-badge badge-psa">PSA</span><div class="lc-grade grade-nm">7</div></div>
+          <div class="lc-body"><div class="lc-game">Pokémon · Promo</div><div class="lc-name">Pikachu Illustrator</div><div class="lc-footer"><div class="lc-price">$4,200</div><div class="lc-arrow">→</div></div></div>
+        </div>
+
+        <div class="listing-card" onclick="window.location.href='listing.html'">
+          <div class="lc-img"><div class="lc-visual mtg-v" style="background:linear-gradient(145deg,#1a1a3c,#0d0d24);border-color:rgba(100,100,255,0.25)"><div class="lc-icon">⬟</div><div class="lc-bars"><div class="lc-bar" style="background:rgba(100,100,255,0.5);width:100%"></div><div class="lc-bar" style="background:rgba(100,100,255,0.25);width:55%"></div></div></div><span class="lc-badge badge-bgs">BGS</span><div class="lc-grade grade-gem" style="font-size:11px">9.0</div></div>
+          <div class="lc-body"><div class="lc-game">MTG · Unlimited</div><div class="lc-name">Mox Sapphire</div><div class="lc-footer"><div class="lc-price">$6,800</div><div class="lc-arrow">→</div></div></div>
+        </div>
+
+        <div class="listing-card" onclick="window.location.href='listing.html'">
+          <div class="lc-img"><div class="lc-visual poke-v"><div class="lc-icon">💧</div><div class="lc-bars"><div class="lc-bar" style="background:rgba(100,180,255,0.5);width:100%"></div><div class="lc-bar" style="background:rgba(100,180,255,0.25);width:80%"></div></div></div><span class="lc-badge badge-psa">PSA</span><div class="lc-grade grade-gem">10</div></div>
+          <div class="lc-body"><div class="lc-game">Pokémon · Base Set</div><div class="lc-name">Blastoise Holo</div><div class="lc-footer"><div class="lc-price">$3,800</div><div class="lc-arrow">→</div></div></div>
+        </div>
+
+        <div class="listing-card" onclick="window.location.href='listing.html'">
+          <div class="lc-img"><div class="lc-visual op-v"><div class="lc-icon">☠</div><div class="lc-bars"><div class="lc-bar" style="background:rgba(200,75,60,0.5);width:100%"></div><div class="lc-bar" style="background:rgba(200,75,60,0.25);width:60%"></div></div></div><span class="lc-badge badge-psa">PSA</span><div class="lc-grade grade-gem">10</div></div>
+          <div class="lc-body"><div class="lc-game">One Piece · OP-01</div><div class="lc-name">Luffy Alt Art</div><div class="lc-footer"><div class="lc-price">$890</div><div class="lc-arrow">→</div></div></div>
+        </div>
+
+        <div class="listing-card" onclick="window.location.href='listing.html'">
+          <div class="lc-img"><div class="lc-visual mtg-v" style="background:linear-gradient(145deg,#2a1c0d,#1a0d05);border-color:rgba(255,150,50,0.2)"><div class="lc-icon">🔥</div><div class="lc-bars"><div class="lc-bar" style="background:rgba(255,150,50,0.5);width:100%"></div><div class="lc-bar" style="background:rgba(255,150,50,0.25);width:70%"></div></div></div><span class="lc-badge badge-bgs">BGS</span><div class="lc-grade grade-nm" style="font-size:11px">8.5</div></div>
+          <div class="lc-body"><div class="lc-game">MTG · Unlimited</div><div class="lc-name">Mox Ruby</div><div class="lc-footer"><div class="lc-price">$4,100</div><div class="lc-arrow">→</div></div></div>
+        </div>
+
+        <div class="listing-card" onclick="window.location.href='listing.html'">
+          <div class="lc-img"><div class="lc-visual sport-v"><div class="lc-icon">⚾</div><div class="lc-bars"><div class="lc-bar" style="background:rgba(76,175,124,0.4);width:100%"></div><div class="lc-bar" style="background:rgba(76,175,124,0.2);width:65%"></div></div></div><span class="lc-badge badge-psa">PSA</span><div class="lc-grade grade-nm">8</div></div>
+          <div class="lc-body"><div class="lc-game">Sports · 1952 Topps</div><div class="lc-name">Mickey Mantle RC</div><div class="lc-footer"><div class="lc-price">$2,100</div><div class="lc-arrow">→</div></div></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- FEEDBACK TAB -->
+    <div id="tab-feedback" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:300;line-height:1;color:var(--text-primary)">4.98 <span style="font-size:24px;color:var(--gold)">★</span></div>
+          <div style="font-size:12px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:4px">847 verified reviews · 0 disputes ever</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button style="font-family:'DM Mono',monospace;font-size:10px;padding:5px 14px;border-radius:20px;border:1.5px solid var(--teal-border);background:var(--teal-bg);color:var(--teal);cursor:pointer;font-weight:500">All</button>
+          <button style="font-family:'DM Mono',monospace;font-size:10px;padding:5px 14px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-weight:500">5 ★ (813)</button>
+          <button style="font-family:'DM Mono',monospace;font-size:10px;padding:5px 14px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-weight:500">4 ★ (29)</button>
+          <button style="font-family:'DM Mono',monospace;font-size:10px;padding:5px 14px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-weight:500">3 ★ (5)</button>
+        </div>
+      </div>
+
+      <div class="feedback-list">
+
+        <div class="feedback-item">
+          <div class="fi-header">
+            <div class="fi-avatar">RV</div>
+            <div>
+              <div class="fi-user">RareVault_99</div>
+              <div style="display:flex;gap:6px;margin-top:2px"><span class="fi-role buyer">Buyer</span></div>
+            </div>
+            <div class="fi-stars">★★★★★</div>
+            <div class="fi-time">Apr 6, 2025</div>
+          </div>
+          <div class="fi-card">Ancestral Recall BGS 9 · $9,200</div>
+          <div class="fi-text">Absolutely flawless experience. Card arrived exactly as described — BGS 9 in perfect condition. CardKing ships fast, packs extremely well, and the card was authenticated before it even reached me. Will buy again without hesitation. This is how TCG selling should work.</div>
+          <div class="fi-verified">✓ Verified purchase · Transaction on-chain</div>
+        </div>
+
+        <div class="feedback-item">
+          <div class="fi-header">
+            <div class="fi-avatar">MT</div>
+            <div>
+              <div class="fi-user">MTGLegacy</div>
+              <div style="display:flex;gap:6px;margin-top:2px"><span class="fi-role buyer">Buyer</span></div>
+            </div>
+            <div class="fi-stars">★★★★★</div>
+            <div class="fi-time">Apr 2, 2025</div>
+          </div>
+          <div class="fi-card">Black Lotus BGS 8.5 · $22,000</div>
+          <div class="fi-text">Bought my first piece of the Power 9 through CardKing. The authentication step gave me real peace of mind on a $22k purchase. Card was graded exactly as listed, shipped same day I bought, and the whole process was transparent from start to finish. The escrow system is brilliant — my money was safe the entire time.</div>
+          <div class="fi-verified">✓ Verified purchase · Transaction on-chain</div>
+        </div>
+
+        <div class="feedback-item">
+          <div class="fi-header">
+            <div class="fi-avatar">SH</div>
+            <div>
+              <div class="fi-user">SlabHunter_X</div>
+              <div style="display:flex;gap:6px;margin-top:2px"><span class="fi-role buyer">Buyer</span></div>
+            </div>
+            <div class="fi-stars">★★★★★</div>
+            <div class="fi-time">Mar 28, 2025</div>
+          </div>
+          <div class="fi-card">Pikachu Illustrator PSA 8 · $6,200</div>
+          <div class="fi-text">Third purchase from CardKing and once again a perfect transaction. Always ships within hours. Always exactly as described. The authentication layer on Trove makes buying high-value cards from strangers actually feel safe. Highly recommend this seller.</div>
+          <div class="fi-verified">✓ Verified purchase · Transaction on-chain</div>
+        </div>
+
+        <div class="feedback-item">
+          <div class="fi-header">
+            <div class="fi-avatar">PP</div>
+            <div>
+              <div class="fi-user">PowerNine_Pro</div>
+              <div style="display:flex;gap:6px;margin-top:2px"><span class="fi-role seller">Seller</span></div>
+            </div>
+            <div class="fi-stars">★★★★☆</div>
+            <div class="fi-time">Mar 14, 2025</div>
+          </div>
+          <div class="fi-card">Mox Emerald BGS 9 · $3,200 (as buyer)</div>
+          <div class="fi-text">Purchased from my listing quickly and paid without any issues. USDC funded escrow instantly. Would sell to again.</div>
+          <div class="fi-verified">✓ Verified purchase · Transaction on-chain</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="tab-history" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13px;color:var(--text-muted)">Showing recent completed sales · All transactions verified on-chain</div>
+        <button class="btn-ghost" style="font-size:11px;padding:6px 14px">View on Basescan →</button>
+      </div>
+      <div style="background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;overflow:hidden">
+        <table class="history-table">
+          <thead><tr><th>Card</th><th>Grade</th><th>Sale Price</th><th>Buyer Rating</th><th>Date</th></tr></thead>
+          <tbody>
+            <tr><td><div class="ht-card"><div class="ht-swatch sw-poke"></div><div><div class="ht-name">Charizard 1st Ed Holo</div><div class="ht-meta">Pokémon · Base Set</div></div></div></td><td><span class="pill pill-blue">PSA 10</span></td><td class="ht-price">$36,000</td><td class="ht-rating">★★★★★</td><td class="ht-date">Apr 4</td></tr>
+            <tr><td><div class="ht-card"><div class="ht-swatch sw-mtg"></div><div><div class="ht-name">Ancestral Recall</div><div class="ht-meta">MTG · Alpha</div></div></div></td><td><span class="pill pill-gold">BGS 9</span></td><td class="ht-price">$9,200</td><td class="ht-rating">★★★★★</td><td class="ht-date">Apr 2</td></tr>
+            <tr><td><div class="ht-card"><div class="ht-swatch sw-poke"></div><div><div class="ht-name">Blastoise Holo</div><div class="ht-meta">Pokémon · Base Set</div></div></div></td><td><span class="pill pill-blue">PSA 10</span></td><td class="ht-price">$3,800</td><td class="ht-rating">★★★★★</td><td class="ht-date">Mar 30</td></tr>
+            <tr><td><div class="ht-card"><div class="ht-swatch sw-mtg"></div><div><div class="ht-name">Time Walk</div><div class="ht-meta">MTG · Alpha · Power Nine</div></div></div></td><td><span class="pill pill-gold">BGS 8.5</span></td><td class="ht-price">$7,400</td><td class="ht-rating">★★★★★</td><td class="ht-date">Mar 27</td></tr>
+            <tr><td><div class="ht-card"><div class="ht-swatch sw-poke"></div><div><div class="ht-name">Pikachu Illustrator</div><div class="ht-meta">Pokémon · CoroCoro Trophy</div></div></div></td><td><span class="pill pill-blue">PSA 8</span></td><td class="ht-price">$6,200</td><td class="ht-rating">★★★★★</td><td class="ht-date">Mar 25</td></tr>
+            <tr><td><div class="ht-card"><div class="ht-swatch sw-op"></div><div><div class="ht-name">Luffy Alt Art SEC</div><div class="ht-meta">One Piece · OP-01</div></div></div></td><td><span class="pill pill-green">CGC 9.5</span></td><td class="ht-price">$740</td><td class="ht-rating">★★★★★</td><td class="ht-date">Mar 22</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ABOUT TAB -->
+    <div id="tab-about" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+        <div style="background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:20px">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;font-weight:500">About This Seller</div>
+          <div style="font-size:13px;color:var(--text-secondary);line-height:1.8">Been collecting since 1999 when I pulled my first Charizard from a pack at a garage sale. Started seriously collecting vintage Pokémon and MTG in 2018.<br><br>I personally inspect every card before listing and only sell what I would buy myself. If I'm unsure about something, I don't list it. Trove's authentication layer gives buyers additional confidence on top of my own standards.<br><br>I typically ship same day or next morning. If there's ever a delay, I'll communicate immediately.</div>
+        </div>
+
+        <div style="background:var(--card-bg);border:1.5px solid var(--border);border-radius:12px;padding:20px">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;font-weight:500">Specialties</div>
+          <div class="specialty-tags" style="margin-bottom:16px">
+            <span class="spec-tag">Pokémon 1st Edition</span>
+            <span class="spec-tag">Base Set Shadowless</span>
+            <span class="spec-tag">MTG Power Nine</span>
+            <span class="spec-tag">Alpha / Beta</span>
+            <span class="spec-tag">Dual Lands</span>
+            <span class="spec-tag">Unlimited Edition</span>
+            <span class="spec-tag">Trophy Cards</span>
+            <span class="spec-tag">High-Grade Slabs</span>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;font-weight:500">Achievements</div>
+          <div class="achievement-grid">
+            <div class="achievement ach-earned"><div class="ach-icon">⭐</div><div class="ach-label">Elite Seller</div></div>
+            <div class="achievement ach-earned"><div class="ach-icon">🔒</div><div class="ach-label">Zero Disputes</div></div>
+            <div class="achievement ach-earned"><div class="ach-icon">⚡</div><div class="ach-label">Fast Shipper</div></div>
+            <div class="achievement ach-earned"><div class="ach-icon">💎</div><div class="ach-label">$1M+ Volume</div></div>
+            <div class="achievement ach-earned"><div class="ach-icon">✓</div><div class="ach-label">ID Verified</div></div>
+            <div class="achievement ach-earned"><div class="ach-icon">🏆</div><div class="ach-label">Top 1%</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT SIDEBAR -->
+  <div class="profile-sidebar">
+
+    <div>
+      <button class="contact-btn">Message CardKing_88</button>
+      <button class="report-btn">Report Profile</button>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sc-title">Seller Stats</div>
+      <div class="sc-row"><span class="sc-label">Member since</span><span class="sc-val">Apr 2024</span></div>
+      <div class="sc-row"><span class="sc-label">Total sales</span><span class="sc-val">847</span></div>
+      <div class="sc-row"><span class="sc-label">Active listings</span><span class="sc-val">24</span></div>
+      <div class="sc-row"><span class="sc-label">Disputes</span><span class="sc-val green">0 ever</span></div>
+      <div class="sc-row"><span class="sc-label">Strikes</span><span class="sc-val green">0</span></div>
+      <div class="sc-row"><span class="sc-label">Avg ship time</span><span class="sc-val green">0.8 days</span></div>
+      <div class="sc-row"><span class="sc-label">Auth pass rate</span><span class="sc-val green">100%</span></div>
+      <div class="sc-row"><span class="sc-label">Lifetime volume</span><span class="sc-val gold">$1.24M</span></div>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sc-title">On-Chain Reputation</div>
+      <div class="on-chain-info">
+        <div class="oci-label">Wallet Address</div>
+        <div class="oci-addr">0x742d35Cc6634C0532925a3b8D4C9f44e8A2f44e</div>
+        <a class="oci-link">View on Basescan →</a>
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;margin-top:12px">All 847 transactions are recorded permanently on the Base blockchain. Reputation cannot be deleted, altered, or gamed. What you see is what exists on-chain.</div>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sc-title">Response & Shipping</div>
+      <div class="sc-row"><span class="sc-label">Responds within</span><span class="sc-val green">~2 hrs</span></div>
+      <div class="sc-row"><span class="sc-label">Ships from</span><span class="sc-val">Los Angeles, CA</span></div>
+      <div class="sc-row"><span class="sc-label">Preferred carrier</span><span class="sc-val">FedEx Priority</span></div>
+      <div class="sc-row"><span class="sc-label">Insurance</span><span class="sc-val green">Always included</span></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const toggle=document.getElementById('themeToggle');
+const html=document.documentElement;
+const saved=localStorage.getItem('trove-theme')||'dark';
+html.setAttribute('data-theme',saved);
+toggle.textContent=saved==='dark'?'🌙':'☀️';
+toggle.addEventListener('click',()=>{
+  const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  toggle.textContent=next==='dark'?'🌙':'☀️';
+  localStorage.setItem('trove-theme',next);
+});
+
+function switchTab(el,tabId){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['listings','feedback','history','about'].forEach(id=>{
+    const el=document.getElementById('tab-'+id);
+    if(el) el.style.display=id===tabId?'block':'none';
+  });
+  window.scrollTo(0,400);
+}
+</script>
+</body>
+</html>

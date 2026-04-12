@@ -1,6 +1,8 @@
 import { Inter } from 'next/font/google'
 import Nav from './components/Nav'
 import Footer from './components/Footer'
+import { AuthProvider } from './context/AuthContext'
+import { AppPrivyProvider } from './context/PrivyContext'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -26,11 +28,15 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </head>
       <body className={inter.className}>
-        <Nav />
-        <main style={{ width: '100%', minWidth: 0 }}>
-          {children}
-        </main>
-        <Footer />
+        <AppPrivyProvider>
+        <AuthProvider>
+          <Nav />
+          <main style={{ width: '100%', minWidth: 0 }}>
+            {children}
+          </main>
+          <Footer />
+        </AuthProvider>
+        </AppPrivyProvider>
       </body>
     </html>
   )

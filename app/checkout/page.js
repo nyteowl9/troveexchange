@@ -1,17 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useWalletConnection } from '@/app/components/ConnectWallet'
 
 export default function Checkout() {
   const [theme, setTheme] = useState('dark')
   const [step, setStep] = useState(1)
-  const [isMobile, setIsMobile] = useState(false)
-  const [selectedWallet, setSelectedWallet] = useState(null)
   const [ack1, setAck1] = useState(false)
   const [ack2, setAck2] = useState(false)
   const [signing, setSigning] = useState(false)
   const [signingStatus, setSigningStatus] = useState('Waiting for wallet confirmation...')
   const [alreadyAcknowledged, setAlreadyAcknowledged] = useState(false)
+  const { walletAddress, connect } = useWalletConnection()
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
@@ -35,13 +35,6 @@ export default function Checkout() {
   const salesTax = parseFloat((cardPrice * 0.095).toFixed(2))
   const total = (cardPrice + authFee + parseFloat(salesTax)).toFixed(2)
 
-  const wallets = [
-    { id: 'metamask', icon: '🦊', name: 'MetaMask', desc: 'Most popular · Browser extension', featured: true },
-    { id: 'phantom', icon: '👻', name: 'Phantom', desc: 'Widely used · Base/EVM support', featured: true },
-    { id: 'rainbow', icon: '🌈', name: 'Rainbow', desc: 'Mobile-first · Clean UX', featured: false },
-    { id: 'ledger', icon: '🛡', name: 'Ledger', desc: 'Hardware wallet · Max security', featured: false },
-    { id: 'walletconnect', icon: '🔗', name: 'WalletConnect', desc: 'Connect 300+ wallets', featured: false, full: true },
-  ]
 
   const goToStep = (n) => {
     setStep(n)
@@ -157,21 +150,27 @@ export default function Checkout() {
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Connect Your <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Wallet</em></div>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>Your USDC lives in your wallet. Connect it to lock funds into escrow — the only movement of money in this transaction.</p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                {wallets.filter(w => !w.full).map(wallet => (
-                  <div key={wallet.id} onClick={() => setSelectedWallet(wallet.id)} style={{ background: 'var(--bg-2)', border: `1.5px solid ${selectedWallet === wallet.id ? 'var(--teal)' : wallet.featured ? 'var(--teal-border)' : 'var(--border)'}`, borderRadius: '12px', padding: isMobile ? '14px' : '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', background: selectedWallet === wallet.id ? 'var(--teal-bg)' : 'var(--bg-2)', transition: 'all 0.2s' }}>
-                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0, border: '1px solid var(--border)' }}>{wallet.icon}</div>
-                    <div>
-                      <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{wallet.name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4 }}>{wallet.desc}</div>
-                    </div>
-                    {wallet.featured && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 8px', borderRadius: '10px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', color: 'var(--teal)', fontWeight: 600, alignSelf: 'flex-start', flexShrink: 0, marginLeft: 'auto' }}>Popular</div>}
+              {walletAddress ? (
+                <div style={{ background: 'rgba(76,175,124,0.06)', border: '1.5px solid rgba(76,175,124,0.35)', borderRadius: '12px', padding: '20px 24px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>✓</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-green)', fontWeight: 500 }}>Wallet Connected</div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', marginTop: '4px' }}>{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)} · Base Network</div>
                   </div>
-                ))}
-                <div onClick={() => setSelectedWallet('walletconnect')} style={{ background: selectedWallet === 'walletconnect' ? 'var(--teal-bg)' : 'var(--bg-3)', border: `1.5px dashed ${selectedWallet === 'walletconnect' ? 'var(--teal)' : 'var(--border)'}`, borderRadius: '12px', padding: '16px', textAlign: 'center', cursor: 'pointer', fontSize: '13px', color: 'var(--text-muted)', gridColumn: '1/-1' }}>
-                  🔗 &nbsp;WalletConnect — Show all 300+ supported wallets
+                  <button onClick={connect} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-tertiary)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer' }}>
+                    Switch Wallet
+                  </button>
                 </div>
-              </div>
+              ) : (
+                <div style={{ marginBottom: '20px' }}>
+                  <button onClick={connect} style={{ width: '100%', background: 'var(--gold)', color: '#0A0A0B', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '15px', fontWeight: 700, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer' }}>
+                    Connect Wallet
+                  </button>
+                  <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', textAlign: 'center', marginTop: '10px' }}>
+                    MetaMask · Phantom · Coinbase · WalletConnect · Embedded wallet
+                  </p>
+                </div>
+              )}
 
               <div style={{ background: 'rgba(232,168,56,0.08)', border: '1.5px solid rgba(232,168,56,0.35)', borderRadius: '10px', padding: '14px 16px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px', display: 'flex', gap: '10px' }}>
                 <span style={{ fontSize: '18px', flexShrink: 0 }}>⚠</span>
@@ -180,7 +179,7 @@ export default function Checkout() {
 
               <div style={{ display: 'flex', gap: '10px' }}>
                 <a href="/listing/1" style={{ ...btn(), textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>← Back to Listing</a>
-                <button onClick={() => goToStep(2)} disabled={!selectedWallet} style={{ ...btn({ background: selectedWallet ? 'var(--teal)' : 'var(--bg-4)', border: 'none', color: selectedWallet ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', fontWeight: 600, opacity: selectedWallet ? 1 : 0.5, cursor: selectedWallet ? 'pointer' : 'not-allowed' }) }}>Connect Wallet →</button>
+                <button onClick={() => goToStep(2)} disabled={!walletAddress} style={{ ...btn({ background: walletAddress ? 'var(--teal)' : 'var(--bg-4)', border: 'none', color: walletAddress ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', fontWeight: 600, opacity: walletAddress ? 1 : 0.5, cursor: walletAddress ? 'pointer' : 'not-allowed' }) }}>Continue →</button>
               </div>
             </div>
           )}
