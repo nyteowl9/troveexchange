@@ -269,20 +269,21 @@ Priority order:
    ✓ User address fields added (migration 002)
    ⚠ Auth center address is placeholder in lib/shippo.js — update before launch
 
-5. TAXJAR ← NEXT
-   □ Label generation (Tier 1: 1 label, Tier 2: Label A + Label B)
-   □ Declared value insurance (automatic, = sale price)
-   □ Webhooks → carrier scan triggers 48hr deadline check
-   □ Webhook → delivery scan triggers 72hr inspection window
-   □ Dynamic shipping calc (buyer zip → real FedEx rate + 15% handling)
+5. TAXJAR — SET UP RIGHT BEFORE LAUNCH (30-day trial, don't waste it)
+   □ Sales tax calculation by buyer zip code
+   □ Called at checkout Step 2 (after address confirmed)
    □ Shipsurance addon for $50k–$100k (Phase 2 add-on)
 
 5. TAXJAR
    □ Sales tax calculation by buyer zip code
    □ Called at checkout Step 2 (after address confirmed)
 
-6. RESEND EMAIL
-   □ All transactional notifications (see email list below)
+6. RESEND EMAIL ✅ COMPLETE
+   ✓ Resend SDK installed
+   ✓ All transactional emails built (lib/emails.js)
+   ✓ Buyer: purchase confirmed, shipped, auth result, delivered, funds released, dispute
+   ✓ Seller: sale/ship now, 24hr reminder, auth result, funds released, strike, dispute, bond returned
+   ✓ chasehollow.com domain added to Resend — DNS verifying (auto-configured via Cloudflare)
 
 7. CREATOR ATTRIBUTION
    □ 30-day cookie on ?ref= parameter
