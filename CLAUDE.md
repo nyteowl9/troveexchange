@@ -85,7 +85,7 @@ Buyer protection fee: NONE (removed — seller bond covers disputes)
 ```
 Auth fee:     $10 (buyer pays)
 Shipping:     1 label — seller ships DIRECT to buyer
-              Actual FedEx rate + 15% handling (one line item)
+              Cheapest carrier rate + 15% handling (one line item)
 Photos:       3 required — front, back, card in sealed package
               Must upload BEFORE or AT TIME of label scan
 Timing:       48hrs to upload photos + get carrier scan
@@ -260,7 +260,16 @@ Priority order:
    ✓ ConnectWalletButton component (app/components/ConnectWallet.jsx)
    ✓ Wallet connection deferred to transaction time (not signup)
 
-4. EASYPOST INTEGRATION ← NEXT
+4. SHIPPING INTEGRATION ✅ COMPLETE (Shippo — replaced EasyPost)
+   ✓ Shippo SDK installed
+   ✓ Rate calculation API (cheapest carrier + 15% handling)
+   ✓ Label generation API (Label A + Label B, declared value insurance)
+   ✓ Webhook handler (carrier scan → in_transit, delivery → inspection_window)
+   ✓ Webhook registered at chasehollow.com/api/webhooks/shippo
+   ✓ User address fields added (migration 002)
+   ⚠ Auth center address is placeholder in lib/shippo.js — update before launch
+
+5. TAXJAR ← NEXT
    □ Label generation (Tier 1: 1 label, Tier 2: Label A + Label B)
    □ Declared value insurance (automatic, = sale price)
    □ Webhooks → carrier scan triggers 48hr deadline check
