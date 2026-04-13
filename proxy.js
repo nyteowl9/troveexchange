@@ -17,7 +17,7 @@ export async function proxy(request) {
     pathname.startsWith(route.path)
   )
 
-  // Not a protected route — pass through
+  // Not a protected route — pass through (also handles ?ref= cookie)
   if (!protectedRoute) {
     return await refreshSession(request)
   }
@@ -79,6 +79,20 @@ export async function proxy(request) {
   return response
 }
 
+// Set 30-day referral attribution cookie if ?ref= is present (last click wins)
+function applyRefCookie(response, request) {
+  const ref = request.nextUrl.searchParams.get('ref')
+  if (ref && /^[a-zA-Z0-9_-]{3,30}$/.test(ref)) {
+    response.cookies.set('ch-ref', ref.toLowerCase(), {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: '/',
+    })
+  }
+  return response
+}
+
 // Refresh session on all non-protected routes
 async function refreshSession(request) {
   let response = NextResponse.next({ request })
@@ -105,7 +119,7 @@ async function refreshSession(request) {
   )
 
   await supabase.auth.getUser()
-  return response
+  return applyRefCookie(response, request)
 }
 
 export const config = {
