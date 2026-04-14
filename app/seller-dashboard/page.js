@@ -115,6 +115,33 @@ function SellerDashboard() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // Realtime — re-fetch when any of this seller's orders or listings change
+  useEffect(() => {
+    if (!user) return
+    const ordersChannel = supabase
+      .channel(`seller-orders-${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'orders',
+        filter: `seller_id=eq.${user.id}`,
+      }, () => fetchData())
+      .subscribe()
+    const listingsChannel = supabase
+      .channel(`seller-listings-${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'listings',
+        filter: `seller_id=eq.${user.id}`,
+      }, () => fetchData())
+      .subscribe()
+    return () => {
+      supabase.removeChannel(ordersChannel)
+      supabase.removeChannel(listingsChannel)
+    }
+  }, [user, fetchData])
+
   const calcFees = (p) => {
     const num = parseFloat(p) || 0
     const platform = (num * 0.035).toFixed(2)

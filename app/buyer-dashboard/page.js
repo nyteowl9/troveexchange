@@ -115,6 +115,21 @@ export default function BuyerDashboard() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // Realtime — re-fetch when any of this buyer's orders change
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase
+      .channel(`buyer-orders-${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'orders',
+        filter: `buyer_id=eq.${user.id}`,
+      }, () => fetchData())
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [user, fetchData])
+
   const pad = n => String(n).padStart(2, '0')
 
   const btn = (extra = {}) => ({
