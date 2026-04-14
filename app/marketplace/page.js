@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Nav from '@/app/components/Nav'
 import { supabase } from '@/lib/supabase'
 
 const PAGE_SIZE = 24
@@ -101,7 +100,13 @@ export default function Marketplace() {
     query = query.range(from, from + PAGE_SIZE - 1)
 
     const { data, count } = await query
-    setListings(data || [])
+
+    // Tier filter is client-side (filtering on joined seller.tier server-side
+    // requires a subquery — applying after fetch for simplicity)
+    const filtered = tierFilters.length > 0
+      ? (data || []).filter(c => tierFilters.includes(c.seller?.tier || 'new'))
+      : (data || [])
+    setListings(filtered)
     setTotal(count || 0)
     setLoading(false)
   }, [category, search, sortBy, priceMin, priceMax, graderFilters, page])
@@ -146,7 +151,6 @@ export default function Marketplace() {
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
-      <Nav />
 
       {/* PAGE HEADER */}
       <div style={{ paddingTop: '64px', background: 'var(--bg-2)', borderBottom: '0.5px solid var(--border)' }}>
