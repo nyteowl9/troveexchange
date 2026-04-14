@@ -65,7 +65,7 @@ function Checkout() {
     window.scrollTo(0, 0)
   }
 
-  const handleSign = () => {
+  const handleSign = async () => {
     setSigning(true)
     const statuses = [
       'Waiting for wallet confirmation...',
@@ -80,7 +80,50 @@ function Checkout() {
       if (statuses[i]) setSigningStatus(statuses[i])
       if (i >= statuses.length - 1) {
         clearInterval(interval)
-        setTimeout(() => {
+        setTimeout(async () => {
+          try {
+            // Get authenticated buyer
+            const { data: { user: buyer } } = await supabase.auth.getUser()
+
+            // Create order record in Supabase
+            const { data: order, error: orderError } = await supabase
+              .from('orders')
+              .insert({
+                listing_id:    listingId,
+                buyer_id:      buyer?.id,
+                seller_id:     listing?.seller_id,
+                auth_tier:     authTier,
+                escrow_amount: parseFloat(total),
+                platform_fee:  parseFloat((cardPrice * 0.03).toFixed(2)),
+                creator_fee:   parseFloat((cardPrice * 0.005).toFixed(2)),
+                auth_fee:      authFee,
+                shipping_cost: 0,   // updated when label is generated
+                sales_tax:     salesTax,
+                status:        'funded',
+                ship_deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+              })
+              .select()
+              .single()
+
+            if (!orderError && order) {
+              // Mark listing as pending so it no longer shows in marketplace
+              await supabase
+                .from('listings')
+                .update({ status: 'pending' })
+                .eq('id', listingId)
+
+              // Fire referral attribution (best-effort, never blocks checkout)
+              fetch('/api/referral/convert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: order.id, sale_amount: cardPrice }),
+              }).catch(() => {})
+            }
+          } catch (err) {
+            console.error('[checkout] order creation error:', err)
+            // Don't block the success screen — Phase 3 blockchain will be authoritative
+          }
+
           setSigning(false)
           goToStep(5)
         }, 1200)
