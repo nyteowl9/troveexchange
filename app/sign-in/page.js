@@ -12,6 +12,11 @@ export default function SignInPage() {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [fullName, setFullName] = useState('')
+  const [street1, setStreet1] = useState('')
+  const [street2, setStreet2] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+  const [zip, setZip] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -58,12 +63,18 @@ export default function SignInPage() {
       if (signUpError) {
         setError(signUpError.message)
       } else if (data.user) {
-        // Save username + full name to profile
+        // Save username, full name, and address to profile
         await supabase
           .from('users')
           .update({
             username: username.toLowerCase().trim(),
             full_name: fullName.trim(),
+            street1: street1.trim(),
+            street2: street2.trim() || null,
+            city: city.trim(),
+            state: state.trim().toUpperCase(),
+            zip: zip.trim(),
+            country: 'US',
           })
           .eq('id', data.user.id)
 
@@ -159,6 +170,74 @@ export default function SignInPage() {
                     placeholder="Jane Smith"
                     style={inputStyle}
                   />
+                </div>
+
+                {/* Address section */}
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '0.25rem' }}>
+                  <p style={{ fontSize: '11px', fontFamily: 'DM Mono, monospace', color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '1rem' }}>Shipping Address</p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <label style={labelStyle}>Street Address</label>
+                      <input
+                        type="text"
+                        value={street1}
+                        onChange={e => setStreet1(e.target.value)}
+                        required
+                        placeholder="123 Main St"
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={labelStyle}>Apt, Suite, Unit <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(optional)</span></label>
+                      <input
+                        type="text"
+                        value={street2}
+                        onChange={e => setStreet2(e.target.value)}
+                        placeholder="Apt 4B"
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={labelStyle}>City</label>
+                      <input
+                        type="text"
+                        value={city}
+                        onChange={e => setCity(e.target.value)}
+                        required
+                        placeholder="New York"
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div>
+                        <label style={labelStyle}>State</label>
+                        <input
+                          type="text"
+                          value={state}
+                          onChange={e => setState(e.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 2))}
+                          required
+                          placeholder="NY"
+                          maxLength={2}
+                          style={{ ...inputStyle, textTransform: 'uppercase' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>ZIP Code</label>
+                        <input
+                          type="text"
+                          value={zip}
+                          onChange={e => setZip(e.target.value.replace(/[^0-9-]/g, '').slice(0, 10))}
+                          required
+                          placeholder="10001"
+                          style={inputStyle}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </>
             )}
