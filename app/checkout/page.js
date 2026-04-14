@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { useWalletConnection } from '@/app/components/ConnectWallet'
+import { supabase } from '@/lib/supabase'
 
 export default function Checkout() {
   const [theme, setTheme] = useState('dark')
@@ -11,7 +14,11 @@ export default function Checkout() {
   const [signing, setSigning] = useState(false)
   const [signingStatus, setSigningStatus] = useState('Waiting for wallet confirmation...')
   const [alreadyAcknowledged, setAlreadyAcknowledged] = useState(false)
+  const [listing, setListing] = useState(null)
+  const [listingLoading, setListingLoading] = useState(true)
   const { walletAddress, connect } = useWalletConnection()
+  const searchParams = useSearchParams()
+  const listingId = searchParams.get('listing_id')
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
@@ -22,18 +29,26 @@ export default function Checkout() {
     if (ack) { setAck1(true); setAck2(true) }
   }, [])
 
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark'
-    setTheme(next)
-    document.documentElement.setAttribute('data-theme', next)
-    localStorage.setItem('ch-theme', next)
-  }
+  useEffect(() => {
+    if (!listingId) { setListingLoading(false); return }
+    supabase
+      .from('listings')
+      .select(`*, seller:seller_id (id, username, full_name, tier, rep_score)`)
+      .eq('id', listingId)
+      .eq('status', 'active')
+      .single()
+      .then(({ data }) => { setListing(data); setListingLoading(false) })
+  }, [listingId])
 
-  const cardPrice = 487
-  const authTier = cardPrice <= 300 ? 'remote' : 'physical'
-  const authFee = authTier === 'remote' ? 10 : 25
-  const salesTax = parseFloat((cardPrice * 0.095).toFixed(2))
-  const total = (cardPrice + authFee + parseFloat(salesTax)).toFixed(2)
+  // Derived price data from real listing (fallback to 0 if still loading)
+  const cardPrice   = listing?.price ?? 0
+  const authTier    = cardPrice <= 300 ? 'remote' : 'physical'
+  const authFee     = authTier === 'remote' ? 10 : 25
+  const salesTax    = parseFloat((cardPrice * 0.095).toFixed(2))
+  const total       = (cardPrice + authFee + salesTax).toFixed(2)
+  const sellerName  = listing?.seller?.username || '—'
+  const sellerTier  = listing?.seller?.tier || 'new'
+  const sellerRep   = listing?.seller?.rep_score
 
 
   const goToStep = (n) => {
@@ -81,6 +96,17 @@ export default function Checkout() {
     fontFamily: 'DM Sans, sans-serif', fontWeight: 500,
     cursor: 'pointer', borderRadius: '10px', ...extra
   })
+
+  // Not found state
+  if (!listingLoading && listingId && !listing) {
+    return (
+      <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', color: 'var(--text-primary)' }}>Listing not found</div>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>This listing may have sold or been removed.</div>
+        <Link href="/marketplace" style={{ color: 'var(--teal)', fontSize: '14px' }}>← Back to marketplace</Link>
+      </div>
+    )
+  }
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
@@ -178,7 +204,7 @@ export default function Checkout() {
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
-                <a href="/listing/1" style={{ ...btn(), textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>← Back to Listing</a>
+                <Link href={listingId ? `/listing/${listingId}` : '/marketplace'} style={{ ...btn(), textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>← Back to Listing</Link>
                 <button onClick={() => goToStep(2)} disabled={!walletAddress} style={{ ...btn({ background: walletAddress ? 'var(--teal)' : 'var(--bg-4)', border: 'none', color: walletAddress ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', fontWeight: 600, opacity: walletAddress ? 1 : 0.5, cursor: walletAddress ? 'pointer' : 'not-allowed' }) }}>Continue →</button>
               </div>
             </div>
@@ -235,9 +261,9 @@ export default function Checkout() {
                 {
                   title: 'Card Details',
                   rows: [
-                    { label: 'Card', val: 'Charizard Holo · Base Set Shadowless' },
-                    { label: 'Grade', val: 'PSA 9 · Cert #12847291' },
-                    { label: 'Seller', val: 'CardKing_88 · Elite · 4.98★ · 847 sales', teal: true },
+                    { label: 'Card', val: listing ? `${listing.card_name}${listing.set ? ` · ${listing.set}` : ''}` : '—' },
+                    { label: 'Grade', val: listing?.grade ? `${listing.grader} ${listing.grade}${listing.cert_number ? ` · Cert #${listing.cert_number}` : ''}` : 'Raw' },
+                    { label: 'Seller', val: listing ? `${sellerName} · ${sellerTier.charAt(0).toUpperCase() + sellerTier.slice(1)}${sellerRep ? ` · ${sellerRep.toFixed(2)}★` : ''}` : '—', teal: true },
                     { label: 'Authentication', val: '✓ Yes — verified before delivery', green: true },
                   ]
                 },
@@ -296,7 +322,7 @@ export default function Checkout() {
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>⬡ How Your Money is Protected</div>
                 {[
                   `Your $${total} USDC locks into a smart contract — not held by Chase Hollow, not held by the seller. By code.`,
-                  authTier === 'remote' ? 'Seller uploads 3 photos and ships direct to you within 48hrs. Miss deadline = auto-refund.' : 'Seller ships to our authentication center within 48hrs or your USDC auto-refunds.',
+                  authTier === 'remote' ? `${sellerName} uploads 3 photos and ships direct to you within 48hrs. Miss deadline = auto-refund.` : `${sellerName} ships to our authentication center within 48hrs or your USDC auto-refunds.`,
                   authTier === 'remote' ? 'Our staff reviews the uploaded photos while your card is in transit.' : 'Our expert physically verifies the card matches the listing exactly — grade, condition, cert number.',
                   'Card ships to you. 72hrs after delivery, USDC releases to seller automatically.',
                 ].map((text, i) => (
@@ -365,7 +391,7 @@ export default function Checkout() {
               <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(76,175,124,0.12)', border: '2px solid rgba(76,175,124,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', margin: '0 auto 20px' }}>✓</div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '44px', fontWeight: 300, marginBottom: '8px', color: 'var(--text-primary)' }}>You're <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Protected</em></div>
               <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: '480px', margin: '0 auto 28px' }}>
-                ${total} USDC is locked in escrow. CardKing_88 has been notified and has 48 hours to ship. You'll receive updates at every step.
+                ${total} USDC is locked in escrow. {sellerName} has been notified and has 48 hours to ship. You'll receive updates at every step.
               </p>
 
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '14px 18px', marginBottom: '24px', fontFamily: 'DM Mono, monospace', fontSize: '11px', textAlign: 'left' }}>
@@ -380,7 +406,7 @@ export default function Checkout() {
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '20px' }}>Live tracking · Updates automatically</div>
                 {[
                   { title: 'Escrow Funded', desc: `$${total} USDC locked in smart contract on Base. Transaction confirmed.`, done: true, active: false },
-                  { title: 'Awaiting Seller Photos & Shipment', desc: 'CardKing_88 has been notified. They have 48hrs to upload 3 photos and ship directly to your address.', done: false, active: true, time: '⏱ Deadline: Apr 8 at 2:14pm · 47hrs 42min remaining' },
+                  { title: 'Awaiting Seller Photos & Shipment', desc: `${sellerName} has been notified. They have 48hrs to${authTier === 'remote' ? ' upload 3 photos and' : ''} ship${authTier === 'physical' ? ' to our authentication center' : ' directly to your address'}.`, done: false, active: true, time: '⏱ Ship deadline: 48hrs from now' },
                   { title: 'In Transit to Authenticator', desc: 'Card en route to Chase Hollow authentication center. Tracking will appear here.', done: false, active: false },
                   { title: 'Authentication', desc: 'Expert verifies grade, condition, and cert number match listing exactly.', done: false, active: false },
                   { title: 'Shipped to You', desc: 'Card ships from auth center to your address. FedEx tracking provided.', done: false, active: false },
@@ -411,14 +437,22 @@ export default function Checkout() {
         <div style={{ position: 'sticky', top: '144px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
             <div style={{ padding: '20px', borderBottom: '0.5px solid var(--border)', display: 'flex', gap: '14px', alignItems: 'center' }}>
-              <div style={{ width: '52px', height: '72px', borderRadius: '6px', background: 'linear-gradient(145deg,#1a3a5c,#0d2035)', border: '2px solid rgba(255,215,0,0.2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>⚡</div>
+              <div style={{ width: '52px', height: '72px', borderRadius: '6px', background: 'var(--bg-4)', border: '2px solid var(--border)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
+                {listing?.photos?.[0] ? <img src={listing.photos[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🃏'}
+              </div>
               <div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)' }}>Charizard Holo</div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.7 }}>Pokémon · Base Set Shadowless<br />PSA 9 · Cert #12847291<br />#4/102 · 1999 Wizards</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: 'var(--teal)', fontWeight: 600 }}>CK</div>
-                  CardKing_88 · Elite · 4.98★
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)' }}>{listingLoading ? '…' : listing?.card_name || 'Listing not found'}</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                  {listing?.game}{listing?.set ? ` · ${listing.set}` : ''}<br />
+                  {listing?.grade ? `${listing.grader} ${listing.grade}${listing.cert_number ? ` · Cert #${listing.cert_number}` : ''}` : listing ? 'Raw' : ''}<br />
+                  {listing?.card_number ? `#${listing.card_number}` : ''}
                 </div>
+                {listing?.seller && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: 'var(--teal)', fontWeight: 600 }}>{sellerName.slice(0, 2).toUpperCase()}</div>
+                    {sellerName} · {sellerTier.charAt(0).toUpperCase() + sellerTier.slice(1)}{sellerRep ? ` · ${sellerRep.toFixed(2)}★` : ''}
+                  </div>
+                )}
               </div>
             </div>
             <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)' }}>

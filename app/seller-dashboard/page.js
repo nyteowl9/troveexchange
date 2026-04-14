@@ -1,13 +1,69 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useAuth } from '@/app/context/AuthContext'
+import { supabase } from '@/lib/supabase'
+
+const ACTIVE_ORDER_STATUSES = ['funded', 'shipped', 'in_transit', 'auth_pending', 'inspection_window']
+
+const BOND_RATE = { new: 0.04, trusted: 0.03, pro: 0.02, elite: 0.01 }
+const TIER_LABEL = { new: 'New', trusted: 'Trusted', pro: 'Pro', elite: 'Elite' }
+
+const SELLER_STATUS_MAP = {
+  funded:           { label: '⚡ Ship Now',      color: 'var(--accent-red)',   bg: 'rgba(200,75,60,0.1)',   border: 'rgba(200,75,60,0.3)',   urgent: true  },
+  shipped:          { label: 'In Transit',       color: 'var(--accent-blue)',  bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)', urgent: false },
+  in_transit:       { label: 'In Transit',       color: 'var(--accent-blue)',  bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)', urgent: false },
+  auth_pending:     { label: 'Authenticating',   color: 'var(--gold)',          bg: 'rgba(201,168,76,0.1)', border: 'rgba(201,168,76,0.28)',urgent: false },
+  inspection_window:{ label: 'Auto-Releasing',   color: 'var(--accent-green)', bg: 'rgba(76,175,124,0.1)', border: 'rgba(76,175,124,0.3)', urgent: false },
+}
+
+function fmtUSD(n) {
+  if (!n && n !== 0) return '—'
+  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function fmtDate(ts) {
+  if (!ts) return '—'
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function shortId(id) {
+  return '#' + String(id).slice(0, 6).toUpperCase()
+}
+
+function shipDeadline(createdAt) {
+  if (!createdAt) return null
+  return new Date(new Date(createdAt).getTime() + 48 * 60 * 60 * 1000)
+}
+
+function hoursUntil(ts) {
+  if (!ts) return null
+  const diff = new Date(ts) - Date.now()
+  return Math.max(0, Math.round(diff / (1000 * 60 * 60)))
+}
 
 export default function SellerDashboard() {
+  const { user, profile, loading: authLoading } = useAuth()
+  const router = useRouter()
+
   const [theme, setTheme] = useState('dark')
-  const [activeSection, setActiveSection] = useState('overview')
+  const [activeSection, setActiveSection]   = useState('overview')
+  const [activeOrders, setActiveOrders]     = useState([])
+  const [myListings, setMyListings]         = useState([])
+  const [completedSales, setCompletedSales] = useState([])
+  const [dataLoading, setDataLoading]       = useState(true)
+
+  // New listing form
   const [listingType, setListingType] = useState('graded')
-  const [grader, setGrader] = useState('PSA')
-  const [price, setPrice] = useState('')
+  const [grader, setGrader]           = useState('PSA')
+  const [price, setPrice]             = useState('')
+  const [photos, setPhotos]           = useState([])
+  const [submitting, setSubmitting]   = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [formData, setFormData]       = useState({ game: 'Pokémon TCG', language: 'English', card_name: '', set: '', card_number: '', grade: '', cert_number: '', grader_other: '', condition: 'Near Mint (NM)', condition_notes: '', quantity: '', seal_condition: 'Factory Sealed — Unopened', lot_description: '' })
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
@@ -15,167 +71,240 @@ export default function SellerDashboard() {
     document.documentElement.setAttribute('data-theme', saved)
   }, [])
 
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark'
-    setTheme(next)
-    document.documentElement.setAttribute('data-theme', next)
-    localStorage.setItem('ch-theme', next)
-  }
+  useEffect(() => {
+    if (!authLoading && !user) router.replace('/sign-in')
+  }, [authLoading, user, router])
+
+  const fetchData = useCallback(async () => {
+    if (!user) return
+    setDataLoading(true)
+    const [ordersRes, listingsRes, salesRes] = await Promise.all([
+      supabase
+        .from('orders')
+        .select(`id, status, escrow_amount, auth_tier, tracking_a, shipped_at, created_at, auto_release_at,
+                 listing:listing_id (id, card_name, game, set, grade, grader, photos, price, auth_tier),
+                 buyer:buyer_id (id, username)`)
+        .eq('seller_id', user.id)
+        .in('status', ACTIVE_ORDER_STATUSES)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('listings')
+        .select('id, card_name, game, set, grade, grader, photos, price, status, listing_type, created_at, expires_at')
+        .eq('seller_id', user.id)
+        .in('status', ['active', 'paused'])
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('orders')
+        .select(`id, escrow_amount, platform_fee, shipping_cost, released_at,
+                 listing:listing_id (card_name, game, set, grade, grader)`)
+        .eq('seller_id', user.id)
+        .eq('status', 'released')
+        .order('released_at', { ascending: false })
+        .limit(50),
+    ])
+    setActiveOrders(ordersRes.data || [])
+    setMyListings(listingsRes.data || [])
+    setCompletedSales(salesRes.data || [])
+    setDataLoading(false)
+  }, [user])
+
+  useEffect(() => { fetchData() }, [fetchData])
 
   const calcFees = (p) => {
     const num = parseFloat(p) || 0
     const platform = (num * 0.035).toFixed(2)
-    const shipSeller = 15
-    const net = (num - parseFloat(platform) - shipSeller).toFixed(2)
-    return { platform, shipSeller, net }
+    const shipCost = 15
+    const net = (num - parseFloat(platform) - shipCost).toFixed(2)
+    return { platform, shipCost, net }
   }
 
   const fees = calcFees(price)
+  const bondRate = BOND_RATE[profile?.tier] || BOND_RATE.new
+  const bondAmount = price ? (parseFloat(price) * bondRate).toFixed(2) : null
 
-  const orders = [
-    { id: '#4821', name: 'Charizard Holo PSA 9', game: 'Pokémon · Base Set', price: '$487', status: 'ship', statusLabel: '⚡ Ship Now', urgent: true, buyer: 'RareVault_99', deadline: 'Apr 8 12:00pm · 22hrs remaining', bg: 'linear-gradient(145deg,#1a3a5c,#0d2035)', icon: '⚡' },
-    { id: '#4819', name: 'Mox Sapphire BGS 9', game: 'MTG · Unlimited', price: '$6,800', status: 'auth', statusLabel: 'Authenticating', urgent: false, buyer: 'MTGLegacy', deadline: 'At Chase Hollow HQ', bg: 'linear-gradient(145deg,#1a1a3c,#0d0d24)', icon: '⬟' },
-    { id: '#4815', name: 'Pikachu Illustrator PSA 7', game: 'Pokémon · Promo', price: '$4,200', status: 'delivered', statusLabel: 'Auto-Releasing', urgent: false, buyer: 'SlabHunter_X', deadline: 'Auto-release Apr 8 12:00pm', bg: 'linear-gradient(145deg,#2a1a3e,#1a0d2a)', icon: '★' },
-    { id: '#4808', name: 'Mox Ruby BGS 8.5', game: 'MTG · Unlimited', price: '$4,100', status: 'transit', statusLabel: 'In Transit', urgent: false, buyer: 'PowerNine_Fan', deadline: 'FedEx · Arriving Apr 8', bg: 'linear-gradient(145deg,#2a1c0d,#1a0d05)', icon: '🔥' },
-  ]
-
-  const listings = [
-    { name: 'Black Lotus BGS 9.5', game: 'MTG · Alpha', price: '$28,400', views: 142, watchers: 38, bg: 'linear-gradient(145deg,#1c2a1c,#0d1a0d)', icon: '✦', status: 'live' },
-    { name: 'Ancestral Recall BGS 9', game: 'MTG · Alpha', price: '$9,200', views: 87, watchers: 21, bg: 'linear-gradient(145deg,#1a2a3c,#0d1a24)', icon: '📜', status: 'live' },
-    { name: 'Blastoise PSA 10', game: 'Pokémon · Base Set', price: '$3,800', views: 63, watchers: 14, bg: 'linear-gradient(145deg,#1a2a3a,#0d1a2a)', icon: '💧', status: 'live' },
-    { name: 'Time Walk BGS 8.5', game: 'MTG · Unlimited', price: '$7,400', views: 45, watchers: 9, bg: 'linear-gradient(145deg,#1a1a2a,#0d0d1a)', icon: '⏳', status: 'draft' },
-  ]
-
-  const earnings = [
-    { name: 'Charizard 1st Ed PSA 10', date: 'Apr 4', gross: '$36,000', fee: '$1,080', ship: '$15', net: '$34,905' },
-    { name: 'Ancestral Recall BGS 9', date: 'Apr 2', gross: '$9,200', fee: '$276', ship: '$15', net: '$8,909' },
-    { name: 'Blastoise PSA 10', date: 'Mar 30', gross: '$3,800', fee: '$114', ship: '$15', net: '$3,671' },
-    { name: 'Time Walk BGS 8.5', date: 'Mar 27', gross: '$7,400', fee: '$222', ship: '$15', net: '$7,163' },
-  ]
-
-  const notifications = [
-    { dot: 'red', title: 'Action required — ship within 22hrs', body: 'Order #4821 (Charizard PSA 9). Buyer has funded escrow. If no carrier scan by Apr 8 12:00pm, buyer is automatically refunded and you receive Strike 1.', time: '1 hour ago', action: 'Print Label', unread: true },
-    { dot: 'green', title: 'Funds auto-released', body: 'Ancestral Recall BGS 9 (Order #4802). $8,909.00 USDC sent to your wallet. 72hr window expired with no dispute.', time: '3 hours ago', unread: false },
-    { dot: 'amber', title: 'New offer received', body: 'RareVault_99 made an offer of $3,900 on your Pikachu Illustrator PSA 7 (listed at $4,200).', time: '5 hours ago', action: 'Review', unread: true },
-    { dot: 'teal', title: 'Authentication passed', body: 'Mox Sapphire BGS 9 (Order #4819) passed authentication. Shipping to buyer within 24hrs.', time: 'Yesterday', unread: false },
-  ]
-
-  const statusColors = {
-    ship: { bg: 'rgba(200,75,60,0.1)', border: 'rgba(200,75,60,0.3)', color: 'var(--accent-red)' },
-    auth: { bg: 'rgba(201,168,76,0.1)', border: 'rgba(201,168,76,0.28)', color: 'var(--gold)' },
-    delivered: { bg: 'rgba(76,175,124,0.1)', border: 'rgba(76,175,124,0.3)', color: 'var(--accent-green)' },
-    transit: { bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)', color: 'var(--accent-blue)' },
-  }
-
-  const navItems = [
-    { id: 'overview', icon: '◈', label: 'Dashboard' },
-    { id: 'notifications', icon: '◉', label: 'Notifications', badge: '2', badgeColor: 'var(--accent-red)' },
-    { id: 'orders', icon: '⇄', label: 'Active Orders', badge: '4', badgeColor: 'var(--accent-amber)' },
-    { id: 'listings', icon: '◆', label: 'My Listings', badge: '24', badgeColor: 'var(--accent-green)' },
-    { id: 'new-listing', icon: '+', label: 'New Listing' },
-    { id: 'earnings', icon: '$', label: 'Earnings' },
-    { id: 'bond', icon: '🔒', label: 'Bond Wallet' },
-    { id: 'profile', icon: '◑', label: 'Profile' },
-  ]
+  const ordersNeedingShip = activeOrders.filter(o => o.status === 'funded')
+  const totalActiveSalesValue = myListings.reduce((sum, l) => sum + Number(l.price || 0), 0)
+  const totalCompletedRevenue = completedSales.reduce((sum, s) => sum + Number(s.escrow_amount || 0), 0)
+  const bondInFlight = activeOrders.reduce((sum, o) => sum + (Number(o.escrow_amount || 0) * bondRate), 0)
 
   const btn = (extra = {}) => ({
     background: 'transparent', border: '1.5px solid var(--border)',
     color: 'var(--text-secondary)', padding: '7px 14px', fontSize: '12px',
     fontFamily: 'DM Sans, sans-serif', fontWeight: 500,
-    cursor: 'pointer', borderRadius: '8px', ...extra
+    cursor: 'pointer', borderRadius: '8px', ...extra,
   })
 
   const inputStyle = {
     width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)',
     borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif',
-    fontSize: '13px', color: 'var(--text-primary)', outline: 'none',
+    fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
   }
 
   const Label = ({ text }) => (
-    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 500 }}>{text}</div>
+    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{text}</div>
   )
 
+  async function handlePhotoUpload(e) {
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    const urls = []
+    for (const file of files) {
+      const ext = file.name.split('.').pop()
+      const path = `listings/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error } = await supabase.storage.from('listing-photos').upload(path, file, { upsert: false })
+      if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from('listing-photos').getPublicUrl(path)
+        urls.push(publicUrl)
+      }
+    }
+    setPhotos(prev => [...prev, ...urls])
+  }
+
+  async function handleSubmitListing() {
+    setSubmitError('')
+    if (!formData.card_name.trim()) { setSubmitError('Card name is required'); return }
+    if (!price || parseFloat(price) < 1) { setSubmitError('Price must be at least $1'); return }
+    if (photos.length < 1) { setSubmitError('At least 1 photo is required'); return }
+
+    setSubmitting(true)
+    const isGraded = listingType === 'graded'
+    const priceNum = parseFloat(price)
+    const authTier = priceNum <= 300 ? 'remote' : 'physical'
+    const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+
+    const payload = {
+      seller_id:    user.id,
+      listing_type: listingType,
+      game:         formData.game,
+      card_name:    formData.card_name.trim(),
+      set:          formData.set.trim() || null,
+      card_number:  formData.card_number.trim() || null,
+      grade:        isGraded ? formData.grade.trim() || null : null,
+      grader:       isGraded ? (grader === 'Other' ? formData.grader_other.trim() : grader) : null,
+      cert_number:  isGraded && grader !== 'Other' ? formData.cert_number.trim() || null : null,
+      condition:    listingType === 'raw' ? formData.condition : null,
+      price:        priceNum,
+      auth_tier:    authTier,
+      photos:       photos,
+      status:       'active',
+      expires_at:   expiresAt,
+    }
+
+    const { error } = await supabase.from('listings').insert(payload)
+    setSubmitting(false)
+    if (error) {
+      setSubmitError('Failed to publish listing. Please try again.')
+    } else {
+      setPrice(''); setPhotos([]); setFormData({ game: 'Pokémon TCG', language: 'English', card_name: '', set: '', card_number: '', grade: '', cert_number: '', grader_other: '', condition: 'Near Mint (NM)', condition_notes: '', quantity: '', seal_condition: 'Factory Sealed — Unopened', lot_description: '' })
+      await fetchData()
+      setActiveSection('listings')
+    }
+  }
+
+  async function handleDeleteListing(id) {
+    await supabase.from('listings').update({ status: 'expired' }).eq('id', id).eq('seller_id', user.id)
+    setMyListings(prev => prev.filter(l => l.id !== id))
+  }
+
+  const navItems = [
+    { id: 'overview',     icon: '◈', label: 'Dashboard' },
+    { id: 'notifications',icon: '◉', label: 'Notifications' },
+    { id: 'orders',       icon: '⇄', label: 'Active Orders',  badgeColor: 'var(--accent-amber)' },
+    { id: 'listings',     icon: '◆', label: 'My Listings',    badgeColor: 'var(--accent-green)' },
+    { id: 'new-listing',  icon: '+', label: 'New Listing' },
+    { id: 'earnings',     icon: '$', label: 'Earnings' },
+    { id: 'bond',         icon: '🔒', label: 'Bond Wallet' },
+    { id: 'profile',      icon: '◑', label: 'Profile' },
+  ]
+
+  const navBadge = (id) => {
+    if (id === 'orders')   return activeOrders.length || null
+    if (id === 'listings') return myListings.length || null
+    return null
+  }
+
   const OrderRow = ({ order }) => {
-    const sc = statusColors[order.status]
+    const sm  = SELLER_STATUS_MAP[order.status] || SELLER_STATUS_MAP.shipped
+    const dl  = shipDeadline(order.created_at)
+    const hrs = order.status === 'funded' ? hoursUntil(dl) : null
+    const photo = order.listing?.photos?.[0]
     return (
-      <div style={{ background: 'var(--bg-2)', border: `1.5px solid ${order.urgent ? 'rgba(200,75,60,0.4)' : 'var(--border)'}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '10px' }}>
+      <div style={{ background: 'var(--bg-2)', border: `1.5px solid ${sm.urgent ? 'rgba(200,75,60,0.4)' : 'var(--border)'}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '10px' }}>
         <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '0.5px solid var(--border)', flexWrap: 'wrap' }}>
-          <div style={{ width: '32px', height: '46px', borderRadius: '4px', background: order.bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>{order.icon}</div>
-          <div style={{ flex: 1, minWidth: '120px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', lineHeight: 1.2, color: 'var(--text-primary)', marginBottom: '2px' }}>{order.name}</div>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{order.game} · {order.id} · Buyer: {order.buyer}</div>
+          <div style={{ width: '32px', height: '46px', borderRadius: '4px', background: 'var(--bg-4)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>
+            {photo ? <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🃏'}
           </div>
-          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, fontWeight: 500, flexShrink: 0 }}>{order.statusLabel}</span>
-          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{order.price}</div>
+          <div style={{ flex: 1, minWidth: '120px' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', lineHeight: 1.2, color: 'var(--text-primary)', marginBottom: '2px' }}>{order.listing?.card_name || '—'}</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{order.listing?.game} · {shortId(order.id)} · Buyer: {order.buyer?.username || '—'}</div>
+          </div>
+          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: sm.bg, border: `1px solid ${sm.border}`, color: sm.color, fontWeight: 500, flexShrink: 0 }}>{sm.label}</span>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{fmtUSD(order.escrow_amount)}</div>
         </div>
         <div style={{ padding: '12px 18px' }}>
-          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: order.urgent ? 'var(--accent-amber)' : 'var(--text-secondary)', background: 'var(--bg-3)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', lineHeight: 1.5 }}>
-            {order.urgent ? `⚠ Ship within deadline · ${order.deadline} · Auto-refund + Strike 1 if missed` : order.deadline}
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: sm.urgent ? 'var(--accent-amber)' : 'var(--text-secondary)', background: 'var(--bg-3)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', lineHeight: 1.5 }}>
+            {order.status === 'funded'            && `⚠ Ship within ${hrs}hrs · Deadline ${fmtDate(dl)} · Auto-refund + Strike if missed`}
+            {order.status === 'shipped'           && (order.tracking_a ? `Tracking: ${order.tracking_a}` : 'Shipped · En route to buyer')}
+            {order.status === 'in_transit'        && (order.tracking_a ? `In transit · ${order.tracking_a}` : 'In transit')}
+            {order.status === 'auth_pending'      && `At Chase Hollow HQ · Authentication in progress`}
+            {order.status === 'inspection_window' && (order.auto_release_at ? `Delivered · Buyer inspection window · Auto-releases ${fmtDate(order.auto_release_at)}` : 'Delivered · Buyer inspection window open')}
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {order.status === 'ship' && (order.priceNum || 9999) <= 300 && (
+            {order.status === 'funded' && order.listing?.auth_tier === 'remote' && (
               <>
                 <button style={{ background: 'rgba(60,125,200,0.15)', border: '1.5px solid rgba(60,125,200,0.4)', color: 'var(--accent-blue)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>📷 Upload 3 Photos</button>
                 <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>🖨 Print Label</button>
               </>
             )}
-            {order.status === 'ship' && (order.priceNum || 9999) > 300 && (
+            {order.status === 'funded' && order.listing?.auth_tier === 'physical' && (
               <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>🖨 Print Label → Ship to Auth Center</button>
             )}
-            <button style={btn()}>View Details</button>
-            <button style={btn()}>Message Buyer</button>
+            {order.listing?.id && (
+              <Link href={`/listing/${order.listing.id}`} style={{ textDecoration: 'none' }}>
+                <button style={btn()}>View Listing</button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
     )
   }
 
+  if (authLoading || (!user && !authLoading)) return null
+
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
-
-      {/* NAV */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'var(--nav-bg, rgba(10,10,11,0.94))', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-        <a href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '19px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-          <div style={{ width: '22px', height: '22px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
-          CHASE HOLLOW
-        </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={toggleTheme} style={{ width: '34px', height: '34px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: '14px', color: 'var(--text-secondary)' }}>{theme === 'dark' ? '🌙' : '☀️'}</button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', border: '1.5px solid var(--border)', borderRadius: '10px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '13px', fontWeight: 600, color: 'var(--teal)' }}>CK</div>
-            <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>CardKing_88</span>
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 7px', borderRadius: '20px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)', color: 'var(--gold)', fontWeight: 500 }}>⭐ Elite</span>
-          </div>
-          <button onClick={() => setActiveSection('new-listing')} style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>+ New Listing</button>
-        </div>
-      </nav>
-
-            <style>{`
+      <style>{`
         @media (max-width: 768px) {
           .dash-aside { display: none !important; }
           .dash-main { margin-left: 0 !important; width: 100% !important; max-width: 100% !important; padding: 16px 1rem 40px !important; }
           .mobile-section-nav { display: block !important; }
         }
-              @media (min-width: 769px) { .mobile-section-nav { display: none !important; } }
+        @media (min-width: 769px) { .mobile-section-nav { display: none !important; } }
       `}</style>
-<div style={{ display: 'flex', flexWrap: 'wrap', paddingTop: '64px', minHeight: '100vh' }}>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', paddingTop: '64px', minHeight: '100vh' }}>
 
         {/* SIDEBAR */}
         <aside className="dash-aside" style={{ width: '220px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '64px', left: 0, height: 'calc(100vh - 64px)', overflowY: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
-          {navItems.map((item, i) => (
-            <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%', marginTop: i === 4 ? '8px' : 0 }}>
-              <span style={{ width: '16px', textAlign: 'center', fontSize: '14px' }}>{item.icon}</span>
-              {item.label}
-              {item.badge && <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor, color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
-            </button>
-          ))}
+          {navItems.map((item, i) => {
+            const badge = navBadge(item.id)
+            return (
+              <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%', marginTop: i === 4 ? '8px' : 0 }}>
+                <span style={{ width: '16px', textAlign: 'center', fontSize: '14px' }}>{item.icon}</span>
+                {item.label}
+                {badge && <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor || 'var(--teal)', color: '#fff', fontWeight: 600 }}>{badge}</span>}
+              </button>
+            )
+          })}
+
           <div style={{ margin: '16px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', borderRadius: '10px', padding: '14px', marginTop: 'auto' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '10px', fontWeight: 500 }}>Seller Stats</div>
             {[
-              { label: 'Sales', val: '847' },
-              { label: 'Rating', val: '4.98 ★', gold: true },
-              { label: 'Strikes', val: '0', green: true },
-              { label: 'Bond tier', val: '1% per sale' },
+              { label: 'Rating',    val: profile?.rep_score ? `${profile.rep_score.toFixed(2)} ★` : '—', gold: true },
+              { label: 'Strikes',   val: String(profile?.strike_count ?? 0), green: profile?.strike_count === 0 },
+              { label: 'Tier',      val: TIER_LABEL[profile?.tier] || 'New' },
+              { label: 'Bond rate', val: `${((bondRate) * 100).toFixed(0)}% per sale` },
             ].map((stat, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '3px 0' }}>
                 <span style={{ color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '10px' }}>{stat.label}</span>
@@ -187,21 +316,10 @@ export default function SellerDashboard() {
 
         {/* MAIN */}
         <main className="dash-main" style={{ marginLeft: '220px', flex: 1, padding: '28px 24px 60px', minWidth: 0 }}>
-          {/* MOBILE NAV DROPDOWN */}
+          {/* MOBILE NAV */}
           <div className="mobile-section-nav" style={{ marginBottom: '20px', display: 'none' }}>
-            <select
-              value={activeSection}
-              onChange={e => setActiveSection(e.target.value)}
-              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
-            >
-              <option value="overview">Dashboard</option>
-              <option value="notifications">Notifications</option>
-              <option value="orders">Active Orders</option>
-              <option value="listings">My Listings</option>
-              <option value="new-listing">New Listing</option>
-              <option value="earnings">Earnings</option>
-              <option value="bond">Bond Wallet</option>
-              <option value="profile">Profile</option>
+            <select value={activeSection} onChange={e => setActiveSection(e.target.value)} style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}>
+              {navItems.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
           </div>
 
@@ -210,24 +328,30 @@ export default function SellerDashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: 'var(--text-primary)' }}>Welcome back, <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>CardKing_88</em></div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>Elite Seller · 847 sales · 0 strikes · Ship within 48hrs of sale</div>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: 'var(--text-primary)' }}>Welcome back, <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{profile?.username || 'Seller'}</em></div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{TIER_LABEL[profile?.tier] || 'New'} Seller · {completedSales.length} sales · {profile?.strike_count ?? 0} strikes · Ship within 48hrs of sale</div>
                 </div>
                 <button onClick={() => setActiveSection('new-listing')} style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>+ New Listing</button>
               </div>
-              <div style={{ background: 'rgba(200,75,60,0.06)', border: '1.5px solid rgba(200,75,60,0.3)', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>⚡ Action required — ship within 22hrs</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Order #4821 (Charizard PSA 9). If no carrier scan by Apr 8 12:00pm, buyer is automatically refunded and you receive Strike 1.</div>
+
+              {/* Ship-now alert */}
+              {ordersNeedingShip.length > 0 && (
+                <div style={{ background: 'rgba(200,75,60,0.06)', border: '1.5px solid rgba(200,75,60,0.3)', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>⚡ Action required — {ordersNeedingShip.length} order{ordersNeedingShip.length > 1 ? 's' : ''} waiting to ship</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{ordersNeedingShip[0].listing?.card_name || '—'} ({shortId(ordersNeedingShip[0].id)}). {hoursUntil(shipDeadline(ordersNeedingShip[0].created_at))}hrs remaining. Miss deadline = auto-refund + Strike 1.</div>
+                  </div>
+                  <button onClick={() => setActiveSection('orders')} style={{ background: 'var(--accent-red)', border: 'none', color: '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>Print Label →</button>
                 </div>
-                <button onClick={() => setActiveSection('orders')} style={{ background: 'var(--accent-red)', border: 'none', color: '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>Print Label →</button>
-              </div>
+              )}
+
+              {/* Metrics */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
                 {[
-                  { label: 'Active Orders', val: '4', sub: '1 needs shipping', color: 'var(--accent-red)' },
-                  { label: 'Active Listings', val: '24', sub: '$284k total value', color: 'var(--text-primary)' },
-                  { label: 'Monthly Revenue', val: '$48.2k', sub: '3% fee · Net after', color: 'var(--accent-green)' },
-                  { label: 'Bond In-Flight', val: '$1,824', sub: 'Returns within 5–7 days', color: 'var(--gold)' },
+                  { label: 'Active Orders',    val: String(activeOrders.length),           sub: ordersNeedingShip.length ? `${ordersNeedingShip.length} need shipping` : 'All on track',  color: ordersNeedingShip.length ? 'var(--accent-red)' : 'var(--text-primary)' },
+                  { label: 'Active Listings',  val: String(myListings.length),              sub: fmtUSD(totalActiveSalesValue) + ' total value',                                            color: 'var(--text-primary)' },
+                  { label: 'Completed Sales',  val: String(completedSales.length),          sub: fmtUSD(totalCompletedRevenue) + ' gross',                                                  color: 'var(--accent-green)' },
+                  { label: 'Bond In-Flight',   val: fmtUSD(bondInFlight),                   sub: 'Returns within 5–7 days',                                                                 color: 'var(--gold)' },
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px 18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
@@ -236,11 +360,18 @@ export default function SellerDashboard() {
                   </div>
                 ))}
               </div>
+
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
-                <button onClick={() => setActiveSection('orders')} style={{ fontSize: '11px', color: 'var(--teal)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 500 }}>View all →</button>
+                {activeOrders.length > 2 && <button onClick={() => setActiveSection('orders')} style={{ fontSize: '11px', color: 'var(--teal)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 500 }}>View all →</button>}
               </div>
-              {orders.slice(0, 2).map((order, i) => <OrderRow key={i} order={order} />)}
+              {dataLoading ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: '13px', fontFamily: 'DM Mono, monospace' }}>Loading orders…</div>
+              ) : activeOrders.length === 0 ? (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No active orders</div>
+              ) : (
+                activeOrders.slice(0, 2).map(order => <OrderRow key={order.id} order={order} />)
+              )}
             </div>
           )}
 
@@ -248,8 +379,14 @@ export default function SellerDashboard() {
           {activeSection === 'orders' && (
             <div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>4 orders in progress · Ship within 48hrs of sale (1 extension available) or buyer auto-refunded</div>
-              {orders.map((order, i) => <OrderRow key={i} order={order} />)}
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>{activeOrders.length} orders in progress · Ship within 48hrs of sale · One extension available</div>
+              {dataLoading ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: '13px', fontFamily: 'DM Mono, monospace' }}>Loading…</div>
+              ) : activeOrders.length === 0 ? (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No active orders</div>
+              ) : (
+                activeOrders.map(order => <OrderRow key={order.id} order={order} />)
+              )}
             </div>
           )}
 
@@ -259,31 +396,44 @@ export default function SellerDashboard() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>My <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listings</em></div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>24 active · $284k total value · Listings go live immediately</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{myListings.length} active · {fmtUSD(totalActiveSalesValue)} total value · Listings go live immediately</div>
                 </div>
                 <button onClick={() => setActiveSection('new-listing')} style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>+ New Listing</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
-                {listings.map((listing, i) => (
-                  <div key={i} style={{ background: 'var(--bg-2)', border: `1.5px solid ${listing.status === 'draft' ? 'rgba(232,168,56,0.3)' : 'var(--border)'}`, borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
-                    <div style={{ aspectRatio: '3/4', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                      <div style={{ width: '65%', aspectRatio: '2.5/3.5', borderRadius: '5px', background: listing.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', opacity: 0.7 }}>{listing.icon}</div>
-                      {listing.status === 'draft' && <div style={{ position: 'absolute', top: '8px', left: '8px', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(232,168,56,0.15)', border: '1px solid rgba(232,168,56,0.3)', color: 'var(--accent-amber)', fontWeight: 500 }}>Draft</div>}
-                      {listing.status === 'live' && <div style={{ position: 'absolute', top: '8px', left: '8px', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', color: 'var(--accent-green)', fontWeight: 500 }}>Live</div>}
-                    </div>
-                    <div style={{ padding: '12px 14px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '3px' }}>{listing.game}</div>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', lineHeight: 1.2, marginBottom: '6px', color: 'var(--text-primary)' }}>{listing.name}</div>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', marginBottom: '6px' }}>{listing.price}</div>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '10px' }}>{listing.views} views · {listing.watchers} watching</div>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button style={btn({ fontSize: '10px', padding: '5px 10px', flex: 1, textAlign: 'center' })}>Edit</button>
-                        <button style={btn({ fontSize: '10px', padding: '5px 10px', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)' })}>Remove</button>
+              {dataLoading ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: '13px', fontFamily: 'DM Mono, monospace' }}>Loading…</div>
+              ) : myListings.length === 0 ? (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '12px' }}>◆</div>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '8px' }}>No active listings</div>
+                  <button onClick={() => setActiveSection('new-listing')} style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>+ Create First Listing</button>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
+                  {myListings.map((listing) => {
+                    const photo = listing.photos?.[0]
+                    return (
+                      <div key={listing.id} style={{ background: 'var(--bg-2)', border: `1.5px solid ${listing.status === 'paused' ? 'rgba(232,168,56,0.3)' : 'var(--border)'}`, borderRadius: '12px', overflow: 'hidden' }}>
+                        <div style={{ aspectRatio: '3/4', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                          {photo ? <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ fontSize: '32px', opacity: 0.4 }}>🃏</div>}
+                          <div style={{ position: 'absolute', top: '8px', left: '8px', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: listing.status === 'paused' ? 'rgba(232,168,56,0.15)' : 'rgba(76,175,124,0.1)', border: `1px solid ${listing.status === 'paused' ? 'rgba(232,168,56,0.3)' : 'rgba(76,175,124,0.3)'}`, color: listing.status === 'paused' ? 'var(--accent-amber)' : 'var(--accent-green)', fontWeight: 500 }}>{listing.status === 'paused' ? 'Paused' : 'Live'}</div>
+                        </div>
+                        <div style={{ padding: '12px 14px' }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '3px' }}>{listing.game}</div>
+                          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', lineHeight: 1.2, marginBottom: '6px', color: 'var(--text-primary)' }}>{listing.card_name}</div>
+                          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', marginBottom: '10px' }}>{fmtUSD(listing.price)}</div>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <Link href={`/listing/${listing.id}`} style={{ textDecoration: 'none', flex: 1 }}>
+                              <button style={btn({ fontSize: '10px', padding: '5px 10px', width: '100%', textAlign: 'center' })}>View</button>
+                            </Link>
+                            <button onClick={() => handleDeleteListing(listing.id)} style={btn({ fontSize: '10px', padding: '5px 10px', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)' })}>Remove</button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -307,11 +457,10 @@ export default function SellerDashboard() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Card Details</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <Label text="GAME" />
-                      <select style={{ ...inputStyle, cursor: 'pointer' }}>
+                      <select value={formData.game} onChange={e => setFormData(p => ({ ...p, game: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
                         <option>Pokémon TCG</option>
                         <option>Magic: The Gathering</option>
                         <option>One Piece TCG</option>
@@ -322,7 +471,7 @@ export default function SellerDashboard() {
                     </div>
                     <div>
                       <Label text="LANGUAGE" />
-                      <select style={{ ...inputStyle, cursor: 'pointer' }}>
+                      <select value={formData.language} onChange={e => setFormData(p => ({ ...p, language: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
                         <option>English</option>
                         <option>Japanese</option>
                         <option>Korean</option>
@@ -331,24 +480,21 @@ export default function SellerDashboard() {
                       </select>
                     </div>
                   </div>
-
                   <div>
-                    <Label text="CARD NAME" />
-                    <input type="text" placeholder="e.g. Charizard Holo" style={inputStyle} />
+                    <Label text="CARD NAME *" />
+                    <input type="text" placeholder="e.g. Charizard Holo" value={formData.card_name} onChange={e => setFormData(p => ({ ...p, card_name: e.target.value }))} style={inputStyle} />
                   </div>
-
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <Label text="SET / EDITION" />
-                      <input type="text" placeholder="e.g. Base Set Shadowless" style={inputStyle} />
+                      <input type="text" placeholder="e.g. Base Set Shadowless" value={formData.set} onChange={e => setFormData(p => ({ ...p, set: e.target.value }))} style={inputStyle} />
                     </div>
                     <div>
                       <Label text="CARD NUMBER" />
-                      <input type="text" placeholder="e.g. 4/102" style={inputStyle} />
+                      <input type="text" placeholder="e.g. 4/102" value={formData.card_number} onChange={e => setFormData(p => ({ ...p, card_number: e.target.value }))} style={inputStyle} />
                     </div>
                   </div>
 
-                  {/* GRADED fields */}
                   {listingType === 'graded' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -364,36 +510,30 @@ export default function SellerDashboard() {
                         </div>
                         <div>
                           <Label text="GRADE" />
-                          <input type="text" placeholder="e.g. 9 or 9.5" style={inputStyle} />
+                          <input type="text" placeholder="e.g. 9 or 9.5" value={formData.grade} onChange={e => setFormData(p => ({ ...p, grade: e.target.value }))} style={inputStyle} />
                         </div>
                       </div>
                       {grader !== 'Other' ? (
                         <div>
                           <Label text={`CERT NUMBER (${grader})`} />
-                          <input type="text" placeholder="e.g. 12847291" style={inputStyle} />
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
-                            Buyers and our authenticators will verify this cert on the {grader} official database. Must be accurate.
-                          </div>
+                          <input type="text" placeholder="e.g. 12847291" value={formData.cert_number} onChange={e => setFormData(p => ({ ...p, cert_number: e.target.value }))} style={inputStyle} />
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>Buyers and our authenticators will verify this cert on the {grader} official database. Must be accurate.</div>
                         </div>
                       ) : (
                         <div>
                           <Label text="GRADER NAME" />
-                          <input type="text" placeholder="e.g. TAG, HGA, Arena Club..." style={inputStyle} />
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
-                            No cert verification will be shown. Our authenticators will verify slab integrity and grade label match only.
-                          </div>
+                          <input type="text" placeholder="e.g. TAG, HGA, Arena Club…" value={formData.grader_other} onChange={e => setFormData(p => ({ ...p, grader_other: e.target.value }))} style={inputStyle} />
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* RAW fields */}
                   {listingType === 'raw' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                         <div>
                           <Label text="CONDITION" />
-                          <select style={{ ...inputStyle, cursor: 'pointer' }}>
+                          <select value={formData.condition} onChange={e => setFormData(p => ({ ...p, condition: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
                             <option>Near Mint (NM)</option>
                             <option>Lightly Played (LP)</option>
                             <option>Moderately Played (MP)</option>
@@ -408,24 +548,21 @@ export default function SellerDashboard() {
                       </div>
                       <div>
                         <Label text="CONDITION NOTES (Required)" />
-                        <textarea placeholder="Describe any flaws, wear, creases, or notable details buyers should know. Be accurate — our authenticators will verify condition matches your description." style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
+                        <textarea placeholder="Describe any flaws, wear, creases, or notable details buyers should know." value={formData.condition_notes} onChange={e => setFormData(p => ({ ...p, condition_notes: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
                       </div>
-                      <div style={{ background: 'rgba(232,168,56,0.06)', border: '1px solid rgba(232,168,56,0.25)', borderRadius: '8px', padding: '10px 12px', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                        ⚠ Raw cards are authenticated for condition match. Our authenticators verify the received card matches your description and photos. Misrepresented condition results in rejection, full buyer refund, and a strike.
-                      </div>
+                      <div style={{ background: 'rgba(232,168,56,0.06)', border: '1px solid rgba(232,168,56,0.25)', borderRadius: '8px', padding: '10px 12px', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>⚠ Raw cards are authenticated for condition match. Misrepresented condition results in rejection, full buyer refund, and a strike.</div>
                     </div>
                   )}
 
-                  {/* PACK / BOX / CASE fields */}
                   {(listingType === 'pack' || listingType === 'box' || listingType === 'case') && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
                         <Label text="QUANTITY" />
-                        <input type="number" placeholder="e.g. 1" style={inputStyle} />
+                        <input type="number" placeholder="e.g. 1" value={formData.quantity} onChange={e => setFormData(p => ({ ...p, quantity: e.target.value }))} style={inputStyle} />
                       </div>
                       <div>
                         <Label text="SEAL CONDITION" />
-                        <select style={{ ...inputStyle, cursor: 'pointer' }}>
+                        <select value={formData.seal_condition} onChange={e => setFormData(p => ({ ...p, seal_condition: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
                           <option>Factory Sealed — Unopened</option>
                           <option>Resealed — Disclosed</option>
                           <option>Open / Loose</option>
@@ -434,47 +571,54 @@ export default function SellerDashboard() {
                     </div>
                   )}
 
-                  {/* LOT fields */}
                   {listingType === 'lot' && (
                     <div>
                       <Label text="LOT DESCRIPTION" />
-                      <textarea placeholder="Describe all cards included — names, sets, conditions, grades if any." style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
+                      <textarea placeholder="Describe all cards included — names, sets, conditions, grades if any." value={formData.lot_description} onChange={e => setFormData(p => ({ ...p, lot_description: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
                     </div>
                   )}
-
                 </div>
               </div>
 
               {/* Photos */}
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Photos (Required · Min 3)</div>
-                <div style={{ border: '2px dashed var(--border)', borderRadius: '10px', padding: '32px', textAlign: 'center', cursor: 'pointer', background: 'var(--bg-3)', marginBottom: '10px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Photos (Required · Min 1)</div>
+                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={{ display: 'none' }} />
+                <div onClick={() => fileInputRef.current?.click()} style={{ border: '2px dashed var(--border)', borderRadius: '10px', padding: '32px', textAlign: 'center', cursor: 'pointer', background: 'var(--bg-3)', marginBottom: photos.length ? '12px' : '0' }}>
                   <div style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.4 }}>📷</div>
                   <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 500 }}>Upload Card Photos</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     {listingType === 'graded' && 'Front, back, full slab, grade label · Min 3 required'}
-                    {listingType === 'raw' && 'Front, back, all four corners · Min 4 required'}
+                    {listingType === 'raw'    && 'Front, back, all four corners · Min 4 required'}
                     {(listingType === 'pack' || listingType === 'box' || listingType === 'case') && 'All sides of sealed product · Min 3 required'}
-                    {listingType === 'lot' && 'All cards spread out + individual shots · Min 4 required'}
+                    {listingType === 'lot'   && 'All cards spread out + individual shots · Min 4 required'}
                   </div>
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                  Photos are used by our authenticators to verify the card received matches your listing exactly.
-                </div>
+                {photos.length > 0 && (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {photos.map((url, i) => (
+                      <div key={i} style={{ position: 'relative', width: '60px', height: '84px', borderRadius: '4px', overflow: 'hidden', border: '1.5px solid var(--border)' }}>
+                        <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button onClick={() => setPhotos(p => p.filter((_, j) => j !== i))} style={{ position: 'absolute', top: '2px', right: '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Price + fees */}
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Price & Fee Calculator</div>
-                <Label text="LISTING PRICE (USDC)" />
+                <Label text="LISTING PRICE (USDC) *" />
                 <input type="number" placeholder="Minimum $1" value={price} onChange={e => setPrice(e.target.value)} style={{ ...inputStyle, marginBottom: '14px', fontSize: '18px', fontFamily: 'Cormorant Garamond, serif' }} />
                 {price && (
                   <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px' }}>
                     {[
-                      { label: 'Your listing price', val: `$${parseFloat(price).toLocaleString()}` },
-                      { label: 'Platform fee (3.5%)', val: `-$${fees.platform}` },
-                      { label: 'Shipping & insurance', val: `-$${fees.shipSeller}` },
-                      { label: 'You receive on settlement', val: `$${fees.net}`, green: true, total: true },
+                      { label: 'Your listing price',       val: `$${parseFloat(price).toLocaleString()}` },
+                      { label: 'Platform fee (3.5%)',      val: `-$${fees.platform}` },
+                      { label: 'Shipping & insurance',     val: `-$${fees.shipCost}` },
+                      { label: 'Auth tier',                val: parseFloat(price) <= 300 ? 'Remote Photo ($10 buyer)' : 'Physical ($25 buyer)' },
+                      { label: 'You receive on settlement',val: `$${fees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
                         <span style={{ color: row.total ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row.total ? 600 : 400 }}>{row.label}</span>
@@ -485,13 +629,13 @@ export default function SellerDashboard() {
                 )}
               </div>
 
-              {/* Notices */}
+              {/* Bond notice */}
               <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', marginBottom: '8px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', fontWeight: 500 }}>Bond — Separate from fees</div>
                 {[
-                  { label: 'Bond posted at purchase', val: price ? `-$${(parseFloat(price) * 0.01).toFixed(2)} (1% Elite)` : '-1% of sale price', amber: true },
-                  { label: 'Bond returned', val: 'Within 5–7 days', green: true },
-                  { label: 'Net bond cost', val: '$0.00', green: true },
+                  { label: 'Bond posted at purchase', val: price && bondAmount ? `-$${bondAmount} (${(bondRate * 100).toFixed(0)}% ${TIER_LABEL[profile?.tier] || 'New'})` : `-${(bondRate * 100).toFixed(0)}% of sale price`, amber: true },
+                  { label: 'Bond returned',            val: 'Within 5–7 days', green: true },
+                  { label: 'Net bond cost',            val: '$0.00', green: true },
                 ].map((row, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: i < 2 ? '0.5px solid var(--border)' : 'none' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
@@ -504,9 +648,12 @@ export default function SellerDashboard() {
                 <strong style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Ship within 48hrs of sale.</strong> One free extension available. Miss deadline = auto-refund to buyer + Strike 1. Three strikes = permanent ban.
               </div>
 
+              {submitError && (
+                <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: 'var(--accent-red)' }}>{submitError}</div>
+              )}
+
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button style={{ flex: 1, background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '14px', fontSize: '14px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Publish Listing — Go Live</button>
-                <button style={btn({ padding: '14px 20px', borderRadius: '10px' })}>Save Draft</button>
+                <button onClick={handleSubmitListing} disabled={submitting} style={{ flex: 1, background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '14px', fontSize: '14px', fontWeight: 700, borderRadius: '10px', cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: submitting ? 0.7 : 1 }}>{submitting ? 'Publishing…' : 'Publish Listing — Go Live'}</button>
               </div>
             </div>
           )}
@@ -517,15 +664,14 @@ export default function SellerDashboard() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div>
                   <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Earnings</em></div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>847 completed sales · All USDC on Base</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{completedSales.length} completed sales · All USDC on Base</div>
                 </div>
-                <button style={btn()}>Export CSV</button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
                 {[
-                  { label: 'Lifetime Revenue', val: '$1.24M', sub: 'Gross sales', color: 'var(--gold)' },
-                  { label: 'Fees Paid (3%)', val: '$37,200', sub: 'Platform fee only', color: 'var(--accent-red)' },
-                  { label: 'Net Received', val: '$1.19M', sub: 'After fees + shipping', color: 'var(--accent-green)' },
+                  { label: 'Gross Revenue',  val: fmtUSD(totalCompletedRevenue), sub: 'All completed sales', color: 'var(--gold)' },
+                  { label: 'Fees Paid (3.5%)',val: fmtUSD(totalCompletedRevenue * 0.035), sub: 'Platform fee',    color: 'var(--accent-red)' },
+                  { label: 'Net Received',   val: fmtUSD(totalCompletedRevenue * (1 - 0.035) - completedSales.length * 15), sub: 'After fees + shipping', color: 'var(--accent-green)' },
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
@@ -534,32 +680,41 @@ export default function SellerDashboard() {
                   </div>
                 ))}
               </div>
-              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
-                      {['Card', 'Date', 'Gross', 'Fee (3%)', 'Shipping', 'Net Received'].map((h, i) => (
-                        <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 14px', fontWeight: 500 }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {earnings.map((sale, i) => (
-                      <tr key={i} style={{ borderBottom: i < earnings.length - 1 ? '0.5px solid var(--border)' : 'none' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{sale.name}</td>
-                        <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{sale.date}</td>
-                        <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--gold)', fontWeight: 600 }}>{sale.gross}</td>
-                        <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>-{sale.fee}</td>
-                        <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>-{sale.ship}</td>
-                        <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--accent-green)', fontWeight: 600 }}>{sale.net}</td>
+              {completedSales.length === 0 ? (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '13px' }}>No completed sales yet</div>
+              ) : (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
+                        {['Card', 'Date', 'Gross', 'Fee (3.5%)', 'Net'].map((h, i) => (
+                          <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 14px', fontWeight: 500 }}>{h}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {completedSales.map((sale, i) => {
+                        const gross = Number(sale.escrow_amount || 0)
+                        const fee   = gross * 0.035
+                        const ship  = Number(sale.shipping_cost || 15)
+                        const net   = gross - fee - ship
+                        return (
+                          <tr key={sale.id} style={{ borderBottom: i < completedSales.length - 1 ? '0.5px solid var(--border)' : 'none' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{sale.listing?.card_name || '—'}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(sale.released_at)}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--gold)', fontWeight: 600 }}>{fmtUSD(gross)}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>-{fmtUSD(fee)}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--accent-green)', fontWeight: 600 }}>{fmtUSD(net)}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -570,9 +725,9 @@ export default function SellerDashboard() {
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>Bonds post per transaction when a buyer purchases — not when you list. All bonds return within 5–7 days on completion.</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
                 {[
-                  { label: 'Currently Locked', val: '$1,824', sub: 'Across 4 active orders · Returns within 5–7 days each', color: 'var(--accent-amber)' },
-                  { label: 'Returned This Month', val: '$12,400', sub: '124 completed transactions', color: 'var(--accent-green)' },
-                  { label: 'Bond Tier', val: '1%', sub: 'Elite seller · Lowest tier', color: 'var(--teal)' },
+                  { label: 'Currently Locked', val: fmtUSD(bondInFlight), sub: `Across ${activeOrders.length} active orders · Returns within 5–7 days each`, color: 'var(--accent-amber)' },
+                  { label: 'Bond Tier',         val: `${(bondRate * 100).toFixed(0)}%`, sub: `${TIER_LABEL[profile?.tier] || 'New'} seller`,                                   color: 'var(--teal)' },
+                  { label: 'Strikes',           val: String(profile?.strike_count ?? 0), sub: profile?.strike_count === 0 ? 'None — clean record' : 'Strike 2 → bond jumps to 4%', color: profile?.strike_count === 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
@@ -584,45 +739,36 @@ export default function SellerDashboard() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Bond Tier Structure</div>
                 {[
-                  { tier: 'New Seller', sales: '0–9 sales', bond: '4%', active: false },
-                  { tier: 'Trusted', sales: '10–99 sales', bond: '3%', active: false },
-                  { tier: 'Pro', sales: '100–499 sales', bond: '2%', active: false },
-                  { tier: 'Elite', sales: '500+ sales', bond: '1%', active: true },
-                ].map((t, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '10px 0', borderBottom: i < 3 ? '0.5px solid var(--border)' : 'none' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: t.active ? 600 : 400, color: t.active ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{t.tier} {t.active && '← You are here'}</div>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{t.sales}</div>
+                  { tier: 'New Seller', range: '0–9 sales',   rate: 4 },
+                  { tier: 'Trusted',    range: '10–99 sales',  rate: 3 },
+                  { tier: 'Pro',        range: '100–499 sales',rate: 2 },
+                  { tier: 'Elite',      range: '500+ sales',   rate: 1 },
+                ].map((t, i) => {
+                  const tierKey = ['new', 'trusted', 'pro', 'elite'][i]
+                  const isMe = profile?.tier === tierKey
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '10px 0', borderBottom: i < 3 ? '0.5px solid var(--border)' : 'none' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: isMe ? 600 : 400, color: isMe ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{t.tier} {isMe && '← You are here'}</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{t.range}</div>
+                      </div>
+                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: isMe ? 'var(--teal)' : 'var(--text-muted)' }}>{t.rate}%</div>
                     </div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: t.active ? 'var(--teal)' : 'var(--text-muted)' }}>{t.bond}</div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
 
-          {/* NOTIFICATIONS */}
+          {/* NOTIFICATIONS — Phase 3 */}
           {activeSection === 'notifications' && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Notifications</em></div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>2 unread</div>
-                </div>
-                <button style={btn()}>Mark all read</button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {notifications.map((notif, i) => (
-                  <div key={i} style={{ background: 'var(--bg-2)', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: '12px', border: notif.unread ? '1.5px solid var(--teal-border)' : '1.5px solid var(--border)', borderLeft: notif.unread ? '3px solid var(--teal)' : '1.5px solid var(--border)' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: notif.dot === 'red' ? 'var(--accent-red)' : notif.dot === 'green' ? 'var(--accent-green)' : notif.dot === 'amber' ? 'var(--accent-amber)' : 'var(--teal)', flexShrink: 0, marginTop: '5px' }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{notif.title}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{notif.body}</div>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>{notif.time}</div>
-                    </div>
-                    {notif.action && <button onClick={() => setActiveSection('orders')} style={btn({ fontSize: '11px', padding: '6px 12px', flexShrink: 0, background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>{notif.action}</button>}
-                  </div>
-                ))}
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Notifications</em></div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>Email notifications active — in-app alerts coming in Phase 3</div>
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontSize: '32px', marginBottom: '12px' }}>◉</div>
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '8px' }}>In-app notifications coming in Phase 3</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>You're receiving order updates by email. Real-time alerts will be added at public launch.</div>
               </div>
             </div>
           )}
@@ -634,7 +780,9 @@ export default function SellerDashboard() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <div style={{ fontSize: '48px', marginBottom: '12px' }}>◑</div>
                 <div>Profile settings — bio, specialties, shipping preferences, contact info.</div>
-                <a href="/profile" style={{ color: 'var(--teal)', textDecoration: 'none', fontSize: '13px', marginTop: '12px', display: 'block' }}>View public profile →</a>
+                {profile?.username && (
+                  <Link href={`/profile/${profile.username}`} style={{ color: 'var(--teal)', textDecoration: 'none', fontSize: '13px', marginTop: '12px', display: 'block' }}>View public profile →</Link>
+                )}
               </div>
             </div>
           )}
