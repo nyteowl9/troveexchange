@@ -1,12 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/app/context/AuthContext'
 
-export default function SignInPage() {
+export default function SignInPageWrapper() {
+  return (
+    <Suspense>
+      <SignInPage />
+    </Suspense>
+  )
+}
+
+function SignInPage() {
   const [mode, setMode] = useState('signin') // 'signin' | 'signup' | 'confirm'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

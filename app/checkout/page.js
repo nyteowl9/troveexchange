@@ -1,12 +1,21 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useWalletConnection } from '@/app/components/ConnectWallet'
 import { supabase } from '@/lib/supabase'
 
-export default function Checkout() {
+// useSearchParams() requires a Suspense boundary in Next.js App Router
+export default function CheckoutPage() {
+  return (
+    <Suspense>
+      <Checkout />
+    </Suspense>
+  )
+}
+
+function Checkout() {
   const [theme, setTheme] = useState('dark')
   const [step, setStep] = useState(1)
   const [ack1, setAck1] = useState(false)
