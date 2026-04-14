@@ -15,7 +15,7 @@ export default function SignInPageWrapper() {
 }
 
 function SignInPage() {
-  const [mode, setMode] = useState('signin') // 'signin' | 'signup' | 'confirm'
+  const [mode, setMode] = useState('signin') // 'signin' | 'signup' | 'confirm' | 'forgot' | 'forgot_sent'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
@@ -55,6 +55,18 @@ function SignInPage() {
       setLoading(false)
     }
     // On success browser redirects — no need to setLoading(false)
+  }
+
+  async function handleForgotPassword(e) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+    })
+    setLoading(false)
+    if (error) { setError(error.message); return }
+    setMode('forgot_sent')
   }
 
   async function handleSubmit(e) {
@@ -129,6 +141,53 @@ function SignInPage() {
           <button onClick={() => setMode('signin')} style={{ color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', fontFamily: 'DM Sans, sans-serif' }}>
             Back to sign in
           </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (mode === 'forgot' || mode === 'forgot_sent') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-1)', padding: '2rem' }}>
+        <div style={{ maxWidth: '400px', width: '100%' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+            <Link href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+              <div style={{ width: '24px', height: '24px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
+              CHASE HOLLOW
+            </Link>
+          </div>
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '16px', padding: '2rem' }}>
+            {mode === 'forgot_sent' ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ width: '52px', height: '52px', background: 'rgba(76,175,124,0.12)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: '22px' }}>✓</div>
+                <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 0.75rem' }}>Check your email</h2>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.65, margin: '0 0 1.5rem' }}>
+                  We sent a password reset link to <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>. Click it to set a new password.
+                </p>
+                <button onClick={() => { setMode('signin'); setError('') }} style={{ color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', fontFamily: 'DM Sans, sans-serif' }}>
+                  Back to sign in
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>Reset password</h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 1.5rem', lineHeight: 1.6 }}>Enter your email and we'll send you a reset link.</p>
+                <form onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontFamily: 'DM Mono, monospace', color: 'var(--text-secondary)', letterSpacing: '0.08em', marginBottom: '6px', textTransform: 'uppercase' }}>Email</label>
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com" style={{ width: '100%', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', color: 'var(--text-primary)', fontFamily: 'DM Sans, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                  {error && <div style={{ background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: 'var(--accent-red)' }}>{error}</div>}
+                  <button type="submit" disabled={loading} style={{ background: 'var(--gold)', color: '#0A0A0B', border: 'none', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: 700, fontFamily: 'DM Sans, sans-serif', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+                    {loading ? '...' : 'Send Reset Link'}
+                  </button>
+                  <button type="button" onClick={() => { setMode('signin'); setError('') }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '13px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                    Back to sign in
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -312,6 +371,14 @@ function SignInPage() {
                 style={inputStyle}
               />
             </div>
+
+            {mode === 'signin' && (
+              <div style={{ textAlign: 'right', marginTop: '-4px' }}>
+                <button type="button" onClick={() => { setMode('forgot'); setError('') }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
             {error && (
               <div style={{ background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: 'var(--accent-red)' }}>
