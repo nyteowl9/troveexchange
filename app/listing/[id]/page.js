@@ -1,94 +1,133 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import Nav from '@/app/components/Nav'
+import { supabase } from '@/lib/supabase'
 
-export default function Listing() {
-  const [theme, setTheme] = useState('dark')
+const TIER_COLORS = {
+  elite:   { color: 'var(--gold)',         bg: 'rgba(201,168,76,0.15)', border: 'rgba(201,168,76,0.3)',  label: '⭐ Elite' },
+  pro:     { color: 'var(--accent-amber)', bg: 'rgba(232,168,56,0.1)', border: 'rgba(232,168,56,0.3)',  label: 'Pro' },
+  trusted: { color: 'var(--accent-blue)',  bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)',  label: 'Trusted' },
+  new:     { color: 'var(--text-muted)',   bg: 'rgba(255,255,255,0.05)', border: 'var(--border)',        label: 'New' },
+}
+
+export default function ListingPage() {
+  const { id } = useParams()
+  const router = useRouter()
+  const [listing, setListing] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
   const [activePhoto, setActivePhoto] = useState(0)
-  const [activeTab, setActiveTab] = useState('7d')
   const [showBuyModal, setShowBuyModal] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem('ch-theme') || 'dark'
-    setTheme(saved)
-    document.documentElement.setAttribute('data-theme', saved)
-    const checkMobile = () => setIsMobile(window.innerWidth <= 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    const check = () => setIsMobile(window.innerWidth <= 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
   }, [])
 
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark'
-    setTheme(next)
-    document.documentElement.setAttribute('data-theme', next)
-    localStorage.setItem('ch-theme', next)
+  useEffect(() => {
+    if (!id) return
+    loadListing()
+  }, [id])
+
+  async function loadListing() {
+    setLoading(true)
+    const { data } = await supabase
+      .from('listings')
+      .select(`
+        id, card_name, game, set, card_number, grade, grader, cert_number,
+        condition, listing_type, price, auth_tier, photos, created_at, expires_at, status,
+        seller:seller_id (id, username, full_name, tier, strike_count, wallet_address)
+      `)
+      .eq('id', id)
+      .single()
+
+    if (!data || data.status !== 'active') {
+      setNotFound(true)
+    } else {
+      setListing(data)
+    }
+    setLoading(false)
   }
 
-  const photos = [
-    { label: 'Front', icon: '⚡' },
-    { label: 'Back', icon: '▭' },
-    { label: 'Slab', icon: '◎' },
-    { label: 'Label', icon: '⊡' },
-    { label: 'Surface', icon: '🔍' },
-  ]
-
-  const priceHistory = {
-    '7d': [420, 435, 450, 445, 460, 475, 487],
-    '30d': [380, 395, 410, 405, 420, 430, 445, 450, 460, 475, 487],
-    '90d': [310, 330, 350, 360, 375, 390, 400, 410, 420, 435, 450, 487],
-    '1y': [220, 250, 280, 310, 330, 360, 380, 400, 420, 450, 470, 487],
+  if (loading) {
+    return (
+      <>
+        <Nav />
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', paddingTop: '64px' }}>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>Loading...</div>
+        </div>
+      </>
+    )
   }
 
-  const recentSales = [
-    { date: 'Apr 2, 2025', grade: 'PSA 9', price: '$472', platform: 'Chase Hollow' },
-    { date: 'Mar 28, 2025', grade: 'PSA 9', price: '$461', platform: 'Chase Hollow' },
-    { date: 'Mar 15, 2025', grade: 'PSA 9', price: '$448', platform: 'Chase Hollow' },
-    { date: 'Feb 22, 2025', grade: 'PSA 9', price: '$430', platform: 'Chase Hollow' },
-    { date: 'Feb 10, 2025', grade: 'PSA 9', price: '$415', platform: 'Chase Hollow' },
+  if (notFound) {
+    return (
+      <>
+        <Nav />
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', gap: '16px', paddingTop: '64px' }}>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '48px', color: 'var(--text-muted)' }}>404</div>
+          <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '14px', color: 'var(--text-secondary)' }}>This listing doesn't exist or is no longer active.</div>
+          <Link href="/marketplace" style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--gold)', textDecoration: 'none' }}>← Back to Marketplace</Link>
+        </div>
+      </>
+    )
+  }
+
+  const { card_name, game, set, card_number, grade, grader, cert_number, condition, listing_type, price, auth_tier, photos, seller } = listing
+  const isGraded = listing_type === 'graded' && grader
+  const isPhysical = auth_tier === 'physical'
+  const authFee = isPhysical ? 25 : 10
+  const buyTotal = (parseFloat(price) + authFee).toFixed(2)
+  const tc = TIER_COLORS[seller?.tier] || TIER_COLORS.new
+  const sellerInitials = (seller?.username || '??').slice(0, 2).toUpperCase()
+  const photoList = photos?.filter(Boolean) || []
+
+  const detailCells = [
+    isGraded && { label: 'Grader',    val: grader,      color: 'var(--accent-blue)' },
+    isGraded && { label: 'Grade',     val: grade,       color: 'var(--accent-green)' },
+    isGraded && cert_number && { label: 'Cert #', val: cert_number, mono: true },
+    card_number && { label: 'Card #', val: card_number, mono: true },
+    set && { label: 'Set',            val: set },
+    condition && { label: 'Condition', val: condition },
+    { label: 'Type', val: listing_type?.charAt(0).toUpperCase() + listing_type?.slice(1) },
+    { label: 'Game', val: game },
+  ].filter(Boolean)
+
+  const authChecklist = isPhysical
+    ? ['Photos match listing exactly', 'Grade label verified on slab', `Cert #${cert_number || '—'} verified on ${grader || ''} database`, 'Slab intact — no cracks, tampering, or re-sealing', 'Holo sticker authentic', 'If anything doesn\'t match — full refund, automatically']
+    : [`Front, back, and sealed-package photos reviewed`, `${isGraded ? `Grade label shows ${grader} ${grade} — verified` : 'Condition matches listing'}`, isGraded ? `Cert #${cert_number || '—'} verified on ${grader || ''} database` : null, 'If anything doesn\'t match — full refund, automatically']
+  const authChecklistFiltered = authChecklist.filter(Boolean)
+
+  const transactionSteps = [
+    { num: '01', title: 'You Lock USDC in Escrow', desc: `$${buyTotal}+ USDC locked in smart contract on Base. Neither party can touch it. Seller is notified immediately.` },
+    { num: '02', title: isPhysical ? 'Seller Ships to Chase Hollow' : 'Seller Ships Direct + Photos', desc: isPhysical ? 'Seller ships to our auth center within 48hrs. Miss the deadline — your USDC auto-refunds automatically.' : 'Seller uploads 3 photos and ships directly to you within 48hrs. Photos reviewed during transit. Miss the deadline — auto-refund.' },
+    { num: '03', title: isPhysical ? 'Expert Authentication' : 'Photo Review In Transit', desc: isPhysical ? 'Our authenticator physically verifies the card — photos, grade label, cert number, slab integrity. Pass = ships to you.' : 'Our staff reviews the 3 uploaded photos while your card is in transit. Pass = card continues to you. Fail = full refund.' },
+    { num: '04', title: 'Delivered · Auto-Release', desc: 'Card ships to your address. 72hrs after delivery, USDC releases to seller automatically. You can release early anytime.' },
   ]
-
-  const reviews = [
-    { user: 'RareVault_99', rating: 5, text: 'Perfect transaction. Card exactly as described. Ships same day. Best seller on the platform.', date: 'Apr 2025', card: 'Ancestral Recall BGS 9' },
-    { user: 'MTGLegacy', rating: 5, text: 'Third purchase from CardKing. Always flawless. The authentication step gives real peace of mind on high value purchases.', date: 'Mar 2025', card: 'Black Lotus BGS 8.5' },
-    { user: 'SlabHunter_X', rating: 5, text: 'Exactly as listed. Fast shipping. Authentication passed no problem. Will buy again.', date: 'Mar 2025', card: 'Pikachu Illustrator PSA 8' },
-  ]
-
-  const cardPrice = 487
-  const authFee = cardPrice <= 300 ? 10 : 25
-  const authTier = cardPrice <= 300 ? 'remote' : 'physical'
-  const salesTax = parseFloat((cardPrice * 0.095).toFixed(2))
-  const total = (cardPrice + authFee + parseFloat(salesTax)).toFixed(2)
-
-  const currentPrices = priceHistory[activeTab]
-  const maxPrice = Math.max(...currentPrices)
-  const minPrice = Math.min(...currentPrices)
 
   const btn = (extra = {}) => ({
-    background: 'transparent',
-    border: '1.5px solid var(--border)',
-    color: 'var(--text-secondary)',
-    padding: '8px 18px', fontSize: '12px',
+    background: 'transparent', border: '1.5px solid var(--border)',
+    color: 'var(--text-secondary)', padding: '8px 18px', fontSize: '12px',
     fontFamily: 'DM Sans, sans-serif', fontWeight: 500,
-    cursor: 'pointer', borderRadius: '8px', ...extra
+    cursor: 'pointer', borderRadius: '8px', ...extra,
   })
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%', overflowX: 'hidden' }}>
+      <Nav />
+
       <style>{`
         @media (max-width: 768px) {
-          .listing-grid { grid-template-columns: 1fr !important; padding: 16px 0.75rem 40px !important; gap: 16px !important; }
+          .listing-grid { grid-template-columns: 1fr !important; padding: 12px 0.75rem 40px !important; gap: 16px !important; }
           .listing-right { position: relative !important; top: auto !important; order: -1 !important; }
-          .listing-left { order: 2 !important; }
           .listing-fee-breakdown { display: none !important; }
-          .listing-breadcrumb { padding: 68px 0.75rem 8px !important; font-size: 10px !important; overflow-x: auto !important; white-space: nowrap !important; }
           .listing-stats { grid-template-columns: 1fr 1fr !important; }
-          .listing-tabs { overflow-x: auto !important; white-space: nowrap !important; display: flex !important; }
-          .listing-table { overflow-x: auto !important; }
-          .listing-table table { min-width: 360px !important; }
-          .listing-trust { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; padding: 12px 14px !important; }
-          .listing-actions { flex-wrap: wrap !important; gap: 8px !important; }
         }
       `}</style>
 
@@ -98,230 +137,161 @@ export default function Listing() {
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '460px', position: 'relative' }}>
             <button onClick={() => setShowBuyModal(false)} style={{ position: 'absolute', top: '14px', right: '14px', width: '30px', height: '30px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '15px' }}>✕</button>
             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px' }}>Confirm <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Purchase</em></div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>Clicking confirm will lock <strong style={{ color: 'var(--gold)' }}>${total} USDC</strong> in escrow on Base. Your wallet will open for signature.</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>Clicking confirm will take you to checkout where your USDC will be locked in escrow on Base.</div>
 
             <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 16px', marginBottom: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', lineHeight: 2 }}>
               {[
-                { label: 'Card', val: 'Charizard Holo PSA 9' },
-                { label: 'Seller', val: 'CardKing_88 · Elite' },
-                { label: 'Card price', val: `$$${cardPrice}` },
-                { label: 'Auth + shipping', val: 'Calculated' },
-                { label: 'Total (est.)', val: `$${total} USDC` },
-                { label: 'Network', val: 'Base (Ethereum L2)' },
-                { label: 'Gas est.', val: '~$0.04' },
+                { label: 'Card',            val: `${card_name}${isGraded ? ` ${grader} ${grade}` : ''}` },
+                { label: 'Seller',          val: `@${seller?.username} · ${tc.label}` },
+                { label: 'Card price',      val: `$${parseFloat(price).toLocaleString()}`, gold: true },
+                { label: `Auth fee`,        val: `$${authFee} (${isPhysical ? 'Physical' : 'Remote Photo'})` },
+                { label: 'Shipping + tax',  val: 'Calculated at checkout' },
+                { label: 'Network',         val: 'Base (Ethereum L2)' },
               ].map((r, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--text-muted)' }}>{r.label}</span>
-                  <span style={{ color: i === 2 ? 'var(--gold)' : 'var(--text-primary)', fontWeight: i === 2 ? 600 : 400 }}>{r.val}</span>
+                  <span style={{ color: r.gold ? 'var(--gold)' : 'var(--text-primary)', fontWeight: r.gold ? 600 : 400 }}>{r.val}</span>
                 </div>
               ))}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-              {['Card received matches listing exactly', 'Auto-refund if seller misses 48hr ship deadline', authTier === 'remote' ? 'Photo reviewed by Chase Hollow staff in transit' : 'Human authentication before card ships to you', '72hr inspection window after delivery'].map((item, i) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+              {['Card matches listing exactly or full refund', 'Auto-refund if seller misses 48hr ship deadline', isPhysical ? 'Human authenticated before card ships to you' : 'Photo reviewed by Chase Hollow staff in transit', '72hr inspection window after delivery'].map((item, i) => (
                 <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                   <span style={{ color: 'var(--accent-green)', flexShrink: 0 }}>✓</span>{item}
                 </div>
               ))}
             </div>
 
-            <a href="/checkout" style={{ display: 'block', width: '100%', background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '16px', fontSize: '15px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', textAlign: 'center', textDecoration: 'none', marginBottom: '8px' }}>
-              🔒 Lock ${total} USDC in Escrow
-            </a>
+            <Link href={`/checkout?listing_id=${id}`} style={{ display: 'block', width: '100%', background: 'var(--teal)', border: 'none', color: 'var(--bg)', padding: '16px', fontSize: '15px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', textAlign: 'center', textDecoration: 'none', marginBottom: '8px' }}>
+              🔒 Continue to Checkout
+            </Link>
             <button onClick={() => setShowBuyModal(false)} style={btn({ width: '100%', padding: '12px', borderRadius: '10px' })}>Cancel</button>
           </div>
         </div>
       )}
 
-
       {/* BREADCRUMB */}
-      <div style={{ background: 'var(--bg-2)', borderBottom: '0.5px solid var(--border)', padding: isMobile ? '68px 1rem 8px' : '76px 2.5rem 12px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
+      <div style={{ background: 'var(--bg-2)', borderBottom: '0.5px solid var(--border)', padding: isMobile ? '76px 1rem 8px' : '76px 2.5rem 12px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
         <div style={{ maxWidth: '1300px', margin: '0 auto', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <a href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Home</a>
+          <Link href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Home</Link>
           <span>→</span>
-          <a href="/marketplace" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Marketplace</a>
+          <Link href="/marketplace" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Marketplace</Link>
           <span>→</span>
-          <a href="/marketplace" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Pokémon</a>
+          <Link href={`/marketplace?game=${encodeURIComponent(game)}`} style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{game}</Link>
           <span>→</span>
-          <span style={{ color: 'var(--text-primary)' }}>Charizard Holo PSA 9</span>
+          <span style={{ color: 'var(--text-primary)' }}>{card_name}{isGraded ? ` ${grader} ${grade}` : ''}</span>
         </div>
       </div>
 
       {/* MAIN */}
-      <div style={{ maxWidth: '1300px', margin: '0 auto', padding: isMobile ? '12px 0.75rem 40px' : '24px 2rem 60px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 360px', gap: isMobile ? '16px' : '32px', alignItems: 'flex-start', width: '100%', boxSizing: 'border-box', minWidth: 0 }}>
+      <div className="listing-grid" style={{ maxWidth: '1300px', margin: '0 auto', padding: isMobile ? '12px 0.75rem 40px' : '24px 2rem 60px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 360px', gap: isMobile ? '16px' : '32px', alignItems: 'flex-start', width: '100%', boxSizing: 'border-box' }}>
 
         {/* LEFT */}
         <div style={{ order: isMobile ? 2 : 1, minWidth: 0, width: '100%' }}>
 
           {/* PHOTO GALLERY */}
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', overflow: 'hidden', marginBottom: '24px' }}>
-            {/* Main photo */}
-            <div style={{ aspectRatio: '4/3', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-              <div style={{ width: '45%', aspectRatio: '2.5/3.5', borderRadius: '8px', background: 'linear-gradient(145deg,#1a3a5c,#0d2035)', border: '2px solid rgba(255,215,0,0.2)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                <div style={{ fontSize: '48px', opacity: 0.7 }}>⚡</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '60%' }}>
-                  <div style={{ height: '4px', borderRadius: '2px', background: 'rgba(255,215,0,0.5)', width: '100%' }} />
-                  <div style={{ height: '4px', borderRadius: '2px', background: 'rgba(255,215,0,0.25)', width: '70%' }} />
-                  <div style={{ height: '4px', borderRadius: '2px', background: 'rgba(255,215,0,0.12)', width: '50%' }} />
-                </div>
-              </div>
-              <div style={{ position: 'absolute', top: '16px', left: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '4px 12px', borderRadius: '6px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)', color: 'var(--gold)', fontWeight: 500 }}>PSA</div>
-              <div style={{ position: 'absolute', top: '16px', right: '16px', width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(201,168,76,0.15)', border: '2px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)' }}>9</div>
-              <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', gap: '8px' }}>
-                <button style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>⊕ Zoom</button>
-              </div>
+            <div style={{ aspectRatio: '4/3', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+              {photoList.length > 0 ? (
+                <img src={photoList[activePhoto]} alt={`${card_name} photo ${activePhoto + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              ) : (
+                <div style={{ width: '45%', aspectRatio: '2.5/3.5', borderRadius: '8px', background: 'var(--bg-4)', border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', opacity: 0.3 }}>🃏</div>
+              )}
+              {isGraded && (
+                <>
+                  <div style={{ position: 'absolute', top: '16px', left: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '4px 12px', borderRadius: '6px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)', color: 'var(--gold)', fontWeight: 500 }}>{grader}</div>
+                  <div style={{ position: 'absolute', top: '16px', right: '16px', width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(201,168,76,0.15)', border: '2px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)' }}>{grade}</div>
+                </>
+              )}
             </div>
-            {/* Thumbnails */}
-            <div style={{ display: 'flex', gap: '8px', padding: '12px 16px', borderTop: '0.5px solid var(--border)', overflowX: 'auto' }}>
-              {photos.map((photo, i) => (
-                <div key={i} onClick={() => setActivePhoto(i)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                  <div style={{ width: '52px', height: '52px', borderRadius: '8px', border: `1.5px solid ${activePhoto === i ? 'var(--teal)' : 'var(--border)'}`, background: 'var(--bg-4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', opacity: activePhoto === i ? 1 : 0.5, transition: 'all 0.15s' }}>{photo.icon}</div>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: activePhoto === i ? 'var(--teal)' : 'var(--text-muted)', fontWeight: 500 }}>{photo.label}</div>
-                </div>
-              ))}
-            </div>
+            {photoList.length > 1 && (
+              <div style={{ display: 'flex', gap: '8px', padding: '12px 16px', borderTop: '0.5px solid var(--border)', overflowX: 'auto' }}>
+                {photoList.map((url, i) => (
+                  <div key={i} onClick={() => setActivePhoto(i)} style={{ flexShrink: 0, cursor: 'pointer' }}>
+                    <div style={{ width: '52px', height: '52px', borderRadius: '8px', border: `1.5px solid ${activePhoto === i ? 'var(--teal)' : 'var(--border)'}`, overflow: 'hidden', opacity: activePhoto === i ? 1 : 0.5, transition: 'all 0.15s' }}>
+                      <img src={url} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: activePhoto === i ? 'var(--teal)' : 'var(--text-muted)', fontWeight: 500, textAlign: 'center', marginTop: '4px' }}>Photo {i + 1}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* CARD DETAILS */}
-          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: isMobile ? '14px' : '24px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: '24px' }}>
             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>
-              Charizard Holo <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>#4/102</em>
+              {card_name}{card_number ? <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}> {card_number}</em> : ''}
             </div>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '18px' }}>Pokémon · Base Set 1999 Shadowless · English</div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '1px', background: 'var(--border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '16px' }}>
-              {[
-                { label: 'Grader', val: 'PSA', color: 'var(--accent-blue)' },
-                { label: 'Grade', val: 'Mint 9', color: 'var(--accent-green)' },
-                { label: 'Cert #', val: '12847291', mono: true },
-                { label: 'Card #', val: '#4/102', mono: true },
-                { label: 'Set', val: 'Shadowless', mono: false },
-                { label: 'Language', val: 'English', mono: false },
-              ].map((cell, i) => (
-                <div key={i} style={{ background: 'var(--bg-3)', padding: '12px 14px' }}>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 500 }}>{cell.label}</div>
-                  <div style={{ fontSize: '14px', fontWeight: 500, color: cell.color || 'var(--text-primary)', fontFamily: cell.mono ? 'DM Mono, monospace' : 'DM Sans, sans-serif', fontSize: cell.mono ? '12px' : '14px' }}>{cell.val}</div>
-                </div>
-              ))}
-            </div>
-            {/* Seller */}
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '18px' }}>{game}{set ? ` · ${set}` : ''}</div>
+
+            {detailCells.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '1px', background: 'var(--border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '16px' }}>
+                {detailCells.map((cell, i) => (
+                  <div key={i} style={{ background: 'var(--bg-3)', padding: '12px 14px' }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 500 }}>{cell.label}</div>
+                    <div style={{ fontSize: cell.mono ? '12px' : '14px', fontWeight: 500, color: cell.color || 'var(--text-primary)', fontFamily: cell.mono ? 'DM Mono, monospace' : 'DM Sans, sans-serif' }}>{cell.val}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Seller row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-3)', borderRadius: '10px', padding: '12px 14px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', fontWeight: 600, color: 'var(--teal)', flexShrink: 0 }}>CK</div>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', fontWeight: 600, color: 'var(--teal)', flexShrink: 0 }}>{sellerInitials}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>CardKing_88</div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--gold)' }}>⭐ Elite · 847 sales · 4.98★ · 0 disputes</div>
+                <Link href={`/profile/${seller?.username}`} style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}>@{seller?.username}</Link>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: tc.color, marginTop: '2px' }}>{tc.label}</div>
               </div>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-green)' }}>0 strikes</div>
-            </div>
-          </div>
-
-          {/* PRICE HISTORY */}
-          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: isMobile ? '14px' : '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Price <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                {['7d', '30d', '90d', '1y', 'All'].map(tab => (
-                  <button key={tab} onClick={() => setActiveTab(tab)} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '5px 12px', borderRadius: '6px', border: `1.5px solid ${activeTab === tab ? 'var(--teal-border)' : 'var(--border)'}`, background: activeTab === tab ? 'var(--teal-bg)' : 'transparent', color: activeTab === tab ? 'var(--teal)' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500 }}>{tab}</button>
-                ))}
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: seller?.strike_count === 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                {seller?.strike_count === 0 ? '0 strikes' : `${seller?.strike_count} strike${seller.strike_count > 1 ? 's' : ''}`}
               </div>
-            </div>
-
-            {/* Simple SVG chart */}
-            <div style={{ position: 'relative', height: '120px', marginBottom: '8px' }}>
-              <svg width="100%" height="120" viewBox={`0 0 ${currentPrices.length * 80} 120`} preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="var(--gold)" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                {/* Area fill */}
-                <path
-                  d={`M 0 ${120 - ((currentPrices[0] - minPrice) / (maxPrice - minPrice)) * 100} ${currentPrices.map((p, i) => `L ${i * 80} ${120 - ((p - minPrice) / (maxPrice - minPrice)) * 100}`).join(' ')} L ${(currentPrices.length - 1) * 80} 120 L 0 120 Z`}
-                  fill="url(#chartGrad)"
-                />
-                {/* Line */}
-                <path
-                  d={`M 0 ${120 - ((currentPrices[0] - minPrice) / (maxPrice - minPrice)) * 100} ${currentPrices.map((p, i) => `L ${i * 80} ${120 - ((p - minPrice) / (maxPrice - minPrice)) * 100}`).join(' ')}`}
-                  fill="none" stroke="var(--gold)" strokeWidth="2"
-                />
-                {/* Dots */}
-                {currentPrices.map((p, i) => (
-                  <circle key={i} cx={i * 80} cy={120 - ((p - minPrice) / (maxPrice - minPrice)) * 100} r="4" fill="var(--gold)" />
-                ))}
-              </svg>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>
-              <span>Low: ${minPrice}</span>
-              <span style={{ color: 'var(--accent-green)' }}>▲ +{Math.round(((currentPrices[currentPrices.length - 1] - currentPrices[0]) / currentPrices[0]) * 100)}% this period</span>
-              <span>High: ${maxPrice}</span>
-            </div>
-
-            {/* Recent Sales Table */}
-            <div style={{ marginTop: '20px', borderTop: '0.5px solid var(--border)', paddingTop: '16px' }}>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Recent Sales — Same Card & Grade</div>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
-                    {['Date', 'Grade', 'Sale Price', 'Platform'].map((h, i) => (
-                      <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '6px 10px', fontWeight: 500 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentSales.map((sale, i) => (
-                    <tr key={i} style={{ borderBottom: i < recentSales.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
-                      <td style={{ padding: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{sale.date}</td>
-                      <td style={{ padding: '10px' }}><span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '5px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>{sale.grade}</span></td>
-                      <td style={{ padding: '10px', fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', fontWeight: 600, color: 'var(--gold)' }}>{sale.price}</td>
-                      <td style={{ padding: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{sale.platform}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
 
           {/* AUTHENTICATION GUARANTEE */}
-          <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: isMobile ? '14px' : '24px' }}>
+          <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>✓</div>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>✓</div>
               <div>
-                <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>Chase Hollow Authentication</div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>What we verify before this card ships to you</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>Chase Hollow {isPhysical ? 'Physical' : 'Remote'} Authentication</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{isPhysical ? 'Expert inspection at our auth center before this card ships to you' : 'Staff photo review in transit — card verified before delivery'}</div>
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
-              {[
-                'Card received matches all listing photos exactly',
-                'Grade label shows PSA 9 — matches listing exactly',
-                'Cert #12847291 verified on PSA\'s official database',
-                'Slab intact — no cracks, tampering, or re-sealing',
-                'If anything doesn\'t match — full refund, automatically',
-              ].map((item, i) => (
+              {authChecklistFiltered.map((item, i) => (
                 <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)', alignItems: 'flex-start' }}>
                   <span style={{ color: 'var(--teal)', flexShrink: 0, marginTop: '1px' }}>✓</span>{item}
                 </div>
               ))}
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6, borderTop: '0.5px solid var(--teal-border)', paddingTop: '12px' }}>
-              The card's grade and authenticity are certified by <strong style={{ color: 'var(--text-secondary)' }}>PSA</strong> — Chase Hollow verifies you receive exactly what was listed. <a href="/#how-it-works" style={{ color: 'var(--teal)', textDecoration: 'none' }}>How authentication works →</a>
+              {isGraded ? `Grade and authenticity certified by ${grader} — Chase Hollow verifies you receive exactly what was listed.` : 'Condition verified by Chase Hollow — you receive exactly what was listed.'}{' '}
+              <a href="/#how-it-works" style={{ color: 'var(--teal)', textDecoration: 'none' }}>How authentication works →</a>
+            </div>
+          </div>
+
+          {/* PRICE HISTORY PLACEHOLDER */}
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: '24px' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, marginBottom: '12px', color: 'var(--text-primary)' }}>Price <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
+            <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '28px', textAlign: 'center' }}>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                Price history and comparable sales coming in Phase 3.<br />
+                All transactions will be publicly verifiable on Base — not self-reported.
+              </div>
             </div>
           </div>
 
           {/* TRANSACTION FLOW */}
-          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: isMobile ? '14px' : '24px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px' }}>
             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, marginBottom: '20px', color: 'var(--text-primary)' }}>
               How This <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Transaction Works</em>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-              {[
-                { num: '01', title: 'You Lock USDC in Escrow', desc: `$${total} USDC locked in smart contract on Base. Neither party can touch it. Seller is notified immediately.`, done: false },
-                { num: '02', title: authTier === 'remote' ? 'Seller Ships Direct + Photos' : 'Seller Ships to Chase Hollow', desc: authTier === 'remote' ? 'Seller uploads 3 photos and ships directly to you within 48hrs. Photos reviewed during transit. Miss the deadline — auto-refund.' : 'Seller ships to our auth center within 48hrs. Miss the deadline — your USDC auto-refunds automatically.', done: false },
-                { num: '03', title: authTier === 'remote' ? 'Photo Review In Transit' : 'Expert Authentication', desc: authTier === 'remote' ? 'Our staff reviews the 3 uploaded photos while your card is in transit. Pass = card continues to you. Fail = full refund.' : 'Our authenticator physically verifies the card — photos, grade label, cert number, slab integrity. Pass = ships to you.', done: false },
-                { num: '04', title: 'Delivered · Auto-Release', desc: 'Card ships to your address via FedEx. 72hrs after delivery, USDC releases to seller automatically. You can release early anytime.', done: false },
-              ].map((step, i) => (
-                <div key={i} style={{ display: 'flex', gap: '14px', position: 'relative', paddingBottom: i < 3 ? '20px' : '0' }}>
-                  {i < 3 && <div style={{ position: 'absolute', left: '14px', top: '30px', bottom: '0', width: '1px', background: 'var(--border)' }} />}
+              {transactionSteps.map((step, i) => (
+                <div key={i} style={{ display: 'flex', gap: '14px', position: 'relative', paddingBottom: i < transactionSteps.length - 1 ? '20px' : '0' }}>
+                  {i < transactionSteps.length - 1 && <div style={{ position: 'absolute', left: '14px', top: '30px', bottom: '0', width: '1px', background: 'var(--border)' }} />}
                   <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1.5px solid var(--teal-border)', background: 'var(--teal-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)', flexShrink: 0, zIndex: 1 }}>{step.num}</div>
                   <div>
                     <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>{step.title}</div>
@@ -332,62 +302,38 @@ export default function Listing() {
             </div>
           </div>
 
-          {/* SELLER REVIEWS */}
-          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>
-                Seller <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Reviews</em>
-              </div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: 'var(--gold)' }}>4.98 <span style={{ fontSize: '16px', color: 'var(--gold)' }}>★</span></div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {reviews.map((review, i) => (
-                <div key={i} style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '13px', fontWeight: 600, color: 'var(--teal)' }}>{review.user[0]}</div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{review.user}</div>
-                    <div style={{ color: 'var(--gold)', fontSize: '12px', letterSpacing: '1px' }}>{'★'.repeat(review.rating)}</div>
-                    <div style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{review.date}</div>
-                  </div>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '6px' }}>{review.card}</div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.65 }}>{review.text}</div>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-green)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>✓ Verified purchase · Transaction on-chain</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
         </div>
 
         {/* RIGHT — PURCHASE PANEL */}
-        <div style={{ position: isMobile ? 'relative' : 'sticky', top: isMobile ? 'auto' : '84px', order: isMobile ? 1 : 2, minWidth: 0, width: '100%' }}>
+        <div className="listing-right" style={{ position: isMobile ? 'relative' : 'sticky', top: isMobile ? 'auto' : '84px', order: isMobile ? 1 : 2, minWidth: 0, width: '100%' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
 
             {/* Card preview */}
             <div style={{ padding: '18px 20px', borderBottom: '0.5px solid var(--border)', display: 'flex', gap: '14px', alignItems: 'center' }}>
-              <div style={{ width: '52px', height: '72px', borderRadius: '6px', background: 'linear-gradient(145deg,#1a3a5c,#0d2035)', border: '2px solid rgba(255,215,0,0.2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>⚡</div>
+              <div style={{ width: '52px', height: '72px', borderRadius: '6px', background: 'var(--bg-3)', border: '2px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                {photoList[0] ? <img src={photoList[0]} alt={card_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '22px', opacity: 0.4 }}>🃏</span>}
+              </div>
               <div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)' }}>Charizard Holo</div>
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)' }}>{card_name}</div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-                  Pokémon · Base Set Shadowless<br />
-                  PSA 9 · Cert #12847291<br />
-                  #4/102 · 1999 Wizards
+                  {game}{set ? ` · ${set}` : ''}<br />
+                  {isGraded ? `${grader} ${grade}${cert_number ? ` · #${cert_number}` : ''}` : (condition || listing_type)}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: 'var(--teal)', fontWeight: 600 }}>CK</div>
-                  CardKing_88 · Elite · 4.98★
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: 'var(--teal)', fontWeight: 600 }}>{sellerInitials}</div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>@{seller?.username} · <span style={{ color: tc.color }}>{tc.label}</span></span>
                 </div>
               </div>
             </div>
 
             {/* Fee breakdown */}
-            <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)', display: isMobile ? 'none' : 'block' }}>
+            <div className="listing-fee-breakdown" style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)' }}>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Fee Breakdown</div>
               {[
-                { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
-                { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
-                { label: 'Shipping & insurance', val: 'Calculated at checkout' },
-                { label: 'Sales tax (varies)', val: 'Calculated at checkout' },
+                { label: 'Card price', val: `$${parseFloat(price).toLocaleString()}` },
+                { label: `Auth fee (${isPhysical ? 'Physical' : 'Remote Photo'})`, val: `$${authFee}` },
+                { label: 'Shipping & insurance', val: 'At checkout' },
+                { label: 'Sales tax', val: 'At checkout' },
               ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '5px 0', borderBottom: '0.5px solid var(--border)' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
@@ -395,31 +341,30 @@ export default function Listing() {
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', marginTop: '4px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Total</span>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Subtotal</span>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 600, color: 'var(--gold)' }}>${total}</div>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>USDC · Base Network</div>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 600, color: 'var(--gold)' }}>${parseFloat(buyTotal).toLocaleString()}</div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>+ shipping & tax · USDC · Base</div>
                 </div>
               </div>
             </div>
 
             {/* Buy button */}
             <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)' }}>
-              <button onClick={() => setShowBuyModal(true)} style={{ width: '100%', background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '16px', fontSize: '15px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                🔒 Buy Now — ${total} USDC
+              <button onClick={() => setShowBuyModal(true)} style={{ width: '100%', background: 'var(--teal)', border: 'none', color: 'var(--bg)', padding: '16px', fontSize: '15px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                🔒 Buy Now — ${parseFloat(price).toLocaleString()} USDC
               </button>
-              <button style={btn({ width: '100%', padding: '11px', borderRadius: '10px', textAlign: 'center' })}>♡ Add to Watchlist</button>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px', lineHeight: 1.6 }}>
-                Auto-refund if seller misses 48hr deadline · 72hr inspection window · On-chain
+                Auto-refund if seller misses 48hr deadline · 72hr inspection window
               </div>
             </div>
 
             {/* Trust items */}
-            <div style={{ padding: isMobile ? '12px 14px' : '16px 20px', display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr', gap: '8px' }}>
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
                 { icon: '🔒', text: 'Escrow protected — funds held by smart contract' },
-                { icon: '✓', text: authTier === 'remote' ? 'Photo authenticated in transit' : 'Human authenticated before delivery' },
-                { icon: '↩', text: 'Auto-refund if seller doesn\'t ship in 48hrs' },
+                { icon: '✓', text: isPhysical ? 'Human authenticated before delivery' : 'Photo authenticated in transit' },
+                { icon: '↩', text: "Auto-refund if seller doesn't ship in 48hrs" },
                 { icon: '⏱', text: '72hr inspection window after delivery' },
                 { icon: '⬡', text: 'Permanent on-chain record on Base' },
               ].map((item, i) => (
@@ -432,9 +377,7 @@ export default function Listing() {
 
           </div>
         </div>
-
       </div>
-
     </div>
   )
 }
