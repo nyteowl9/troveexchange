@@ -145,6 +145,7 @@ export default function BuyerDashboard() {
     { id: 'offers',        icon: '◆', label: 'My Offers' },
     { id: 'history',       icon: '◎', label: 'Purchase History' },
     { id: 'disputes',      icon: '⚠', label: 'Disputes',           badgeColor: 'var(--accent-red)' },
+    { id: 'account',       icon: '⚙', label: 'Account' },
   ]
 
   const OrderCard = ({ order }) => {
@@ -611,7 +612,136 @@ export default function BuyerDashboard() {
             </div>
           )}
 
+          {/* ACCOUNT */}
+          {activeSection === 'account' && (
+            <AccountSection user={user} profile={profile} supabase={supabase} btn={btn} />
+          )}
+
         </main>
+      </div>
+    </div>
+  )
+}
+
+function AccountSection({ user, profile, supabase, btn }) {
+  const [editing, setEditing]     = useState(false)
+  const [saving, setSaving]       = useState(false)
+  const [saveMsg, setSaveMsg]     = useState('')
+  const [error, setError]         = useState('')
+  const [form, setForm]           = useState({
+    full_name: profile?.full_name || '',
+    street1:   profile?.street1   || '',
+    street2:   profile?.street2   || '',
+    city:      profile?.city      || '',
+    state:     profile?.state     || '',
+    zip:       profile?.zip       || '',
+  })
+
+  const inputStyle = { width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: 'var(--text-primary)', fontFamily: 'DM Sans, sans-serif', outline: 'none', boxSizing: 'border-box' }
+  const labelStyle = { display: 'block', fontSize: '10px', fontFamily: 'DM Mono, monospace', color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 500 }
+
+  const handleSave = async () => {
+    setSaving(true)
+    setError('')
+    const { error: err } = await supabase
+      .from('users')
+      .update({
+        full_name: form.full_name.trim(),
+        street1:   form.street1.trim(),
+        street2:   form.street2.trim() || null,
+        city:      form.city.trim(),
+        state:     form.state.trim().toUpperCase(),
+        zip:       form.zip.trim(),
+      })
+      .eq('id', user.id)
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    setSaveMsg('Saved')
+    setEditing(false)
+    setTimeout(() => setSaveMsg(''), 3000)
+  }
+
+  return (
+    <div style={{ maxWidth: '560px' }}>
+      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '20px' }}>
+        My <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Account</em>
+      </div>
+
+      {/* Profile info */}
+      <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '14px' }}>
+        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '14px', fontWeight: 500 }}>Profile</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {[
+            { label: 'Username',  val: profile?.username || '—' },
+            { label: 'Email',     val: user?.email || '—' },
+            { label: 'Member since', val: profile?.joined_at ? new Date(profile.joined_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '—' },
+            { label: 'Buyer tier',  val: profile?.tier ? profile.tier.charAt(0).toUpperCase() + profile.tier.slice(1) : 'New' },
+          ].map((row, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingBottom: '10px', borderBottom: i < 3 ? '0.5px solid var(--border)' : 'none' }}>
+              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{row.label}</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Shipping address */}
+      <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 500 }}>Shipping Address</div>
+          {!editing && <button onClick={() => setEditing(true)} style={btn({ fontSize: '11px', padding: '5px 12px' })}>Edit</button>}
+        </div>
+
+        {!editing ? (
+          <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+            {profile?.full_name && <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{profile.full_name}</div>}
+            {profile?.street1
+              ? <>
+                  <div>{profile.street1}{profile.street2 ? `, ${profile.street2}` : ''}</div>
+                  <div>{profile.city}, {profile.state} {profile.zip}</div>
+                  <div>United States</div>
+                </>
+              : <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>No address on file — add one so we can generate shipping labels.</div>
+            }
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div>
+              <label style={labelStyle}>Full Name</label>
+              <input type="text" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Street Address</label>
+              <input type="text" value={form.street1} onChange={e => setForm(f => ({ ...f, street1: e.target.value }))} placeholder="123 Main St" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Apt, Suite <span style={{ fontWeight: 400 }}>(optional)</span></label>
+              <input type="text" value={form.street2} onChange={e => setForm(f => ({ ...f, street2: e.target.value }))} placeholder="Apt 4B" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>City</label>
+              <input type="text" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} style={inputStyle} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div>
+                <label style={labelStyle}>State</label>
+                <input type="text" value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 2) }))} placeholder="NY" maxLength={2} style={{ ...inputStyle, textTransform: 'uppercase' }} />
+              </div>
+              <div>
+                <label style={labelStyle}>ZIP Code</label>
+                <input type="text" value={form.zip} onChange={e => setForm(f => ({ ...f, zip: e.target.value.replace(/[^0-9-]/g, '').slice(0, 10) }))} placeholder="10001" style={inputStyle} />
+              </div>
+            </div>
+            {error && <div style={{ fontSize: '12px', color: 'var(--accent-red)' }}>{error}</div>}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+              <button onClick={handleSave} disabled={saving} style={{ background: 'var(--teal)', border: 'none', color: '#0A0A0B', padding: '10px 24px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                {saving ? 'Saving...' : 'Save Address'}
+              </button>
+              <button onClick={() => { setEditing(false); setError('') }} style={btn({ padding: '10px 16px' })}>Cancel</button>
+            </div>
+          </div>
+        )}
+        {saveMsg && <div style={{ fontSize: '12px', color: 'var(--accent-green)', marginTop: '10px' }}>✓ {saveMsg}</div>}
       </div>
     </div>
   )

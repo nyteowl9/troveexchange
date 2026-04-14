@@ -67,7 +67,9 @@ function Onboarding() {
 
     const { error: updateError } = await supabase
       .from('users')
-      .update({
+      .upsert({
+        id:        user.id,
+        email:     user.email,
         username:  username.toLowerCase().trim(),
         full_name: fullName.trim(),
         street1:   street1.trim(),
@@ -76,8 +78,7 @@ function Onboarding() {
         state:     state.trim().toUpperCase(),
         zip:       zip.trim(),
         country:   'US',
-      })
-      .eq('id', user.id)
+      }, { onConflict: 'id' })
 
     if (updateError) {
       setError(updateError.message)
