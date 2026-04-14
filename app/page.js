@@ -1,15 +1,28 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
 
 export default function Home() {
   const [theme, setTheme] = useState('dark')
   const [activeCategory, setActiveCategory] = useState('all')
+  const [featuredListings, setFeaturedListings] = useState([])
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
     setTheme(saved)
     document.documentElement.setAttribute('data-theme', saved)
+  }, [])
+
+  useEffect(() => {
+    supabase
+      .from('listings')
+      .select('id, card_name, game, set, grade, grader, photos, price, listing_type')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(6)
+      .then(({ data }) => setFeaturedListings(data || []))
   }, [])
 
   const toggleTheme = () => {
@@ -26,15 +39,6 @@ export default function Home() {
     { id: 'onepiece', label: 'One Piece', icon: '☠' },
     { id: 'yugioh', label: 'Yu-Gi-Oh', icon: '⊡' },
     { id: 'sports', label: 'Sports', icon: '⚾' },
-  ]
-
-  const listings = [
-    { game: 'Pokémon · Base Set', name: 'Charizard Holo', set: '1999 Shadowless · #4/102', grade: 'PSA 9', grader: 'PSA', price: '$487', bg: 'linear-gradient(145deg,#1a3a5c,#0d2035)', icon: '⚡', borderColor: 'rgba(255,215,0,0.2)' },
-    { game: 'MTG · Alpha', name: 'Black Lotus', set: '1993 Limited Edition · Rare', grade: 'BGS 9.5', grader: 'BGS', price: '$28,400', bg: 'linear-gradient(145deg,#1c2a1c,#0d1a0d)', icon: '✦', borderColor: 'rgba(76,175,124,0.2)' },
-    { game: 'Pokémon · Promo', name: 'Pikachu Illustrator', set: '1998 CoroCoro · Trophy', grade: 'PSA 7', grader: 'PSA', price: '$4,200', bg: 'linear-gradient(145deg,#2a1a3e,#1a0d2a)', icon: '★', borderColor: 'rgba(180,100,255,0.2)' },
-    { game: 'One Piece · OP-01', name: 'Monkey D. Luffy', set: 'Romance Dawn · SEC Alt Art', grade: 'PSA 10', grader: 'PSA', price: '$890', bg: 'linear-gradient(145deg,#2a1c1c,#1a0d0d)', icon: '☠', borderColor: 'rgba(200,75,60,0.2)' },
-    { game: 'MTG · Unlimited', name: 'Mox Sapphire', set: '1993 Unlimited Edition · Rare', grade: 'BGS 9', grader: 'BGS', price: '$6,800', bg: 'linear-gradient(145deg,#1a1a3c,#0d0d24)', icon: '⬟', borderColor: 'rgba(100,100,255,0.2)' },
-    { game: 'Pokémon · Base Set', name: 'Blastoise Holo', set: '1999 Base Set · #2/102', grade: 'PSA 10', grader: 'PSA', price: '$3,800', bg: 'linear-gradient(145deg,#1a2a3a,#0d1a2a)', icon: '💧', borderColor: 'rgba(100,180,255,0.2)' },
   ]
 
   const recentSales = [
@@ -158,32 +162,43 @@ export default function Home() {
             <a href="/marketplace" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>View all →</a>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
-            {listings.map((card, i) => (
-              <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer' }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = 'var(--teal-border)' }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-              >
-                <div style={{ aspectRatio: '3/4', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  <div style={{ width: '72%', aspectRatio: '2.5/3.5', borderRadius: '6px', background: card.bg, border: `2px solid ${card.borderColor}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <div style={{ fontSize: '28px', opacity: 0.7 }}>{card.icon}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '60%' }}>
-                      <div style={{ height: '3px', borderRadius: '2px', background: 'rgba(201,168,76,0.4)', width: '100%' }} />
-                      <div style={{ height: '3px', borderRadius: '2px', background: 'rgba(201,168,76,0.2)', width: '70%' }} />
+            {featuredListings.length === 0 ? (
+              // Skeleton placeholders while loading or if empty
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', opacity: 0.4 }}>
+                  <div style={{ aspectRatio: '3/4', background: 'var(--bg-3)' }} />
+                  <div style={{ padding: '14px 16px' }}>
+                    <div style={{ height: '8px', borderRadius: '4px', background: 'var(--bg-4)', marginBottom: '8px', width: '60%' }} />
+                    <div style={{ height: '20px', borderRadius: '4px', background: 'var(--bg-4)', marginBottom: '6px' }} />
+                    <div style={{ height: '22px', borderRadius: '4px', background: 'var(--bg-4)', width: '50%', marginTop: '12px' }} />
+                  </div>
+                </div>
+              ))
+            ) : featuredListings.map((card) => (
+              <Link key={card.id} href={`/listing/${card.id}`} style={{ textDecoration: 'none' }}>
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, border-color 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = 'var(--teal-border)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                >
+                  <div style={{ aspectRatio: '3/4', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                    {card.photos?.[0]
+                      ? <img src={card.photos[0]} alt={card.card_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <div style={{ fontSize: '36px', opacity: 0.3 }}>🃏</div>
+                    }
+                    {card.grader && <div style={{ position: 'absolute', top: '10px', left: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 9px', borderRadius: '6px', fontWeight: 500, background: 'rgba(201,168,76,0.12)', border: '1px solid var(--teal-border)', color: 'var(--gold)' }}>{card.grader}</div>}
+                    {card.grade && <div style={{ position: 'absolute', top: '10px', right: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 8px', borderRadius: '6px', fontWeight: 600, background: 'rgba(201,168,76,0.15)', border: '1.5px solid var(--gold)', color: 'var(--gold)', whiteSpace: 'nowrap' }}>{card.grade}</div>}
+                  </div>
+                  <div style={{ padding: '14px 16px' }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 500 }}>{card.game}</div>
+                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '19px', fontWeight: 400, lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)' }}>{card.card_name}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px' }}>{card.set}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)' }}>${Number(card.price).toLocaleString()}</div>
+                      <div style={{ width: '30px', height: '30px', border: '1.5px solid var(--border)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>→</div>
                     </div>
                   </div>
-                  <div style={{ position: 'absolute', top: '10px', left: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 9px', borderRadius: '6px', fontWeight: 500, background: 'rgba(201,168,76,0.12)', border: '1px solid var(--teal-border)', color: 'var(--gold)' }}>{card.grader}</div>
-                  <div style={{ position: 'absolute', top: '10px', right: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 8px', borderRadius: '6px', fontWeight: 600, background: 'rgba(201,168,76,0.15)', border: '1.5px solid var(--gold)', color: 'var(--gold)', whiteSpace: 'nowrap' }}>{card.grade.replace(card.grader, '').trim()}</div>
                 </div>
-                <div style={{ padding: '14px 16px' }}>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 500 }}>{card.game}</div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '19px', fontWeight: 400, lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)' }}>{card.name}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px' }}>{card.set}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)' }}>{card.price}</div>
-                    <div style={{ width: '30px', height: '30px', border: '1.5px solid var(--border)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>→</div>
-                  </div>
-                </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

@@ -9,7 +9,7 @@ const PROTECTED_ROUTES = [
   { path: '/customer-support',  roles: ['staff', 'owner'] },
 ]
 
-export async function proxy(request) {
+export async function middleware(request) {
   const { pathname } = request.nextUrl
 
   // Check if this path requires protection

@@ -130,7 +130,7 @@ export default function Nav() {
           )}
 
           {/* List a Card — desktop only */}
-          <Link href="/seller-dashboard" className="nav-list-btn" style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '7px 18px', fontSize: '12px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', textDecoration: 'none' }}>
+          <Link href={user ? '/seller-dashboard?section=new-listing' : '/sign-in'} className="nav-list-btn" style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '7px 18px', fontSize: '12px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', textDecoration: 'none' }}>
             List a Card
           </Link>
 
@@ -152,7 +152,7 @@ export default function Nav() {
             </Link>
           ))}
           <div style={{ padding: '14px 1.5rem' }}>
-            <Link href="/seller-dashboard" onClick={() => setMenuOpen(false)} style={{ display: 'block', textAlign: 'center', background: 'var(--teal)', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', textDecoration: 'none' }}>
+            <Link href={user ? '/seller-dashboard?section=new-listing' : '/sign-in'} onClick={() => setMenuOpen(false)} style={{ display: 'block', textAlign: 'center', background: 'var(--teal)', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', textDecoration: 'none' }}>
               List a Card →
             </Link>
           </div>

@@ -1,10 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/lib/supabase'
+
+export default function SellerDashboardPage() {
+  return <Suspense><SellerDashboard /></Suspense>
+}
 
 const ACTIVE_ORDER_STATUSES = ['funded', 'shipped', 'in_transit', 'auth_pending', 'inspection_window']
 
@@ -44,12 +48,13 @@ function hoursUntil(ts) {
   return Math.max(0, Math.round(diff / (1000 * 60 * 60)))
 }
 
-export default function SellerDashboard() {
+function SellerDashboard() {
   const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [theme, setTheme] = useState('dark')
-  const [activeSection, setActiveSection]   = useState('overview')
+  const [activeSection, setActiveSection]   = useState(() => searchParams.get('section') || 'overview')
   const [activeOrders, setActiveOrders]     = useState([])
   const [myListings, setMyListings]         = useState([])
   const [completedSales, setCompletedSales] = useState([])
