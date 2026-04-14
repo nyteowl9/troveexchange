@@ -2,4 +2,8 @@
 // is always server-rendered on demand instead of prebuilt at deploy time.
 export const dynamic = 'force-dynamic'
 
-export { default } from './SignInClient'
+import SignInClient from './SignInClient'
+
+export default function Page() {
+  return <SignInClient />
+}
