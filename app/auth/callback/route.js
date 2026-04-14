@@ -30,8 +30,19 @@ export async function GET(request) {
 
   // PKCE flow (newer Supabase default)
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // New OAuth users (Google) won't have a username yet — send to onboarding
+      if (data?.user) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', data.user.id)
+          .single()
+        if (!profile?.username) {
+          return NextResponse.redirect(`${origin}/onboarding?next=${encodeURIComponent(next)}`)
+        }
+      }
       return NextResponse.redirect(`${origin}${next}`)
     }
     console.error('[auth/callback] PKCE exchange error:', error.message)

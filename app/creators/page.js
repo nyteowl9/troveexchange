@@ -1,11 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { supabase } from '../../lib/supabase'
 
 export default function Creators() {
   const [theme, setTheme] = useState('dark')
   const [activeTab, setActiveTab] = useState('program')
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [refCode, setRefCode] = useState('')
   const [form, setForm] = useState({
     name: '', handle: '', platform: '', audience: '',
     contentType: '', channelUrl: '', wallet: '', why: ''
@@ -25,6 +29,39 @@ export default function Creators() {
   }
 
   const updateForm = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
+
+  const handleSubmit = async () => {
+    if (!form.name || !form.handle || !form.platform || !form.audience || !form.contentType || !form.channelUrl || !form.wallet) {
+      setSubmitError('Please fill in all required fields.')
+      return
+    }
+    setSubmitting(true)
+    setSubmitError('')
+
+    const raw = form.handle.replace(/^@/, '').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20)
+    const code = raw || 'creator' + Date.now().toString(36)
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const { error } = await supabase.from('creators').insert({
+      user_id: user?.id || null,
+      handle: form.handle,
+      platform: form.platform,
+      channel_url: form.channelUrl,
+      wallet_address: form.wallet,
+      ref_code: code,
+      status: 'approved',
+      approved_at: new Date().toISOString(),
+    })
+
+    setSubmitting(false)
+    if (error) {
+      setSubmitError(error.code === '23505' ? 'That handle or ref code is already registered.' : 'Something went wrong. Please try again.')
+      return
+    }
+    setRefCode(code)
+    setSubmitted(true)
+  }
 
   const inputStyle = {
     width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)',
@@ -123,7 +160,7 @@ export default function Creators() {
             <div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
                 {[
-                  { num: '01', title: 'Apply & Get Approved', desc: 'Fill out the application with your channel info and audience details. We manually review every application to maintain quality. Most decisions within 48hrs.' },
+                  { num: '01', title: 'Apply & Get Instant Access', desc: 'Fill out the application with your channel info and audience details. Once submitted, you\'re instantly approved and get your unique referral link right away.' },
                   { num: '02', title: 'Get Your Link', desc: 'Once approved, you get a unique referral link — chasehollow.com/?ref=YOURNAME — and access to your creator dashboard with real-time stats.' },
                   { num: '03', title: 'Earn on Every Sale', desc: 'Anyone who clicks your link and buys within 30 days earns you 0.5% of the sale. A $10,000 card = $50 USDC to you. Paid monthly, automatically.' },
                 ].map((step, i) => (
@@ -243,7 +280,7 @@ export default function Creators() {
           {activeTab === 'apply' && !submitted && (
             <div style={{ maxWidth: '680px', margin: '0 auto' }}>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Creator <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Application</em></div>
-              <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '28px', lineHeight: 1.6 }}>We review every application manually. Tell us about yourself and your audience. Most decisions within 48 hours.</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '28px', lineHeight: 1.6 }}>Fill out the form below and you'll get instant access — your unique referral link is generated immediately on submit.</div>
 
               {/* Personal info */}
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '14px' }}>
@@ -329,16 +366,22 @@ export default function Creators() {
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', fontWeight: 500 }}>Tell Us More</div>
                 <div>
                   <Label text="Why do you want to partner with Chase Hollow?" required />
-                  <textarea value={form.why} onChange={e => updateForm('form.why', e.target.value)} placeholder="Tell us about your audience, the kind of content you make, why Chase Hollow is a good fit, and any other relevant info. The more detail the better." style={{ ...inputStyle, resize: 'vertical', minHeight: '100px', lineHeight: 1.65 }} />
+                  <textarea value={form.why} onChange={e => updateForm('why', e.target.value)} placeholder="Tell us about your audience, the kind of content you make, why Chase Hollow is a good fit, and any other relevant info. The more detail the better." style={{ ...inputStyle, resize: 'vertical', minHeight: '100px', lineHeight: 1.65 }} />
                 </div>
               </div>
 
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '16px' }}>
-                By applying you agree to Chase Hollow's creator terms. We reserve the right to approve or deny applications, and to revoke creator status if terms are violated (spam, fake traffic, self-referral abuse). All decisions are final.
+                By applying you agree to Chase Hollow's creator terms. We reserve the right to revoke creator status if terms are violated (spam, fake traffic, self-referral abuse).
               </div>
 
-              <button onClick={() => setSubmitted(true)} style={{ width: '100%', background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '16px', fontSize: '15px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                Submit Application
+              {submitError && (
+                <div style={{ background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#C84B3C', marginBottom: '14px' }}>
+                  {submitError}
+                </div>
+              )}
+
+              <button onClick={handleSubmit} disabled={submitting} style={{ width: '100%', background: submitting ? 'var(--border)' : 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '16px', fontSize: '15px', fontWeight: 700, borderRadius: '10px', cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                {submitting ? 'Setting up your account...' : 'Submit Application →'}
               </button>
             </div>
           )}
@@ -347,19 +390,29 @@ export default function Creators() {
           {activeTab === 'apply' && submitted && (
             <div style={{ maxWidth: '560px', margin: '0 auto', textAlign: 'center', padding: '40px 0' }}>
               <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'rgba(76,175,124,0.12)', border: '2px solid rgba(76,175,124,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 20px' }}>✓</div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '40px', fontWeight: 300, marginBottom: '10px', color: 'var(--text-primary)' }}>Application <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Received</em></div>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '40px', fontWeight: 300, marginBottom: '10px', color: 'var(--text-primary)' }}>You're <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Approved</em></div>
               <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: '28px' }}>
-                We'll review your application and get back to you within 48 hours. We review your content and audience to make sure it's a good fit before approving.
+                Welcome to the Chase Hollow Creator Program. Your referral link is live — start sharing and earn 0.5% USDC on every sale you drive.
               </p>
+
+              {/* Ref link */}
+              <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '12px', padding: '20px', marginBottom: '20px', textAlign: 'left' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--teal)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', fontWeight: 500 }}>Your Referral Link</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '14px', color: 'var(--text-primary)', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', wordBreak: 'break-all' }}>
+                  https://chasehollow.com/?ref={refCode}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>Share this link anywhere. 30-day cookie window — you earn on any purchase made within 30 days of a click.</div>
+              </div>
+
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '24px', textAlign: 'left' }}>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px', fontWeight: 500 }}>What Happens Next</div>
-                {['We review your channel and audience (usually within 24hrs)', 'You receive an approval or feedback email', 'If approved, you\'ll get your unique referral link and dashboard access', 'Start sharing and earning USDC on every sale you drive'].map((step, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px', fontWeight: 500 }}>Next Steps</div>
+                {['Visit your creator dashboard to see clicks, conversions, and earnings', 'Share your link in videos, posts, and your bio', 'Earnings are calculated on the 1st — paid to your wallet by the 7th', '$50 minimum threshold to receive payout (balance rolls over if under)'].map((step, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: i < 3 ? '8px' : '0' }}>
                     <span style={{ color: 'var(--teal)', flexShrink: 0 }}>→</span>{step}
                   </div>
                 ))}
               </div>
-              <a href="/marketplace" style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '13px 28px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', textDecoration: 'none', display: 'inline-block' }}>Browse the Marketplace →</a>
+              <a href="/creator-dashboard" style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '13px 28px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', textDecoration: 'none', display: 'inline-block' }}>Go to Creator Dashboard →</a>
             </div>
           )}
 

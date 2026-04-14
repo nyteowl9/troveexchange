@@ -41,6 +41,22 @@ function SignInPage() {
     }
   }, [searchParams])
 
+  async function handleGoogleSignIn() {
+    setError('')
+    setLoading(true)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+    }
+    // On success browser redirects — no need to setLoading(false)
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
@@ -147,6 +163,28 @@ function SignInPage() {
                 {label}
               </button>
             ))}
+          </div>
+
+          {/* Google OAuth */}
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', background: '#fff', border: '1px solid #dadce0', borderRadius: '10px', padding: '11px', fontSize: '14px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', color: '#3c4043', cursor: loading ? 'not-allowed' : 'pointer', marginBottom: '1.25rem', opacity: loading ? 0.7 : 1 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.86l6.1-6.1C34.46 3.08 29.5 1 24 1 14.82 1 7.07 6.48 3.64 14.26l7.12 5.53C12.5 13.6 17.8 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.5 24.5c0-1.64-.15-3.22-.42-4.75H24v9h12.7c-.55 2.97-2.22 5.48-4.73 7.17l7.28 5.66C43.08 37.34 46.5 31.4 46.5 24.5z"/>
+              <path fill="#FBBC05" d="M10.76 28.21A14.5 14.5 0 0 1 9.5 24c0-1.46.25-2.87.7-4.19l-7.12-5.53A22.94 22.94 0 0 0 1 24c0 3.71.89 7.22 2.46 10.32l7.3-6.11z"/>
+              <path fill="#34A853" d="M24 47c5.84 0 10.74-1.93 14.32-5.24l-7.28-5.66c-1.97 1.32-4.5 2.1-7.04 2.1-6.2 0-11.5-4.1-13.24-9.79l-7.3 6.11C7.07 41.52 14.82 47 24 47z"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.25rem' }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+            <span style={{ fontSize: '11px', fontFamily: 'DM Mono, monospace', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>OR</span>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
