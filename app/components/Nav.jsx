@@ -101,9 +101,9 @@ export default function Nav() {
         {/* Desktop nav links */}
         <div className="nav-desktop">
           {links.map((link, i) => (
-            <Link key={i} href={link.href} style={{ fontSize: '12px', fontWeight: 500, color: pathname === link.href ? 'var(--teal)' : 'var(--text-secondary)', textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              {link.label}
-            </Link>
+            link.href.includes('#')
+              ? <a key={i} href={link.href} style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{link.label}</a>
+              : <Link key={i} href={link.href} style={{ fontSize: '12px', fontWeight: 500, color: pathname === link.href ? 'var(--teal)' : 'var(--text-secondary)', textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{link.label}</Link>
           ))}
         </div>
 
@@ -147,9 +147,9 @@ export default function Nav() {
       {menuOpen && (
         <div style={{ position: 'fixed', top: '64px', left: 0, right: 0, zIndex: 199, background: 'var(--bg-2)', borderBottom: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
           {links.map((link, i) => (
-            <Link key={i} href={link.href} onClick={() => setMenuOpen(false)} style={{ display: 'block', padding: '14px 1.5rem', fontSize: '14px', fontWeight: 500, color: pathname === link.href ? 'var(--teal)' : 'var(--text-secondary)', textDecoration: 'none', borderBottom: i < links.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
-              {link.label}
-            </Link>
+            link.href.includes('#')
+              ? <a key={i} href={link.href} onClick={() => setMenuOpen(false)} style={{ display: 'block', padding: '14px 1.5rem', fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', textDecoration: 'none', borderBottom: i < links.length - 1 ? '0.5px solid var(--border)' : 'none' }}>{link.label}</a>
+              : <Link key={i} href={link.href} onClick={() => setMenuOpen(false)} style={{ display: 'block', padding: '14px 1.5rem', fontSize: '14px', fontWeight: 500, color: pathname === link.href ? 'var(--teal)' : 'var(--text-secondary)', textDecoration: 'none', borderBottom: i < links.length - 1 ? '0.5px solid var(--border)' : 'none' }}>{link.label}</Link>
           ))}
           <div style={{ padding: '14px 1.5rem' }}>
             <Link href={user ? '/seller-dashboard?section=new-listing' : '/sign-in'} onClick={() => setMenuOpen(false)} style={{ display: 'block', textAlign: 'center', background: 'var(--teal)', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', textDecoration: 'none' }}>

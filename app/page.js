@@ -226,7 +226,7 @@ export default function Home() {
       </div>
 
       {/* FEE COMPARISON */}
-      <section style={{ padding: '80px 2.5rem', background: 'var(--bg-2)', borderTop: '0.5px solid var(--border)' }}>
+      <section id="fee-comparison" style={{ padding: '80px 2.5rem', background: 'var(--bg-2)', borderTop: '0.5px solid var(--border)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '12px', fontWeight: 500 }}>Why Chase Hollow</div>
@@ -361,7 +361,7 @@ export default function Home() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section style={{ padding: '80px 2.5rem', background: 'var(--bg-2)', borderTop: '0.5px solid var(--border)' }}>
+      <section id="how-it-works" style={{ padding: '80px 2.5rem', background: 'var(--bg-2)', borderTop: '0.5px solid var(--border)' }}>
         <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(36px, 5vw, 46px)', fontWeight: 300, marginBottom: '10px', color: 'var(--text-primary)' }}>
@@ -487,7 +487,7 @@ export default function Home() {
       </section>
 
       {/* WALLET + USDC GUIDE */}
-      <section style={{ padding: '80px 2.5rem', borderTop: '0.5px solid var(--border)' }}>
+      <section id="wallets" style={{ padding: '80px 2.5rem', borderTop: '0.5px solid var(--border)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ marginBottom: '40px' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '12px', fontWeight: 500 }}>Getting Started</div>
