@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx hardhat:*)",
+      "Bash(cmd /c \"taskkill /PID 422224 /F\")",
+      "Bash(npm run:*)",
+      "Bash(cmd /c \"taskkill /F /IM node.exe\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)"
+    ]
+  }
+}

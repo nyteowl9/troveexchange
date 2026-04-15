@@ -5,3 +5,4 @@ alter table public.users
   add column state text,
   add column zip text,
   add column country text not null default 'US';
+

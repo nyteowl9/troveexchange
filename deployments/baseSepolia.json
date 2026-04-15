@@ -1,0 +1,9 @@
+{
+  "network": "baseSepolia",
+  "deployedAt": "2026-04-15T18:49:38.824Z",
+  "deployer": "0xE39a2128b7CeA98992E59ae3a7Ab2669E5801983",
+  "MockUSDC": "0x6F1B2ed9bE4A426e03d1Ad7012bC3dBac17430Cd",
+  "ChaseHollowEscrow": "0xb6827BA2BF3DCA5Cc39E717101ae0003C9Ce195C",
+  "feeRecipient": "0xE39a2128b7CeA98992E59ae3a7Ab2669E5801983",
+  "guardian": "0xF91ddA9227E3593E9336aeED081A90CD81Aa136F"
+}

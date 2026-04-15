@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { emailBuyerFundsReleased, emailSellerFundsReleased } from '@/lib/emails'
+import { emailBuyerFundsReleased, emailSellerFundsReleased, emailReviewRequest } from '@/lib/emails'
 
 // GET /api/cron/escrow-release
 // Schedule: every 15 minutes (*/15 * * * *)
@@ -39,6 +39,13 @@ export async function GET(request) {
         emailBuyerFundsReleased({ to: order.buyer.email, order }),
         emailSellerFundsReleased({ to: order.seller.email, order }),
       ])
+
+      // Increment seller total_sales and recalculate tier
+      await supabaseAdmin.rpc('increment_total_sales_and_recalculate', { p_user_id: order.seller_id })
+
+      // Send review request to both parties (fire and forget)
+      emailReviewRequest({ to: order.buyer.email,  order, role: 'buyer'  }).catch(() => {})
+      emailReviewRequest({ to: order.seller.email, order, role: 'seller' }).catch(() => {})
 
       // Phase 3: trigger smart contract escrow release here
       // await releaseEscrow(order.escrow_tx_hash, order.seller.wallet_address, order.escrow_amount - fees)

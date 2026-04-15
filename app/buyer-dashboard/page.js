@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/lib/supabase'
+import ChatModal from '@/app/components/ChatModal'
 
 const ACTIVE_STATUSES = ['funded', 'shipped', 'in_transit', 'auth_pending', 'inspection_window']
 
@@ -51,6 +52,7 @@ export default function BuyerDashboard() {
   const [historyOrders, setHistoryOrders] = useState([])
   const [disputes, setDisputes]           = useState([])
   const [dataLoading, setDataLoading]     = useState(true)
+  const [chatOrder, setChatOrder]         = useState(null) // { id, label }
 
   // Countdown for the most urgent inspection_window order
   const [countdown, setCountdown] = useState({ h: 0, m: 0, s: 0 })
@@ -217,6 +219,7 @@ export default function BuyerDashboard() {
                 <button onClick={() => setActiveSection('disputes')} style={btn({ border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)' })}>Raise Dispute</button>
               </>
             )}
+            <button onClick={() => setChatOrder({ id: order.id, label: card?.card_name })} style={btn({ border: '1.5px solid var(--teal-border)', color: 'var(--teal)' })}>Message Seller</button>
             <Link href={`/listing/${order.listing?.id || ''}`} style={{ textDecoration: 'none' }}>
               <button style={btn()}>View Listing</button>
             </Link>
@@ -230,6 +233,15 @@ export default function BuyerDashboard() {
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
+
+      {chatOrder && (
+        <ChatModal
+          orderId={chatOrder.id}
+          orderLabel={chatOrder.label}
+          onClose={() => setChatOrder(null)}
+        />
+      )}
+
       <style>{`
         @media (max-width: 768px) {
           .dash-aside { display: none !important; }

@@ -10,6 +10,10 @@ export default function AuthenticatorPortal() {
   const [decision, setDecision] = useState(null)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [showLabelModal, setShowLabelModal] = useState(false)
+  const [showWrongCardModal, setShowWrongCardModal] = useState(false)
+  const [wrongCardNotes, setWrongCardNotes] = useState('')
+  const [wrongCardSubmitting, setWrongCardSubmitting] = useState(false)
+  const [activeReturn, setActiveReturn] = useState(null)
   const [uploadedPhotos, setUploadedPhotos] = useState({})
 
   useEffect(() => {
@@ -171,10 +175,11 @@ export default function AuthenticatorPortal() {
         {/* SIDEBAR */}
         <aside className="dash-aside" style={{ width: '200px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '56px', left: 0, height: 'calc(100vh - 56px)', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
           {[
-            { id: 'queue', icon: '⊡', label: 'Inspection Queue', badge: queue.length },
-            { id: 'inspect', icon: '🔍', label: 'Current Card', disabled: !activeCard },
-            { id: 'completed', icon: '✓', label: 'Completed Today', badge: 12 },
-            { id: 'flagged', icon: '⚠', label: 'Flagged', badge: 1 },
+            { id: 'queue',     icon: '⊡', label: 'Inspection Queue', badge: queue.length },
+            { id: 'inspect',   icon: '🔍', label: 'Current Card',     disabled: !activeCard },
+            { id: 'returns',   icon: '↩', label: 'Dispute Returns',   badge: 1 },
+            { id: 'completed', icon: '✓', label: 'Completed Today',   badge: 12 },
+            { id: 'flagged',   icon: '⚠', label: 'Flagged',           badge: 1 },
           ].map(item => (
             <button key={item.id} onClick={() => !item.disabled && setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', cursor: item.disabled ? 'not-allowed' : 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: item.disabled ? 'var(--text-muted)' : activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%', opacity: item.disabled ? 0.4 : 1 }}>
               <span style={{ fontSize: '13px' }}>{item.icon}</span>
@@ -204,6 +209,7 @@ export default function AuthenticatorPortal() {
             >
               <option value="queue">Inspection Queue</option>
               <option value="inspect">Current Card</option>
+              <option value="returns">Dispute Returns</option>
               <option value="completed">Completed Today</option>
               <option value="flagged">Flagged</option>
             </select>
@@ -485,8 +491,139 @@ export default function AuthenticatorPortal() {
             </div>
           )}
 
+          {/* DISPUTE RETURNS */}
+          {activeSection === 'returns' && (
+            <div>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                Dispute <em style={{ fontStyle: 'italic', color: 'var(--accent-amber)' }}>Returns</em>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>
+                Cards returned by buyers after a buyer-wins dispute. Inspect the return, then generate Label D to send back to seller — or flag a wrong card.
+              </div>
+
+              {/* Return card list — mock data, wired to real orders at backend integration */}
+              {activeReturn === null ? (
+                <div>
+                  {[
+                    { id: 'RET-4821', order: '#4821', name: 'Charizard Holo', set: 'Pokémon · Base Set Shadowless · #4/102', grade: 'PSA 9', seller: 'CardKing_88', buyer: 'RareVault_99', value: '$487', arrived: '1h ago', deadline: '4 days left' },
+                  ].map(ret => (
+                    <div key={ret.id} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px 20px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}
+                      onClick={() => setActiveReturn(ret.id)}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{ret.name} — {ret.grade}</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>{ret.set}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Buyer: {ret.buyer} · Seller: {ret.seller} · {ret.value}</div>
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(232,168,56,0.1)', border: '1px solid rgba(232,168,56,0.3)', color: 'var(--accent-amber)', marginBottom: '4px' }}>Arrived {ret.arrived}</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-red)' }}>{ret.deadline} to process</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Return inspection view */
+                <div>
+                  <button onClick={() => setActiveReturn(null)} style={{ ...btn({ fontSize: '11px', padding: '6px 14px', marginBottom: '16px' }) }}>← Back to Returns</button>
+                  <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '22px', marginBottom: '16px' }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Return Inspection Checklist</div>
+                    {[
+                      { id: 'identity',  label: 'Card matches the original listing', sub: 'Confirm this is the exact card that was sold — same cert number, same slab, same card' },
+                      { id: 'condition', label: 'Card returned in same condition as sent', sub: 'No new damage, tampering, or switching of cards inside slab' },
+                      { id: 'slab',      label: 'Slab integrity intact', sub: 'No cracks, chips, or signs of tampering since original inspection' },
+                      { id: 'complete',  label: 'Return package complete', sub: 'All items present — nothing missing from original shipment' },
+                    ].map(item => (
+                      <div key={item.id} onClick={() => setChecklist(p => ({ ...p, [item.id]: !p[item.id] }))}
+                        style={{ display: 'flex', gap: '12px', padding: '12px 0', borderBottom: '0.5px solid var(--border)', cursor: 'pointer', alignItems: 'flex-start' }}>
+                        <div style={{ width: '18px', height: '18px', borderRadius: '4px', border: `2px solid ${checklist[item.id] ? 'var(--accent-green)' : 'var(--border)'}`, background: checklist[item.id] ? 'var(--accent-green)' : 'transparent', flexShrink: 0, marginTop: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {checklist[item.id] && <span style={{ color: '#fff', fontSize: '10px', fontWeight: 700 }}>✓</span>}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '2px' }}>{item.label}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{item.sub}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      style={{ flex: 1, minWidth: '180px', background: 'var(--teal)', border: 'none', color: '#fff', padding: '13px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                      onClick={() => alert('Label D generation — wire to POST /api/shipping/label { order_id, label: "D" }')}>
+                      ✓ Return Verified — Generate Label D
+                    </button>
+                    <button
+                      style={{ flex: 1, minWidth: '180px', background: 'rgba(200,75,60,0.1)', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '13px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                      onClick={() => setShowWrongCardModal(true)}>
+                      ✗ Wrong Card Received
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
         </main>
       </div>
+
+      {/* WRONG CARD MODAL */}
+      {showWrongCardModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.4)', borderRadius: '16px', padding: '28px', maxWidth: '500px', width: '100%' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Wrong Card <em style={{ fontStyle: 'italic', color: 'var(--accent-red)' }}>Received</em></div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
+              Flag this return as the wrong card. The buyer will be notified and given 5 days to ship the correct card. The seller will be informed. If the correct card is not received within 5 days, the dispute reverses to seller wins.
+            </div>
+
+            <div style={{ background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.25)', borderRadius: '10px', padding: '14px 16px', marginBottom: '18px' }}>
+              {[
+                'Buyer is notified — must ship correct card within 5 days',
+                'Seller is informed the dispute is under review',
+                'Return deadline resets from today + 5 days',
+                'Day 5 with no correct card received → seller wins automatically',
+              ].map((point, i) => (
+                <div key={i} style={{ fontSize: '12px', color: 'var(--text-secondary)', padding: '3px 0', display: 'flex', gap: '8px' }}>
+                  <span style={{ color: 'var(--accent-amber)', flexShrink: 0 }}>→</span>
+                  {point}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginBottom: '18px' }}>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px', fontWeight: 500 }}>Notes for buyer (required)</div>
+              <textarea
+                value={wrongCardNotes}
+                onChange={e => setWrongCardNotes(e.target.value)}
+                placeholder="Describe what was received vs. what was expected (e.g. 'Received a Pikachu Base Set, listing was for Charizard Holo PSA 9')"
+                style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', minHeight: '90px', lineHeight: 1.6, boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                disabled={wrongCardSubmitting || !wrongCardNotes.trim()}
+                onClick={async () => {
+                  if (!wrongCardNotes.trim()) return
+                  setWrongCardSubmitting(true)
+                  try {
+                    // Wire to POST /api/admin/orders/[orderId]/wrong-card
+                    alert(`Wrong card flagged. Notes: ${wrongCardNotes}\n\nWire to: POST /api/admin/orders/{orderId}/wrong-card`)
+                    setShowWrongCardModal(false)
+                    setWrongCardNotes('')
+                    setActiveReturn(null)
+                  } finally {
+                    setWrongCardSubmitting(false)
+                  }
+                }}
+                style={{ flex: 1, background: wrongCardNotes.trim() ? 'var(--accent-red)' : 'var(--bg-3)', border: 'none', color: wrongCardNotes.trim() ? '#fff' : 'var(--text-muted)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: wrongCardNotes.trim() ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: wrongCardSubmitting ? 0.6 : 1 }}>
+                {wrongCardSubmitting ? 'Flagging…' : 'Flag — Notify Buyer & Seller'}
+              </button>
+              <button onClick={() => { setShowWrongCardModal(false); setWrongCardNotes('') }} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

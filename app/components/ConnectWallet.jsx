@@ -37,6 +37,7 @@ export function useWalletConnection() {
     ready,
     authenticated,
     walletAddress,
+    wallet: wallets?.[0] ?? null,
     connect: login,
     disconnect,
   }

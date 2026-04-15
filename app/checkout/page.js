@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { ethers } from 'ethers'
 import { useWalletConnection } from '@/app/components/ConnectWallet'
 import { supabase } from '@/lib/supabase'
+import { ESCROW_ADDRESS, USDC_ADDRESS, USDC_ABI, ESCROW_ABI, calcSellerBond } from '@/lib/escrow'
 
 // useSearchParams() requires a Suspense boundary in Next.js App Router
 export default function CheckoutPage() {
@@ -25,7 +27,17 @@ function Checkout() {
   const [alreadyAcknowledged, setAlreadyAcknowledged] = useState(false)
   const [listing, setListing] = useState(null)
   const [listingLoading, setListingLoading] = useState(true)
-  const { walletAddress, connect } = useWalletConnection()
+
+  // Real blockchain state
+  const [usdcBalance, setUsdcBalance]     = useState(null)   // BigInt, 6 decimals
+  const [shippingFee, setShippingFee]     = useState(null)   // dollars (number)
+  const [labelACost, setLabelACost]       = useState(null)   // dollars (number), T2 only
+  const [balanceLoading, setBalanceLoading] = useState(false)
+  const [txHash, setTxHash]               = useState(null)
+  const [supabaseOrderId, setSupabaseOrderId] = useState(null)
+  const [checkoutError, setCheckoutError] = useState(null)
+
+  const { walletAddress, wallet, connect } = useWalletConnection()
   const searchParams = useSearchParams()
   const listingId = searchParams.get('listing_id')
 
@@ -42,23 +54,71 @@ function Checkout() {
     if (!listingId) { setListingLoading(false); return }
     supabase
       .from('listings')
-      .select(`*, seller:seller_id (id, username, full_name, tier, rep_score)`)
+      .select(`*, seller:seller_id (id, username, full_name, tier, rep_score, wallet_address)`)
       .eq('id', listingId)
       .eq('status', 'active')
       .single()
       .then(({ data }) => { setListing(data); setListingLoading(false) })
   }, [listingId])
 
-  // Derived price data from real listing (fallback to 0 if still loading)
-  const cardPrice   = listing?.price ?? 0
-  const authTier    = cardPrice <= 300 ? 'remote' : 'physical'
-  const authFee     = authTier === 'remote' ? 10 : 25
-  const salesTax    = parseFloat((cardPrice * 0.095).toFixed(2))
-  const total       = (cardPrice + authFee + salesTax).toFixed(2)
-  const sellerName  = listing?.seller?.username || '—'
-  const sellerTier  = listing?.seller?.tier || 'new'
-  const sellerRep   = listing?.seller?.rep_score
+  // Fetch real USDC balance + shipping estimate when buyer reaches Step 2
+  useEffect(() => {
+    if (step !== 2 || !wallet || !listingId || !listing) return
+    setBalanceLoading(true)
+    setCheckoutError(null)
 
+    async function fetchStep2Data() {
+      try {
+        // Read USDC balance from chain via Privy wallet provider
+        const eip1193 = await wallet.getEthereumProvider()
+        const provider = new ethers.BrowserProvider(eip1193)
+        const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider)
+        const bal = await usdcContract.balanceOf(walletAddress)
+        setUsdcBalance(bal)
+
+        // Fetch shipping estimate from Shippo
+        const res = await fetch('/api/checkout/estimate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listing_id: listingId }),
+        })
+        const est = await res.json()
+        setShippingFee(est.shipping_fee ?? 15)
+        setLabelACost(est.label_a_cost ?? 0)
+      } catch (err) {
+        console.error('[checkout/step2]', err)
+        // Fall back to estimates so buyer isn't blocked
+        setShippingFee(listing.price > 300 ? 15 : 12)
+        setLabelACost(listing.price > 300 ? 12 : 0)
+      } finally {
+        setBalanceLoading(false)
+      }
+    }
+
+    fetchStep2Data()
+  }, [step, wallet, listingId, listing, walletAddress])
+
+  // Derived price data from real listing (fallback to 0 if still loading)
+  const cardPrice    = listing?.price ?? 0
+  const authTier     = cardPrice <= 300 ? 'remote' : 'physical'
+  const authFee      = authTier === 'remote' ? 10 : 25
+  const salesTax     = parseFloat((cardPrice * 0.095).toFixed(2))
+  const platformFee  = parseFloat((cardPrice * 0.03).toFixed(2))
+  const creatorFee   = parseFloat((cardPrice * 0.005).toFixed(2))
+  const labelACostVal = labelACost ?? (cardPrice > 300 ? 12 : 0)
+  const shippingFeeVal = shippingFee ?? (cardPrice > 300 ? 15 : 12)
+  const sellerPayout = parseFloat((cardPrice - platformFee - creatorFee - labelACostVal).toFixed(2))
+  const escrowTotal  = parseFloat((sellerPayout + platformFee + creatorFee + authFee + shippingFeeVal + salesTax).toFixed(2))
+  const total        = escrowTotal.toFixed(2)
+  const sellerName   = listing?.seller?.username || '—'
+  const sellerTier   = listing?.seller?.tier || 'new'
+  const sellerRep    = listing?.seller?.rep_score
+  const usdcBalanceFormatted = usdcBalance !== null
+    ? parseFloat(ethers.formatUnits(usdcBalance, 6)).toFixed(2)
+    : null
+  const hasSufficientBalance = usdcBalance !== null
+    ? usdcBalance >= ethers.parseUnits(total, 6)
+    : true // optimistic until loaded
 
   const goToStep = (n) => {
     setStep(n)
@@ -67,68 +127,105 @@ function Checkout() {
 
   const handleSign = async () => {
     setSigning(true)
-    const statuses = [
-      'Waiting for wallet confirmation...',
-      'Wallet detected — please approve in MetaMask...',
-      'Transaction submitted to Base...',
-      'Waiting for block confirmation...',
-      'Confirmed on Base · 1 block ✓'
-    ]
-    let i = 0
-    const interval = setInterval(() => {
-      i++
-      if (statuses[i]) setSigningStatus(statuses[i])
-      if (i >= statuses.length - 1) {
-        clearInterval(interval)
-        setTimeout(async () => {
-          try {
-            // Get authenticated buyer
-            const { data: { user: buyer } } = await supabase.auth.getUser()
+    setCheckoutError(null)
 
-            // Create order record in Supabase
-            const { data: order, error: orderError } = await supabase
-              .from('orders')
-              .insert({
-                listing_id:    listingId,
-                buyer_id:      buyer?.id,
-                seller_id:     listing?.seller_id,
-                auth_tier:     authTier,
-                escrow_amount: parseFloat(total),
-                platform_fee:  parseFloat((cardPrice * 0.03).toFixed(2)),
-                creator_fee:   parseFloat((cardPrice * 0.005).toFixed(2)),
-                auth_fee:      authFee,
-                shipping_cost: 0,   // updated when label is generated
-                sales_tax:     salesTax,
-                status:        'funded',
-                ship_deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-              })
-              .select()
-              .single()
+    try {
+      if (!wallet) throw new Error('No wallet connected')
+      if (!listing?.seller?.wallet_address) throw new Error('Seller wallet address not found')
 
-            if (!orderError && order) {
-              // Mark listing as pending so it no longer shows in marketplace
-              await supabase
-                .from('listings')
-                .update({ status: 'pending' })
-                .eq('id', listingId)
+      // ── 1. Get ethers signer via Privy wallet ──────────────
+      setSigningStatus('Connecting to wallet...')
+      const eip1193 = await wallet.getEthereumProvider()
+      const provider = new ethers.BrowserProvider(eip1193)
+      const signer = await provider.getSigner()
 
-              // Fire referral attribution (best-effort, never blocks checkout)
-              fetch('/api/referral/convert', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ order_id: order.id, sale_amount: cardPrice }),
-              }).catch(() => {})
-            }
-          } catch (err) {
-            console.error('[checkout] order creation error:', err)
-            // Don't block the success screen — Phase 3 blockchain will be authoritative
-          }
+      // ── 2. Build on-chain amounts (USDC 6 decimals) ────────
+      const u = (n) => ethers.parseUnits(parseFloat(n).toFixed(6), 6)
+      const onchainOrderId = ethers.hexlify(ethers.randomBytes(32))
 
-          setSigning(false)
-          goToStep(5)
-        }, 1200)
-      }
-    }, 900)
+      const cardPriceU    = u(cardPrice)
+      const platformFeeU  = cardPriceU * 300n / 10000n
+      const creatorFeeU   = cardPriceU * 50n / 10000n
+      const labelACostU   = u(labelACostVal)
+      const authFeeU      = u(authFee)
+      const shippingFeeU  = u(shippingFeeVal)
+      const salesTaxU     = u(salesTax)
+      const sellerPayoutU = cardPriceU - platformFeeU - creatorFeeU - labelACostU
+      const escrowAmountU = sellerPayoutU + platformFeeU + creatorFeeU + authFeeU + shippingFeeU + salesTaxU
+      const sellerBondUSD = calcSellerBond(cardPrice, sellerTier)
+      const sellerBondU   = u(sellerBondUSD)
+
+      // ── 3. Approve USDC ────────────────────────────────────
+      setSigningStatus('Step 1 of 2 — Approve USDC spend · confirm in wallet...')
+      const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
+      const approveTx = await usdcContract.approve(ESCROW_ADDRESS, escrowAmountU)
+      setSigningStatus('Approval submitted — waiting for confirmation...')
+      await approveTx.wait()
+
+      // ── 4. Fund escrow ─────────────────────────────────────
+      setSigningStatus('Step 2 of 2 — Lock USDC in escrow · confirm in wallet...')
+      const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
+      const fundTx = await escrowContract.fundOrder(
+        onchainOrderId,
+        listing.seller.wallet_address,
+        ethers.ZeroAddress,  // no creator on-chain for now; referral handled off-chain
+        escrowAmountU,
+        sellerBondU,
+        platformFeeU,
+        creatorFeeU,
+        authFeeU,
+        shippingFeeU,
+        salesTaxU,
+        sellerPayoutU,
+      )
+      setSigningStatus('Transaction submitted — waiting for block confirmation...')
+      await fundTx.wait()
+      setSigningStatus('Confirmed on Base ✓')
+
+      // ── 5. Create Supabase order ───────────────────────────
+      const { data: { user: buyer } } = await supabase.auth.getUser()
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          listing_id:       listingId,
+          buyer_id:         buyer?.id,
+          seller_id:        listing?.seller_id,
+          auth_tier:        authTier,
+          escrow_amount:    parseFloat(ethers.formatUnits(escrowAmountU, 6)),
+          platform_fee:     parseFloat(ethers.formatUnits(platformFeeU, 6)),
+          creator_fee:      parseFloat(ethers.formatUnits(creatorFeeU, 6)),
+          auth_fee:         authFee,
+          shipping_cost:    shippingFeeVal,
+          sales_tax:        salesTax,
+          onchain_order_id: onchainOrderId,
+          escrow_tx_hash:   fundTx.hash,
+          status:           'funded',
+          ship_deadline:    new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+        })
+        .select()
+        .single()
+
+      if (orderError) throw new Error('Failed to record order: ' + orderError.message)
+
+      // ── 6. Mark listing pending + fire referral ────────────
+      await supabase.from('listings').update({ status: 'pending' }).eq('id', listingId)
+      fetch('/api/referral/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, sale_amount: cardPrice }),
+      }).catch(() => {})
+
+      setTxHash(fundTx.hash)
+      setSupabaseOrderId(order.id)
+      setSigning(false)
+      goToStep(5)
+
+    } catch (err) {
+      console.error('[checkout/handleSign]', err)
+      const msg = err?.info?.error?.message || err?.message || 'Transaction failed'
+      setCheckoutError(msg)
+      setSigning(false)
+    }
   }
 
   const handleAck = (which, val) => {
@@ -174,7 +271,7 @@ function Checkout() {
               {[
                 { label: 'Action', val: 'Lock USDC in Escrow' },
                 { label: 'Amount', val: `$${total} USDC`, gold: true },
-                { label: 'Contract', val: '0x8f2a...d91c ✓ Verified', green: true },
+                { label: 'Contract', val: `${ESCROW_ADDRESS?.slice(0,6)}...${ESCROW_ADDRESS?.slice(-4)} ✓ Verified`, green: true },
                 { label: 'Network', val: 'Base (Ethereum L2)' },
               ].map((r, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -268,24 +365,28 @@ function Checkout() {
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Verify <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>USDC Balance</em></div>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>We detected your wallet on Base. Checking your USDC balance for this purchase.</p>
 
-              <div style={{ background: 'rgba(76,175,124,0.04)', border: '1.5px solid rgba(76,175,124,0.4)', borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' }}>
+              <div style={{ background: hasSufficientBalance ? 'rgba(76,175,124,0.04)' : 'rgba(200,75,60,0.04)', border: `1.5px solid ${hasSufficientBalance ? 'rgba(76,175,124,0.4)' : 'rgba(200,75,60,0.4)'}`, borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>✓</div>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: hasSufficientBalance ? 'rgba(76,175,124,0.1)' : 'rgba(200,75,60,0.1)', border: `1px solid ${hasSufficientBalance ? 'rgba(76,175,124,0.3)' : 'rgba(200,75,60,0.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>{balanceLoading ? '…' : hasSufficientBalance ? '✓' : '✗'}</div>
                   <div>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-green)', fontWeight: 500 }}>Sufficient Balance Detected</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '2px' }}>0x742d...f44e · Base Network</div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: hasSufficientBalance ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: 500 }}>
+                      {balanceLoading ? 'Checking balance…' : hasSufficientBalance ? 'Sufficient Balance Detected' : 'Insufficient USDC Balance'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '2px' }}>{walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)} · Base Network</div>
                   </div>
                 </div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '40px', fontWeight: 300, lineHeight: 1, color: 'var(--text-primary)', marginBottom: '2px' }}>$2,840.00</div>
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '40px', fontWeight: 300, lineHeight: 1, color: 'var(--text-primary)', marginBottom: '2px' }}>
+                  {balanceLoading ? '…' : usdcBalanceFormatted !== null ? `$${parseFloat(usdcBalanceFormatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginBottom: '14px' }}>USDC available on Base</div>
                 <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {[
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
                     { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
-                    { label: 'Shipping & insurance', val: 'Calculated at checkout' },
-                        { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
+                    { label: 'Shipping & insurance', val: balanceLoading ? 'Calculating…' : `$${shippingFeeVal.toFixed(2)}` },
+                    { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
                     { label: 'Total to lock in escrow', val: `$${total} USDC`, total: true },
-                    { label: 'Remaining after purchase', val: `$${(2840 - parseFloat(total)).toFixed(2)} USDC`, green: true },
+                    { label: 'Remaining after purchase', val: usdcBalanceFormatted !== null ? `$${Math.max(0, parseFloat(usdcBalanceFormatted) - parseFloat(total)).toFixed(2)} USDC` : '—', green: true },
                   ].map((row, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingTop: row.total ? '6px' : '0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
                       <span style={{ color: row.total ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row.total ? 600 : 400 }}>{row.label}</span>
@@ -295,9 +396,15 @@ function Checkout() {
                 </div>
               </div>
 
+              {!hasSufficientBalance && usdcBalanceFormatted !== null && (
+                <div style={{ background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: 'var(--accent-red)', marginBottom: '16px', lineHeight: 1.6 }}>
+                  You need ${total} USDC on Base to complete this purchase. <a href="/#wallets" style={{ color: 'var(--teal)', textDecoration: 'none' }}>How to get USDC on Base →</a>
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button onClick={() => goToStep(1)} style={btn()}>← Back</button>
-                <button onClick={() => goToStep(3)} style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>Looks Good →</button>
+                <button onClick={() => goToStep(3)} disabled={!hasSufficientBalance || balanceLoading} style={btn({ background: (hasSufficientBalance && !balanceLoading) ? 'var(--teal)' : 'var(--bg-4)', border: 'none', color: (hasSufficientBalance && !balanceLoading) ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', fontWeight: 600, opacity: (hasSufficientBalance && !balanceLoading) ? 1 : 0.5, cursor: (hasSufficientBalance && !balanceLoading) ? 'pointer' : 'not-allowed' })}>Looks Good →</button>
               </div>
             </div>
           )}
@@ -324,7 +431,7 @@ function Checkout() {
                   rows: [
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}`, gold: true },
                     { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
-                    { label: 'Shipping & insurance', val: '$18.40' },
+                    { label: 'Shipping & insurance', val: `$${shippingFeeVal.toFixed(2)}` },
                         { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
                     { label: 'Total locked in escrow', val: `$${total} USDC`, gold: true, total: true },
                   ]
@@ -403,7 +510,7 @@ function Checkout() {
                 {[
                   { label: 'Action', val: 'Lock USDC in escrow smart contract', green: true },
                   { label: 'Amount', val: `$${total} USDC`, gold: true },
-                  { label: 'Contract', val: '0x8f2a...d91c · Verified ✓', teal: true },
+                  { label: 'Contract', val: `${ESCROW_ADDRESS?.slice(0,6)}...${ESCROW_ADDRESS?.slice(-4)} · Verified ✓`, teal: true },
                   { label: 'Network', val: 'Base (Ethereum L2)' },
                   { label: 'Gas fee', val: '~$0.04 USDC' },
                 ].map((row, i) => (
@@ -429,6 +536,12 @@ function Checkout() {
                 ))}
               </div>
 
+              {checkoutError && (
+                <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: 'var(--accent-red)', marginBottom: '14px', lineHeight: 1.6 }}>
+                  Transaction failed — {checkoutError}
+                </div>
+              )}
+
               <button onClick={handleSign} style={{ width: '100%', background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '18px', fontSize: '16px', fontWeight: 700, borderRadius: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
                 🔒 Sign &amp; Lock ${total} USDC in Escrow
               </button>
@@ -448,13 +561,15 @@ function Checkout() {
 
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '14px 18px', marginBottom: '24px', fontFamily: 'DM Mono, monospace', fontSize: '11px', textAlign: 'left' }}>
                 <div style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 500 }}>Transaction Hash · On-Chain Confirmation</div>
-                <div style={{ color: 'var(--accent-green)', wordBreak: 'break-all', lineHeight: 1.6 }}>0x8f2a91C4b3D2e5F1a0B7c6D3e8F2a91C4b3D2e5F1a0B7c6D3e8F2a91C4b3D2e5</div>
-                <a href="#" style={{ color: 'var(--teal)', fontSize: '10px', marginTop: '4px', display: 'block', textDecoration: 'none' }}>View on Basescan →</a>
+                <div style={{ color: 'var(--accent-green)', wordBreak: 'break-all', lineHeight: 1.6 }}>{txHash || '—'}</div>
+                {txHash && (
+                  <a href={`https://sepolia.basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--teal)', fontSize: '10px', marginTop: '4px', display: 'block', textDecoration: 'none' }}>View on Basescan →</a>
+                )}
               </div>
 
               {/* Order tracker */}
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '24px', marginBottom: '24px', textAlign: 'left' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>Order <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>#4821</em></div>
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>Order <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>#{supabaseOrderId?.slice(-6).toUpperCase() || '—'}</em></div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '20px' }}>Live tracking · Updates automatically</div>
                 {[
                   { title: 'Escrow Funded', desc: `$${total} USDC locked in smart contract on Base. Transaction confirmed.`, done: true, active: false },

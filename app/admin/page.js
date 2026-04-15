@@ -7,6 +7,57 @@ export default function AdminPanel() {
   const [activeSection, setActiveSection] = useState('overview')
   const [showActionModal, setShowActionModal] = useState(null)
 
+  // Tier config state
+  const [tierConfig, setTierConfig] = useState(null)
+  const [tierConfigEdit, setTierConfigEdit] = useState(null)
+  const [tierConfigSaving, setTierConfigSaving] = useState(false)
+  const [tierConfigMsg, setTierConfigMsg] = useState(null)
+
+  useEffect(() => {
+    if (activeSection === 'settings' && !tierConfig) loadTierConfig()
+  }, [activeSection])
+
+  async function loadTierConfig() {
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin/tier-config', {
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setTierConfig(data)
+        setTierConfigEdit({ ...data })
+      }
+    } catch {}
+  }
+
+  async function saveTierConfig() {
+    setTierConfigSaving(true)
+    setTierConfigMsg(null)
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin/tier-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify(tierConfigEdit),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setTierConfig(data)
+        setTierConfigEdit({ ...data })
+        setTierConfigMsg({ type: 'ok', text: 'Saved.' })
+      } else {
+        setTierConfigMsg({ type: 'err', text: 'Save failed.' })
+      }
+    } catch {
+      setTierConfigMsg({ type: 'err', text: 'Save failed.' })
+    }
+    setTierConfigSaving(false)
+    setTimeout(() => setTierConfigMsg(null), 3000)
+  }
+
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
     setTheme(saved)
@@ -70,10 +121,16 @@ export default function AdminPanel() {
   ]
 
   const tierColors = {
-    Elite: { bg: 'rgba(201,168,76,0.1)', border: 'rgba(201,168,76,0.28)', color: 'var(--gold)' },
-    Pro: { bg: 'rgba(232,168,56,0.1)', border: 'rgba(232,168,56,0.3)', color: 'var(--accent-amber)' },
-    Trusted: { bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)', color: 'var(--accent-blue)' },
-    New: { bg: 'rgba(255,255,255,0.05)', border: 'var(--border)', color: 'var(--text-muted)' },
+    legend: { bg: 'rgba(232,168,56,0.15)', border: 'rgba(232,168,56,0.4)', color: '#E8A838', label: '👑 Legend' },
+    elite:   { bg: 'rgba(201,168,76,0.1)',  border: 'rgba(201,168,76,0.28)', color: 'var(--gold)',        label: '⭐ Elite' },
+    pro:     { bg: 'rgba(13,110,110,0.1)',  border: 'rgba(13,110,110,0.3)', color: 'var(--teal)',         label: 'Pro' },
+    trusted: { bg: 'rgba(60,125,200,0.1)',  border: 'rgba(60,125,200,0.3)', color: 'var(--accent-blue)', label: 'Trusted' },
+    new:     { bg: 'rgba(255,255,255,0.05)', border: 'var(--border)',        color: 'var(--text-muted)',  label: 'New' },
+    // legacy capitalized keys (used in static mock data)
+    Elite:   { bg: 'rgba(201,168,76,0.1)',  border: 'rgba(201,168,76,0.28)', color: 'var(--gold)',        label: '⭐ Elite' },
+    Pro:     { bg: 'rgba(13,110,110,0.1)',  border: 'rgba(13,110,110,0.3)', color: 'var(--teal)',         label: 'Pro' },
+    Trusted: { bg: 'rgba(60,125,200,0.1)',  border: 'rgba(60,125,200,0.3)', color: 'var(--accent-blue)', label: 'Trusted' },
+    New:     { bg: 'rgba(255,255,255,0.05)', border: 'var(--border)',        color: 'var(--text-muted)',  label: 'New' },
   }
 
   const btn = (extra = {}) => ({
@@ -313,6 +370,7 @@ export default function AdminPanel() {
                       <>
                         <button onClick={() => setShowActionModal({ title: 'Execute — Refund Buyer', description: `Full escrow refund will be sent to the buyer. Seller receives Strike 1. This is irreversible.`, note: d.staffNote, action: 'Confirm — Refund Buyer', actionColor: 'var(--accent-green)', color: 'rgba(76,175,124,0.4)' })} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Execute — Refund Buyer</button>
                         <button onClick={() => setShowActionModal({ title: 'Execute — Release to Seller', description: `Escrow will be released to the seller. Buyer bond forfeited. This is irreversible.`, note: d.staffNote, action: 'Confirm — Release to Seller', actionColor: 'var(--gold)', color: 'rgba(201,168,76,0.4)' })} style={{ background: 'transparent', border: '1.5px solid rgba(201,168,76,0.4)', color: 'var(--gold)', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Execute — Release to Seller</button>
+                        <button onClick={() => setShowActionModal({ title: 'Void Dispute for Tier', description: `This dispute will NOT count against the seller's tier eligibility or dispute rate. The record stays visible — this only removes it from tier calculations. Use for frivolous or unusual disputes that don't reflect seller behavior.`, note: d.staffNote, action: 'Void for Tier', actionColor: 'var(--accent-blue)', color: 'rgba(60,125,200,0.4)' })} style={btn({ padding: '10px 16px', border: '1.5px solid rgba(60,125,200,0.4)', color: 'var(--accent-blue)' })}>Void for Tier</button>
                       </>
                     )}
                     {d.type === 'strike_appeal' && (
@@ -573,7 +631,8 @@ export default function AdminPanel() {
                     { label: 'New seller (0–9 sales)', val: '4%', editable: true },
                     { label: 'Trusted (10–99 sales)', val: '3%', editable: true },
                     { label: 'Pro (100–499 sales)', val: '2%', editable: true },
-                    { label: 'Elite (500+ sales)', val: '1%', editable: true },
+                    { label: 'Elite (500–2,499 sales)', val: '1%', editable: true },
+                    { label: 'Legend (2,500+ sales)', val: '1%', editable: true },
                   ]
                 },
               ].map((section, si) => (
@@ -595,6 +654,136 @@ export default function AdminPanel() {
                   ))}
                 </div>
               ))}
+
+              {/* LIVE TIER THRESHOLDS — reads/writes tier_config */}
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
+                <div style={{ padding: '12px 18px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.06em' }}>Seller Tier Thresholds</span>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>Stored in Supabase · No redeployment needed</span>
+                </div>
+
+                {!tierConfigEdit ? (
+                  <div style={{ padding: '24px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Loading…</div>
+                ) : (
+                  <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                    {/* Sales thresholds */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+                      {[
+                        { key: 'trusted_min_sales', label: 'Trusted min sales' },
+                        { key: 'pro_min_sales',     label: 'Pro min sales' },
+                        { key: 'elite_min_sales',   label: 'Elite min sales' },
+                        { key: 'legend_min_sales',  label: 'Legend min sales' },
+                      ].map(({ key, label }) => (
+                        <div key={key}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
+                          <input type="number" min="1" value={tierConfigEdit[key] ?? ''}
+                            onChange={e => setTierConfigEdit(p => ({ ...p, [key]: parseInt(e.target.value) || 0 }))}
+                            style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Elite/Legend gates */}
+                    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+                      <div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Max dispute rate (%)</div>
+                        <input type="number" min="0" max="100" step="0.5"
+                          value={tierConfigEdit.elite_max_dispute_rate != null ? (parseFloat(tierConfigEdit.elite_max_dispute_rate) * 100).toFixed(1) : ''}
+                          onChange={e => setTierConfigEdit(p => ({ ...p, elite_max_dispute_rate: parseFloat(e.target.value) / 100 || 0 }))}
+                          style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Min account age (days)</div>
+                        <input type="number" min="0"
+                          value={tierConfigEdit.elite_min_account_age_days ?? ''}
+                          onChange={e => setTierConfigEdit(p => ({ ...p, elite_min_account_age_days: parseInt(e.target.value) || 0 }))}
+                          style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>No dispute loss (days)</div>
+                        <input type="number" min="0"
+                          value={tierConfigEdit.elite_no_dispute_loss_days ?? ''}
+                          onChange={e => setTierConfigEdit(p => ({ ...p, elite_no_dispute_loss_days: parseInt(e.target.value) || 0 }))}
+                          style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Trust Tier unlock */}
+                    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Trust Tier (photo-only auth) unlocks at</div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {['elite', 'legend'].map(t => (
+                          <button key={t} onClick={() => setTierConfigEdit(p => ({ ...p, trust_tier_unlocks_at: t }))}
+                            style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '7px 20px', borderRadius: '8px', border: `1.5px solid ${tierConfigEdit.trust_tier_unlocks_at === t ? 'var(--gold)' : 'var(--border)'}`, background: tierConfigEdit.trust_tier_unlocks_at === t ? 'rgba(201,168,76,0.1)' : 'transparent', color: tierConfigEdit.trust_tier_unlocks_at === t ? 'var(--gold)' : 'var(--text-muted)', cursor: 'pointer', fontWeight: tierConfigEdit.trust_tier_unlocks_at === t ? 600 : 400, textTransform: 'capitalize' }}>
+                            {t === 'elite' ? '⭐ Elite' : '👑 Legend'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bond floor */}
+                    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Seller Bond Floor</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.6 }}>
+                        Bond = floor + (price × bond%). Floor covers worst-case return shipping exposure (Labels B + C + D ≈ $35).
+                      </div>
+                      <div style={{ maxWidth: '200px' }}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Min bond floor ($)</div>
+                        <input type="number" min="0" value={tierConfigEdit?.min_bond_floor_usd ?? ''}
+                          onChange={e => setTierConfigEdit(p => ({ ...p, min_bond_floor_usd: parseInt(e.target.value) || 0 }))}
+                          style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.6 }}>
+                        Example at $20 floor — $400 card, new seller (4%): $20 + $16 = $36 bond
+                      </div>
+                    </div>
+
+                    {/* Auth tier thresholds */}
+                    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Authentication Tier Thresholds</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+                        {[
+                          { key: 'remote_auth_max_value',   label: 'Tier 1 max value ($)',  note: 'Cards ≤ this → remote photo auth' },
+                          { key: 'physical_auth_max_value', label: 'Tier 2 max value ($)',  note: 'Cards ≤ this → physical auth' },
+                          { key: 'remote_auth_fee',         label: 'Tier 1 auth fee ($)',   note: 'Buyer pays (remote)' },
+                          { key: 'physical_auth_fee',       label: 'Tier 2 auth fee ($)',   note: 'Buyer pays (physical)' },
+                        ].map(({ key, label, note }) => (
+                          <div key={key}>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '4px', opacity: 0.7 }}>{note}</div>
+                            <input type="number" min="0" value={tierConfigEdit?.[key] ?? ''}
+                              onChange={e => setTierConfigEdit(p => ({ ...p, [key]: parseInt(e.target.value) || 0 }))}
+                              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.6 }}>
+                        ⚠ Auth fee changes here are for checkout logic only. Also update the contract via Safe multisig to keep them in sync.
+                      </div>
+                    </div>
+
+                    {/* Save button */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
+                      <button onClick={saveTierConfig} disabled={tierConfigSaving}
+                        style={{ background: 'var(--teal)', border: 'none', color: '#fff', padding: '9px 24px', borderRadius: '8px', fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 600, cursor: tierConfigSaving ? 'not-allowed' : 'pointer', opacity: tierConfigSaving ? 0.6 : 1 }}>
+                        {tierConfigSaving ? 'Saving…' : 'Save Tier Config'}
+                      </button>
+                      {tierConfigMsg && (
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: tierConfigMsg.type === 'ok' ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                          {tierConfigMsg.text}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

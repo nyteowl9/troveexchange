@@ -116,7 +116,12 @@ Window:       72hr buyer inspection after delivery (both tiers)
 
 **Phase 2 — Trust Tier (future)**
 ```
-Eligible:     Elite sellers (500+ sales, 0 disputes lost, 0 strikes, 12mo+)
+Eligible:     Elite sellers by default (configurable to Legend in admin)
+              Thresholds stored in Supabase tier_config table (no redeployment)
+Criteria:     500+ sales (Elite) OR 2,500+ sales (Legend)
+              Dispute loss rate < 2% of completed orders
+              No dispute loss in last 90 days
+              Account age ≥ 365 days
 Auth:         Photo auth only (same 3 photos) — never zero auth
 ```
 
@@ -140,7 +145,8 @@ Auth:         Photo auth only (same 3 photos) — never zero auth
 New Seller:   4% bond per transaction
 Trusted:      3% (10–99 sales)
 Pro:          2% (100–499 sales)
-Elite:        1% (500+ sales)
+Elite:        1% (500–2,499 sales)
+Legend:       1% (2,500+ sales)
 Strike 2:     Bond jumps to 4% regardless of tier
 
 Posted:       When buyer purchases (not at listing time)
@@ -319,8 +325,12 @@ Priority order:
 
 ## Supabase Schema Reference
 ```sql
-users (id, email, wallet_address, role, tier, strike_count,
-       rep_score, joined_at, suspended_until, banned)
+users (id, email, wallet_address, role, strike_count, joined_at,
+       suspended_until, banned,
+       seller_tier [new|trusted|pro|elite|legend], total_sales,
+       seller_rep_score, seller_review_count,
+       buyer_rep_score,  buyer_review_count,
+       dispute_losses, last_dispute_loss_at)
 
 listings (id, seller_id, game, set, card_name, card_number,
           grade, grader, cert_number, condition, listing_type,
@@ -347,6 +357,18 @@ creators (id, user_id, handle, platform, channel_url,
 
 referral_conversions (id, creator_id, order_id,
                       sale_amount, commission, paid)
+
+reviews (id, order_id, reviewer_id, reviewed_id,
+         reviewer_role [buyer|seller], rating 1-5, comment,
+         flagged, created_at)
+-- One review per order per role. Only after status=released.
+
+tier_config (singleton row — admin editable via /admin → Platform Settings)
+  trusted_min_sales, pro_min_sales, elite_min_sales, legend_min_sales
+  elite_max_dispute_rate (default 0.02 = 2%)
+  elite_min_account_age_days (default 365)
+  elite_no_dispute_loss_days (default 90)
+  trust_tier_unlocks_at [elite|legend] (default elite)
 ```
 
 ---

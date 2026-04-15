@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/lib/supabase'
+import ChatModal from '@/app/components/ChatModal'
 
 export default function SellerDashboardPage() {
   return <Suspense><SellerDashboard /></Suspense>
@@ -12,8 +13,9 @@ export default function SellerDashboardPage() {
 
 const ACTIVE_ORDER_STATUSES = ['funded', 'shipped', 'in_transit', 'auth_pending', 'inspection_window']
 
-const BOND_RATE = { new: 0.04, trusted: 0.03, pro: 0.02, elite: 0.01 }
-const TIER_LABEL = { new: 'New', trusted: 'Trusted', pro: 'Pro', elite: 'Elite' }
+const BOND_RATE  = { new: 0.04, trusted: 0.03, pro: 0.02, elite: 0.01, legend: 0.01 }
+const TIER_LABEL = { new: 'New', trusted: 'Trusted', pro: 'Pro', elite: 'Elite', legend: 'Legend' }
+const BOND_FLOOR = 20 // $20 flat floor added to every bond
 
 const SELLER_STATUS_MAP = {
   funded:           { label: '⚡ Ship Now',      color: 'var(--accent-red)',   bg: 'rgba(200,75,60,0.1)',   border: 'rgba(200,75,60,0.3)',   urgent: true  },
@@ -55,6 +57,7 @@ function SellerDashboard() {
 
   const [theme, setTheme] = useState('dark')
   const [activeSection, setActiveSection]   = useState(() => searchParams.get('section') || 'overview')
+  const [chatOrder, setChatOrder]           = useState(null)
   const [activeOrders, setActiveOrders]     = useState([])
   const [myListings, setMyListings]         = useState([])
   const [completedSales, setCompletedSales] = useState([])
@@ -151,8 +154,8 @@ function SellerDashboard() {
   }
 
   const fees = calcFees(price)
-  const bondRate = BOND_RATE[profile?.tier] || BOND_RATE.new
-  const bondAmount = price ? (parseFloat(price) * bondRate).toFixed(2) : null
+  const bondRate   = BOND_RATE[profile?.tier] || BOND_RATE.new
+  const bondAmount = price ? (BOND_FLOOR + parseFloat(price) * bondRate).toFixed(2) : null
 
   const ordersNeedingShip = activeOrders.filter(o => o.status === 'funded')
   const totalActiveSalesValue = myListings.reduce((sum, l) => sum + Number(l.price || 0), 0)
@@ -291,6 +294,7 @@ function SellerDashboard() {
             {order.status === 'funded' && order.listing?.auth_tier === 'physical' && (
               <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>🖨 Print Label → Ship to Auth Center</button>
             )}
+            <button onClick={() => setChatOrder({ id: order.id, label: order.listing?.card_name })} style={btn({ border: '1.5px solid var(--teal-border)', color: 'var(--teal)' })}>Message Buyer</button>
             {order.listing?.id && (
               <Link href={`/listing/${order.listing.id}`} style={{ textDecoration: 'none' }}>
                 <button style={btn()}>View Listing</button>
@@ -306,6 +310,15 @@ function SellerDashboard() {
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
+
+      {chatOrder && (
+        <ChatModal
+          orderId={chatOrder.id}
+          orderLabel={chatOrder.label}
+          onClose={() => setChatOrder(null)}
+        />
+      )}
+
       <style>{`
         @media (max-width: 768px) {
           .dash-aside { display: none !important; }
@@ -665,7 +678,7 @@ function SellerDashboard() {
               <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', marginBottom: '8px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', fontWeight: 500 }}>Bond — Separate from fees</div>
                 {[
-                  { label: 'Bond posted at purchase', val: price && bondAmount ? `-$${bondAmount} (${(bondRate * 100).toFixed(0)}% ${TIER_LABEL[profile?.tier] || 'New'})` : `-${(bondRate * 100).toFixed(0)}% of sale price`, amber: true },
+                  { label: 'Bond posted at purchase', val: price && bondAmount ? `-$${bondAmount} ($20 + ${(bondRate * 100).toFixed(0)}% of $${price})` : `$20 + ${(bondRate * 100).toFixed(0)}% of sale price`, amber: true },
                   { label: 'Bond returned',            val: 'Within 5–7 days', green: true },
                   { label: 'Net bond cost',            val: '$0.00', green: true },
                 ].map((row, i) => (
@@ -755,39 +768,88 @@ function SellerDashboard() {
             <div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Bond <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Wallet</em></div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>Bonds post per transaction when a buyer purchases — not when you list. All bonds return within 5–7 days on completion.</div>
+
+              {/* Stats */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
                 {[
                   { label: 'Currently Locked', val: fmtUSD(bondInFlight), sub: `Across ${activeOrders.length} active orders · Returns within 5–7 days each`, color: 'var(--accent-amber)' },
-                  { label: 'Bond Tier',         val: `${(bondRate * 100).toFixed(0)}%`, sub: `${TIER_LABEL[profile?.tier] || 'New'} seller`,                                   color: 'var(--teal)' },
+                  { label: 'Bond Tier',         val: `${(bondRate * 100).toFixed(0)}% + $20`, sub: `${TIER_LABEL[profile?.tier] || 'New'} seller`, color: 'var(--teal)' },
                   { label: 'Strikes',           val: String(profile?.strike_count ?? 0), sub: profile?.strike_count === 0 ? 'None — clean record' : 'Strike 2 → bond jumps to 4%', color: profile?.strike_count === 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: m.color }}>{m.val}</div>
+                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: m.color }}>{m.val}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
                   </div>
                 ))}
               </div>
+
+              {/* Why does the bond exist — full explanation */}
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '22px', marginBottom: '16px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', fontWeight: 500 }}>What is the bond — and why does it exist?</div>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 14px' }}>
+                  The bond is a <strong style={{ color: 'var(--text-primary)' }}>security deposit, not a fee.</strong> It posts when a buyer purchases your card and is returned to you in full within 5–7 business days after the sale completes successfully. On a clean sale, your net bond cost is always <strong style={{ color: 'var(--accent-green)' }}>$0.00.</strong>
+                </p>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 14px' }}>
+                  Chase Hollow physically authenticates every card at our center before it reaches the buyer. If a dispute is filed after delivery, we manage the full return shipping chain — the card is returned to us for inspection, then sent back to you. That process involves up to four shipping labels, all generated and paid for by Chase Hollow. The bond exists to cover that cost in the rare event of a disputed sale where the buyer wins.
+                </p>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 16px' }}>
+                  The bond also signals to buyers that you stand behind your listing. It's one of the reasons buyers trust Chase Hollow sellers over other platforms.
+                </p>
+                {[
+                  { icon: '✓', color: 'var(--accent-green)', text: 'Bond is returned 100% on every successful sale — it is not a fee' },
+                  { icon: '✓', color: 'var(--accent-green)', text: 'Bond posts only at the time of purchase — never required to list' },
+                  { icon: '✓', color: 'var(--accent-green)', text: 'Bond rate decreases as you build your sales history (see tier table below)' },
+                  { icon: '⚠', color: 'var(--accent-amber)', text: 'Bond is forfeited only if you lose a dispute — this is rare and preventable by accurate listings' },
+                  { icon: '⚠', color: 'var(--accent-amber)', text: 'Strike 2 resets your bond rate to 4% regardless of tier — maintain your record' },
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '10px', padding: '6px 0', borderTop: '0.5px solid var(--border)' }}>
+                    <span style={{ color: item.color, fontFamily: 'DM Mono, monospace', fontSize: '11px', flexShrink: 0, marginTop: '1px' }}>{item.icon}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bond formula */}
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>How is my bond calculated?</div>
+                <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-primary)', marginBottom: '12px' }}>
+                  Bond = $20 base + ({(bondRate * 100).toFixed(0)}% × sale price)
+                </div>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                  The $20 base covers worst-case return shipping costs. The percentage portion scales with sale value. For example — a $400 sale at your current {(bondRate * 100).toFixed(0)}% tier: <strong style={{ color: 'var(--text-primary)' }}>${(20 + 400 * bondRate).toFixed(2)} bond</strong>, returned in full on completion.
+                </p>
+              </div>
+
+              {/* Bond tier structure */}
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Bond Tier Structure</div>
                 {[
-                  { tier: 'New Seller', range: '0–9 sales',   rate: 4 },
-                  { tier: 'Trusted',    range: '10–99 sales',  rate: 3 },
-                  { tier: 'Pro',        range: '100–499 sales',rate: 2 },
-                  { tier: 'Elite',      range: '500+ sales',   rate: 1 },
+                  { tier: 'New Seller',  range: '0–9 sales',        rate: 4,  key: 'new'     },
+                  { tier: 'Trusted',     range: '10–99 sales',       rate: 3,  key: 'trusted' },
+                  { tier: 'Pro',         range: '100–499 sales',     rate: 2,  key: 'pro'     },
+                  { tier: 'Elite',       range: '500–2,499 sales',   rate: 1,  key: 'elite'   },
+                  { tier: 'Legend',      range: '2,500+ sales',      rate: 1,  key: 'legend'  },
                 ].map((t, i) => {
-                  const tierKey = ['new', 'trusted', 'pro', 'elite'][i]
-                  const isMe = profile?.tier === tierKey
+                  const isMe = (profile?.tier || 'new') === t.key
                   return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '10px 0', borderBottom: i < 3 ? '0.5px solid var(--border)' : 'none' }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '10px 0', borderBottom: i < 4 ? '0.5px solid var(--border)' : 'none' }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '13px', fontWeight: isMe ? 600 : 400, color: isMe ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{t.tier} {isMe && '← You are here'}</div>
+                        <div style={{ fontSize: '13px', fontWeight: isMe ? 600 : 400, color: isMe ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                          {t.tier} {isMe && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--teal)', marginLeft: '6px' }}>← You are here</span>}
+                        </div>
                         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{t.range}</div>
                       </div>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: isMe ? 'var(--teal)' : 'var(--text-muted)' }}>{t.rate}%</div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: isMe ? 'var(--teal)' : 'var(--text-muted)' }}>{t.rate}%<span style={{ fontSize: '13px', fontFamily: 'DM Sans, sans-serif', fontWeight: 400 }}> + $20</span></div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>per sale</div>
+                      </div>
                     </div>
                   )
                 })}
+                <div style={{ marginTop: '14px', padding: '12px 14px', background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '8px', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                  Your tier is calculated automatically from your completed sales history. Elite and Legend tiers also require a &lt;2% dispute loss rate and account age of 365+ days.
+                </div>
               </div>
             </div>
           )}
