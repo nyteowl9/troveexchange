@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import ChatModal from '@/app/components/ChatModal'
+import ConnectWalletButton, { useWalletConnection } from '@/app/components/ConnectWallet'
 
 export default function SellerDashboardPage() {
   return <Suspense><SellerDashboard /></Suspense>
@@ -52,6 +53,7 @@ function hoursUntil(ts) {
 
 function SellerDashboard() {
   const { user, profile, loading: authLoading } = useAuth()
+  const { walletAddress } = useWalletConnection()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -210,6 +212,7 @@ function SellerDashboard() {
 
   async function handleSubmitListing() {
     setSubmitError('')
+    if (!walletAddress) { setSubmitError('You must connect a wallet before publishing — buyers pay to your wallet address.'); return }
     if (!formData.card_name.trim()) { setSubmitError('Listing title is required'); return }
     if (!formData.description.trim()) { setSubmitError('Description is required'); return }
     if (listingType === 'graded') {
@@ -786,6 +789,15 @@ function SellerDashboard() {
               <div style={{ background: 'rgba(200,75,60,0.05)', border: '1px solid rgba(200,75,60,0.2)', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 <strong style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Ship within 48hrs of sale.</strong> One free extension available. Miss deadline = auto-refund to buyer + Strike 1. Three strikes = permanent ban.
               </div>
+
+              {!walletAddress && (
+                <div style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '8px', padding: '12px 14px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--gold)', fontFamily: 'DM Sans, sans-serif', lineHeight: 1.5 }}>
+                    Connect a wallet to publish — buyers pay to your wallet address.
+                  </div>
+                  <ConnectWalletButton style={{ padding: '8px 16px', fontSize: '12px' }} />
+                </div>
+              )}
 
               {submitError && (
                 <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: 'var(--accent-red)' }}>{submitError}</div>
