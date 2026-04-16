@@ -53,7 +53,7 @@ function hoursUntil(ts) {
 
 function SellerDashboard() {
   const { user, profile, loading: authLoading } = useAuth()
-  const { walletAddress, ready: walletReady } = useWalletConnection()
+  const { walletAddress, ready: walletReady, disconnect: disconnectWallet } = useWalletConnection()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -888,6 +888,35 @@ function SellerDashboard() {
             <div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Bond <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Wallet</em></div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>Bonds post per transaction when a buyer purchases — not when you list. All bonds return within 5–7 days on completion.</div>
+
+              {/* Payment wallet */}
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 500 }}>Payment Wallet</div>
+                  {profile?.wallet_address ? (
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)' }}>
+                      {profile.wallet_address.slice(0, 8)}...{profile.wallet_address.slice(-6)}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '12px', color: 'var(--accent-amber)' }}>No wallet connected — buyers can't complete purchases</div>
+                  )}
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>USDC payments and bond returns go to this address</div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <ConnectWalletButton
+                    label={profile?.wallet_address ? 'Change Wallet' : 'Connect Wallet'}
+                    style={{ padding: '8px 16px', fontSize: '12px' }}
+                  />
+                  {profile?.wallet_address && walletAddress && (
+                    <button
+                      onClick={disconnectWallet}
+                      style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', padding: '8px 14px', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', cursor: 'pointer' }}
+                    >
+                      Disconnect
+                    </button>
+                  )}
+                </div>
+              </div>
 
               {/* Stats */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>

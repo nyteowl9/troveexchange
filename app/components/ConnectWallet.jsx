@@ -6,30 +6,39 @@ import { supabase } from '@/lib/supabase'
 import { useEffect } from 'react'
 
 export function useWalletConnection() {
-  const { ready, authenticated, login } = usePrivy()
+  const { ready, authenticated, login, linkWallet } = usePrivy()
   const { wallets } = useWallets()
   const { user, refreshProfile } = useAuth()
 
-  // Sync wallet address to Supabase when it changes
+  // Only sync EXTERNAL wallets (MetaMask, Coinbase, etc.) — never Privy embedded wallets
+  const externalWallet = wallets?.find(w => w.walletClientType !== 'privy') ?? null
+  const walletAddress = externalWallet?.address ?? null
+
   useEffect(() => {
     async function syncWallet() {
-      if (!user || !wallets?.length) return
-      const address = wallets[0].address
+      if (!user || !externalWallet) return
       await supabase
         .from('users')
-        .update({ wallet_address: address })
+        .update({ wallet_address: externalWallet.address })
         .eq('id', user.id)
       await refreshProfile()
     }
     syncWallet()
-  }, [wallets, user])
+  }, [externalWallet?.address, user?.id])
 
-  const walletAddress = wallets?.[0]?.address ?? null
+  async function connectExternal() {
+    // linkWallet opens the "connect a wallet" modal without re-authenticating
+    await linkWallet()
+  }
 
   async function disconnect() {
-    // Disconnect just the wallet — don't log out of Privy entirely
-    if (wallets?.[0]) {
-      await wallets[0].disconnect()
+    if (externalWallet) {
+      await externalWallet.disconnect()
+      // Clear from Supabase
+      if (user) {
+        await supabase.from('users').update({ wallet_address: null }).eq('id', user.id)
+        await refreshProfile()
+      }
     }
   }
 
@@ -37,8 +46,8 @@ export function useWalletConnection() {
     ready,
     authenticated,
     walletAddress,
-    wallet: wallets?.[0] ?? null,
-    connect: login,
+    wallet: externalWallet,
+    connect: connectExternal,
     disconnect,
   }
 }

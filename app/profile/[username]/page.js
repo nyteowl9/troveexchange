@@ -169,7 +169,7 @@ export default function ProfilePage() {
               <div style={{ flex: 1, minWidth: '200px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px', flexWrap: 'wrap' }}>
                   <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '34px', fontWeight: 300, color: 'var(--text-primary)', margin: 0 }}>
-                    {profile.full_name || profile.username}
+                    @{profile.username}
                   </h1>
                   {/* Tier badge — only shown if user has sales */}
                   {sales > 0 && (
