@@ -52,13 +52,18 @@ function Checkout() {
 
   useEffect(() => {
     if (!listingId) { setListingLoading(false); return }
-    supabase
-      .from('listings')
-      .select(`*, seller:seller_id (id, username, full_name, tier, rep_score, wallet_address)`)
-      .eq('id', listingId)
-      .eq('status', 'active')
-      .single()
-      .then(({ data }) => { setListing(data); setListingLoading(false) })
+    Promise.all([
+      supabase.from('listings').select(`*, seller:seller_id (id, username, full_name, tier, rep_score, wallet_address)`).eq('id', listingId).eq('status', 'active').single(),
+      supabase.auth.getUser(),
+    ]).then(([{ data }, { data: { user } }]) => {
+      if (data && user && data.seller_id === user.id) {
+        // Seller trying to buy their own listing — bounce back
+        window.location.href = '/seller-dashboard'
+        return
+      }
+      setListing(data)
+      setListingLoading(false)
+    })
   }, [listingId])
 
   // Fetch real USDC balance + shipping estimate when buyer reaches Step 2
@@ -68,15 +73,20 @@ function Checkout() {
     setCheckoutError(null)
 
     async function fetchStep2Data() {
+      // Read USDC balance — fails silently if wallet is on wrong network
       try {
-        // Read USDC balance from chain via Privy wallet provider
         const eip1193 = await wallet.getEthereumProvider()
         const provider = new ethers.BrowserProvider(eip1193)
         const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider)
         const bal = await usdcContract.balanceOf(walletAddress)
         setUsdcBalance(bal)
+      } catch {
+        // Balance unavailable (e.g. wrong network in dev) — shown as "—" in UI
+        setUsdcBalance(null)
+      }
 
-        // Fetch shipping estimate from Shippo
+      // Fetch shipping estimate — falls back to defaults on error
+      try {
         const res = await fetch('/api/checkout/estimate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -85,14 +95,12 @@ function Checkout() {
         const est = await res.json()
         setShippingFee(est.shipping_fee ?? 15)
         setLabelACost(est.label_a_cost ?? 0)
-      } catch (err) {
-        console.error('[checkout/step2]', err)
-        // Fall back to estimates so buyer isn't blocked
+      } catch {
         setShippingFee(listing.price > 300 ? 15 : 12)
         setLabelACost(listing.price > 300 ? 12 : 0)
-      } finally {
-        setBalanceLoading(false)
       }
+
+      setBalanceLoading(false)
     }
 
     fetchStep2Data()
@@ -102,7 +110,7 @@ function Checkout() {
   const cardPrice    = listing?.price ?? 0
   const authTier     = cardPrice <= 300 ? 'remote' : 'physical'
   const authFee      = authTier === 'remote' ? 10 : 25
-  const salesTax     = parseFloat((cardPrice * 0.095).toFixed(2))
+  const salesTax     = 0  // TaxJar integration deferred to launch
   const platformFee  = parseFloat((cardPrice * 0.03).toFixed(2))
   const creatorFee   = parseFloat((cardPrice * 0.005).toFixed(2))
   const labelACostVal = labelACost ?? (cardPrice > 300 ? 12 : 0)
@@ -384,7 +392,7 @@ function Checkout() {
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
                     { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
                     { label: 'Shipping & insurance', val: balanceLoading ? 'Calculating…' : `$${shippingFeeVal.toFixed(2)}` },
-                    { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
+                    { label: 'Sales tax', val: 'TBD at launch' },
                     { label: 'Total to lock in escrow', val: `$${total} USDC`, total: true },
                     { label: 'Remaining after purchase', val: usdcBalanceFormatted !== null ? `$${Math.max(0, parseFloat(usdcBalanceFormatted) - parseFloat(total)).toFixed(2)} USDC` : '—', green: true },
                   ].map((row, i) => (
@@ -432,7 +440,7 @@ function Checkout() {
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}`, gold: true },
                     { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
                     { label: 'Shipping & insurance', val: `$${shippingFeeVal.toFixed(2)}` },
-                        { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
+                        { label: 'Sales tax', val: 'TBD at launch' },
                     { label: 'Total locked in escrow', val: `$${total} USDC`, gold: true, total: true },
                   ]
                 },
@@ -627,7 +635,7 @@ function Checkout() {
                 { label: 'Card price', val: `$${cardPrice}` },
                 { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
                 { label: 'Shipping & insurance', val: 'Calculated at checkout' },
-                { label: 'Sales tax (CA · 9.5%)', val: `$${salesTax}` },
+                { label: 'Sales tax', val: 'TBD at launch' },
               ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '0.5px solid var(--border)' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>

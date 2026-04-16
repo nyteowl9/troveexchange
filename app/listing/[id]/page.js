@@ -22,12 +22,19 @@ export default function ListingPage() {
   const [activePhoto, setActivePhoto] = useState(0)
   const [showBuyModal, setShowBuyModal] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState(null)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768)
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUserId(user?.id ?? null)
+    })
   }, [])
 
   useEffect(() => {
@@ -355,12 +362,20 @@ export default function ListingPage() {
 
             {/* Buy button */}
             <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)' }}>
-              <button onClick={() => setShowBuyModal(true)} style={{ width: '100%', background: 'var(--teal)', border: 'none', color: 'var(--bg)', padding: '16px', fontSize: '15px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                🔒 Buy Now — ${parseFloat(price).toLocaleString()} USDC
-              </button>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px', lineHeight: 1.6 }}>
-                Auto-refund if seller misses 48hr deadline · 72hr inspection window
-              </div>
+              {currentUserId && currentUserId === seller?.id ? (
+                <div style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', color: 'var(--text-muted)', padding: '16px', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', borderRadius: '10px', textAlign: 'center' }}>
+                  This is your listing
+                </div>
+              ) : (
+                <>
+                  <button onClick={() => setShowBuyModal(true)} style={{ width: '100%', background: 'var(--teal)', border: 'none', color: 'var(--bg)', padding: '16px', fontSize: '15px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    🔒 Buy Now — ${parseFloat(price).toLocaleString()} USDC
+                  </button>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px', lineHeight: 1.6 }}>
+                    Auto-refund if seller misses 48hr deadline · 72hr inspection window
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Trust items */}
