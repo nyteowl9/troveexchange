@@ -53,7 +53,7 @@ function hoursUntil(ts) {
 
 function SellerDashboard() {
   const { user, profile, loading: authLoading } = useAuth()
-  const { walletAddress, ready: walletReady, disconnect: disconnectWallet } = useWalletConnection()
+  const { walletAddress, ready: walletReady, connect: connectWallet, disconnect: disconnectWallet } = useWalletConnection()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -212,8 +212,7 @@ function SellerDashboard() {
 
   async function handleSubmitListing() {
     setSubmitError('')
-    const hasWallet = walletAddress || profile?.wallet_address
-    if (!hasWallet) { setSubmitError('You must connect a wallet before publishing — buyers pay to your wallet address.'); return }
+    if (!profile?.wallet_address) { setSubmitError('You must connect a wallet before publishing — go to Bond Wallet to connect MetaMask.'); return }
     if (!formData.card_name.trim()) { setSubmitError('Listing title is required'); return }
     if (!formData.description.trim()) { setSubmitError('Description is required'); return }
     if (listingType === 'graded') {
@@ -427,15 +426,14 @@ function SellerDashboard() {
               </div>
 
               {/* No-wallet banner — listings are unpurchasable */}
-              {walletReady && !walletAddress && !profile?.wallet_address && myListings.filter(l => l.status === 'active').length > 0 && (
+              {walletReady && !profile?.wallet_address && myListings.filter(l => l.status === 'active').length > 0 && (
                 <div style={{ background: 'rgba(201,168,76,0.07)', border: '1.5px solid rgba(201,168,76,0.35)', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--gold)', marginBottom: '4px' }}>⚠ Your listings can't be purchased yet</div>
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                      You have {myListings.filter(l => l.status === 'active').length} active listing{myListings.filter(l => l.status === 'active').length > 1 ? 's' : ''} but no wallet connected. Buyers pay to your wallet address — connect once and all your listings become purchasable immediately.
+                      You have {myListings.filter(l => l.status === 'active').length} active listing{myListings.filter(l => l.status === 'active').length > 1 ? 's' : ''} but no payment wallet connected. Go to <button onClick={() => setActiveSection('bond')} style={{ background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', padding: 0, textDecoration: 'underline' }}>Bond Wallet</button> to connect MetaMask — one time, and all your listings become purchasable immediately.
                     </div>
                   </div>
-                  <ConnectWalletButton style={{ padding: '8px 16px', fontSize: '12px', flexShrink: 0 }} />
                 </div>
               )}
 
@@ -804,7 +802,7 @@ function SellerDashboard() {
                 <strong style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Ship within 48hrs of sale.</strong> One free extension available. Miss deadline = auto-refund to buyer + Strike 1. Three strikes = permanent ban.
               </div>
 
-              {walletReady && !walletAddress && !profile?.wallet_address && (
+              {walletReady && !profile?.wallet_address && (
                 <div style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '8px', padding: '12px 14px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                   <div style={{ fontSize: '12px', color: 'var(--gold)', fontFamily: 'DM Sans, sans-serif', lineHeight: 1.5 }}>
                     Connect a wallet to publish — buyers pay to your wallet address.
@@ -890,31 +888,36 @@ function SellerDashboard() {
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>Bonds post per transaction when a buyer purchases — not when you list. All bonds return within 5–7 days on completion.</div>
 
               {/* Payment wallet */}
-              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-                <div>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 500 }}>Payment Wallet</div>
-                  {profile?.wallet_address ? (
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)' }}>
-                      {profile.wallet_address.slice(0, 8)}...{profile.wallet_address.slice(-6)}
+              <div style={{ background: 'var(--bg-2)', border: `1.5px solid ${profile?.wallet_address ? 'var(--border)' : 'rgba(201,168,76,0.4)'}`, borderRadius: '12px', padding: '18px 20px', marginBottom: '20px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500 }}>Payment Wallet</div>
+                {!profile?.wallet_address && (
+                  <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: 'var(--gold)', lineHeight: 1.6 }}>
+                    ⚠ No wallet connected — buyers cannot complete purchases on any of your listings until you connect a MetaMask or other external wallet below.
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                  <div>
+                    {profile?.wallet_address ? (
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '14px', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        {profile.wallet_address.slice(0, 10)}...{profile.wallet_address.slice(-8)}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Not set</div>
+                    )}
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      USDC payments and bond returns go to this address · MetaMask, Coinbase, or any external wallet
                     </div>
-                  ) : (
-                    <div style={{ fontSize: '12px', color: 'var(--accent-amber)' }}>No wallet connected — buyers can't complete purchases</div>
-                  )}
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>USDC payments and bond returns go to this address</div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <ConnectWalletButton
-                    label={profile?.wallet_address ? 'Change Wallet' : 'Connect Wallet'}
-                    style={{ padding: '8px 16px', fontSize: '12px' }}
-                  />
-                  {profile?.wallet_address && walletAddress && (
-                    <button
-                      onClick={disconnectWallet}
-                      style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', padding: '8px 14px', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', cursor: 'pointer' }}
-                    >
-                      Disconnect
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                    <button onClick={connectWallet} style={{ background: 'var(--gold)', color: '#0A0A0B', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '12px', fontWeight: 700, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer' }}>
+                      {profile?.wallet_address ? 'Change Wallet' : 'Connect Wallet'}
                     </button>
-                  )}
+                    {profile?.wallet_address && (
+                      <button onClick={disconnectWallet} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', padding: '9px 14px', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', cursor: 'pointer' }}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
