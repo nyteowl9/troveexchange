@@ -1,9 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  watchOptions: {
-    // Exclude Hardhat build artifacts and other non-app folders from the file watcher
-    // so the dev server doesn't spin up fans scanning thousands of JSON files
-    ignored: ['**/artifacts/**', '**/cache/**', '**/contracts/**', '**/scripts/**', '**/test/**', '**/deployments/**', '**/ignition/**', '**/node_modules/**'],
+  webpack: (config, { dev }) => {
+    if (dev) {
+      // Exclude Hardhat build artifacts from the file watcher
+      config.watchOptions = {
+        ignored: /node_modules|artifacts|cache|contracts|scripts|test|deployments|ignition/,
+      }
+    }
+    return config
   },
 };
 
