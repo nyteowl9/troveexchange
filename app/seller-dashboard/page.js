@@ -53,7 +53,7 @@ function hoursUntil(ts) {
 
 function SellerDashboard() {
   const { user, profile, loading: authLoading } = useAuth()
-  const { walletAddress } = useWalletConnection()
+  const { walletAddress, ready: walletReady } = useWalletConnection()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -427,7 +427,7 @@ function SellerDashboard() {
               </div>
 
               {/* No-wallet banner — listings are unpurchasable */}
-              {!walletAddress && !profile?.wallet_address && myListings.filter(l => l.status === 'active').length > 0 && (
+              {walletReady && !walletAddress && !profile?.wallet_address && myListings.filter(l => l.status === 'active').length > 0 && (
                 <div style={{ background: 'rgba(201,168,76,0.07)', border: '1.5px solid rgba(201,168,76,0.35)', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--gold)', marginBottom: '4px' }}>⚠ Your listings can't be purchased yet</div>
@@ -804,7 +804,7 @@ function SellerDashboard() {
                 <strong style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Ship within 48hrs of sale.</strong> One free extension available. Miss deadline = auto-refund to buyer + Strike 1. Three strikes = permanent ban.
               </div>
 
-              {!walletAddress && !profile?.wallet_address && (
+              {walletReady && !walletAddress && !profile?.wallet_address && (
                 <div style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '8px', padding: '12px 14px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                   <div style={{ fontSize: '12px', color: 'var(--gold)', fontFamily: 'DM Sans, sans-serif', lineHeight: 1.5 }}>
                     Connect a wallet to publish — buyers pay to your wallet address.
