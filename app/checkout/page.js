@@ -269,9 +269,11 @@ function Checkout() {
   if (!listingLoading && listing && !listing.seller?.wallet_address) {
     return (
       <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '20px' }}>
-        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', color: 'var(--text-primary)' }}>Temporarily Unavailable</div>
-        <div style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center', maxWidth: '400px', lineHeight: 1.7 }}>
-          The seller hasn't connected a wallet yet and cannot receive payment. Check back soon or contact support if this persists.
+        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', color: 'var(--text-primary)' }}>Purchase Unavailable</div>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center', maxWidth: '420px', lineHeight: 1.7 }}>
+          This seller hasn't connected a wallet to their account yet. They need to connect a wallet before they can receive payment.
+          <br /><br />
+          Check back soon — or <Link href="/customer-support" style={{ color: 'var(--teal)', textDecoration: 'none' }}>contact support</Link> if this listing has been available for a while.
         </div>
         <Link href="/marketplace" style={{ color: 'var(--teal)', fontSize: '14px' }}>← Back to marketplace</Link>
       </div>

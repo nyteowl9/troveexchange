@@ -365,10 +365,6 @@ export default function ListingPage() {
                 <div style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', color: 'var(--text-muted)', padding: '16px', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', borderRadius: '10px', textAlign: 'center' }}>
                   This is your listing
                 </div>
-              ) : !seller?.wallet_address ? (
-                <div style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', color: 'var(--text-muted)', padding: '16px', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', borderRadius: '10px', textAlign: 'center', lineHeight: 1.6 }}>
-                  Temporarily unavailable — seller hasn't connected a wallet yet
-                </div>
               ) : (
                 <>
                   <button onClick={() => setShowBuyModal(true)} style={{ width: '100%', background: 'var(--teal)', border: 'none', color: 'var(--bg)', padding: '16px', fontSize: '15px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
