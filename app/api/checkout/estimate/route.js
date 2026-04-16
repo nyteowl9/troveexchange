@@ -59,7 +59,7 @@ export async function POST(request) {
     if (!seller?.street1 || !seller?.city || !seller?.zip) {
       // Seller address not set — return a flat estimate
       return NextResponse.json({
-        shipping_fee: isTier2 ? 15 : 12,
+        shipping_fee: isTier2 ? 15 : 8,
         label_a_cost: isTier2 ? 12 : 0,
         estimated_days: 3,
         estimated: true,
@@ -130,9 +130,10 @@ export async function POST(request) {
   } catch (err) {
     console.error('[checkout/estimate]', err)
     // Return flat fallback rather than blocking checkout
+    // label_a_cost is 0 — can't determine tier safely here
     return NextResponse.json({
-      shipping_fee: 15,
-      label_a_cost: 12,
+      shipping_fee: 8,
+      label_a_cost: 0,
       estimated_days: 3,
       estimated: true,
     })
