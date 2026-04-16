@@ -672,18 +672,18 @@ function Checkout() {
               {[
                 { label: 'Card price', val: `$${cardPrice}` },
                 { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
-                { label: 'Shipping & insurance', val: 'Calculated at checkout' },
-                              ].map((row, i) => (
+                { label: 'Shipping & insurance', val: step >= 2 ? (balanceLoading ? 'Calculating…' : `~$${shippingFeeVal.toFixed(2)}`) : 'Est. at checkout' },
+              ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '0.5px solid var(--border)' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
                   <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-primary)' }}>{row.val}</span>
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', marginTop: '4px' }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Subtotal (est.)</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Total (est.)</div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 600, color: 'var(--gold)' }}>${total}</div>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>+ shipping · USDC · Base</div>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 600, color: 'var(--gold)' }}>${step >= 2 ? total : `${parseFloat(cardPrice + authFee).toFixed(2)}`}</div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{step >= 2 ? 'incl. shipping · USDC · Base' : '+ est. shipping · USDC · Base'}</div>
                 </div>
               </div>
             </div>
