@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Nav from '@/app/components/Nav'
 import { supabase } from '@/lib/supabase'
@@ -15,7 +15,6 @@ const TIER_COLORS = {
 
 export default function ListingPage() {
   const { id } = useParams()
-  const router = useRouter()
   const [listing, setListing] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -365,6 +364,10 @@ export default function ListingPage() {
               {currentUserId && currentUserId === seller?.id ? (
                 <div style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', color: 'var(--text-muted)', padding: '16px', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', borderRadius: '10px', textAlign: 'center' }}>
                   This is your listing
+                </div>
+              ) : !seller?.wallet_address ? (
+                <div style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', color: 'var(--text-muted)', padding: '16px', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', borderRadius: '10px', textAlign: 'center', lineHeight: 1.6 }}>
+                  Temporarily unavailable — seller hasn't connected a wallet yet
                 </div>
               ) : (
                 <>

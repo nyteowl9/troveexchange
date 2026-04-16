@@ -265,6 +265,19 @@ function Checkout() {
     )
   }
 
+  // Seller hasn't connected a wallet yet — can't receive payment
+  if (!listingLoading && listing && !listing.seller?.wallet_address) {
+    return (
+      <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '20px' }}>
+        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', color: 'var(--text-primary)' }}>Temporarily Unavailable</div>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center', maxWidth: '400px', lineHeight: 1.7 }}>
+          The seller hasn't connected a wallet yet and cannot receive payment. Check back soon or contact support if this persists.
+        </div>
+        <Link href="/marketplace" style={{ color: 'var(--teal)', fontSize: '14px' }}>← Back to marketplace</Link>
+      </div>
+    )
+  }
+
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
 
