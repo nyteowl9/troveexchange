@@ -73,15 +73,16 @@ function Checkout() {
     setCheckoutError(null)
 
     async function fetchStep2Data() {
-      // Read USDC balance — fails silently if wallet is on wrong network
+      // Read USDC balance on Base — silently skips if wallet can't switch
       try {
         const eip1193 = await wallet.getEthereumProvider()
+        const chainHex = '0x' + (8453).toString(16)
+        await eip1193.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainHex }] }).catch(() => {})
         const provider = new ethers.BrowserProvider(eip1193)
         const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider)
         const bal = await usdcContract.balanceOf(walletAddress)
         setUsdcBalance(bal)
       } catch {
-        // Balance unavailable (e.g. wrong network in dev) — shown as "—" in UI
         setUsdcBalance(null)
       }
 
@@ -144,6 +145,29 @@ function Checkout() {
       // ── 1. Get ethers signer via Privy wallet ──────────────
       setSigningStatus('Connecting to wallet...')
       const eip1193 = await wallet.getEthereumProvider()
+
+      // Enforce Base network — switch if wallet is on wrong chain
+      const chainHex = '0x' + (8453).toString(16)  // 0x2105
+      try {
+        await eip1193.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainHex }] })
+      } catch (switchErr) {
+        // Chain not added yet — add it, then switch
+        if (switchErr.code === 4902) {
+          await eip1193.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: chainHex,
+              chainName: 'Base',
+              nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['https://mainnet.base.org'],
+              blockExplorerUrls: ['https://basescan.org'],
+            }],
+          })
+        } else {
+          throw new Error('Please switch your wallet to the Base network to continue.')
+        }
+      }
+
       const provider = new ethers.BrowserProvider(eip1193)
       const signer = await provider.getSigner()
 
