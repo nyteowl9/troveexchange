@@ -275,13 +275,9 @@ Priority order:
    ✓ User address fields added (migration 002)
    ⚠ Auth center address is placeholder in lib/shippo.js — update before launch
 
-5. TAXJAR — SET UP RIGHT BEFORE LAUNCH (30-day trial, don't waste it)
-   □ Sales tax calculation by buyer zip code
-   □ Called at checkout Step 2 (after address confirmed)
-   □ Shipsurance addon for $50k–$100k (Phase 2 add-on)
-
-5. TAXJAR
-   □ Sales tax calculation by buyer zip code
+5. TAXJAR — DEFERRED UNTIL GMV EXCEEDS ~$50K (economic nexus threshold)
+   □ Sales tax currently passes 0 — fully removed from UI
+   □ When ready: sales tax calculation by buyer zip code
    □ Called at checkout Step 2 (after address confirmed)
 
 6. RESEND EMAIL ✅ COMPLETE

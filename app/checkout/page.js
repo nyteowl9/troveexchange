@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ethers } from 'ethers'
@@ -392,8 +392,7 @@ function Checkout() {
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
                     { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
                     { label: 'Shipping & insurance', val: balanceLoading ? 'Calculating…' : `$${shippingFeeVal.toFixed(2)}` },
-                    { label: 'Sales tax', val: 'TBD at launch' },
-                    { label: 'Total to lock in escrow', val: `$${total} USDC`, total: true },
+                                        { label: 'Total to lock in escrow', val: `$${total} USDC`, total: true },
                     { label: 'Remaining after purchase', val: usdcBalanceFormatted !== null ? `$${Math.max(0, parseFloat(usdcBalanceFormatted) - parseFloat(total)).toFixed(2)} USDC` : '—', green: true },
                   ].map((row, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingTop: row.total ? '6px' : '0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
@@ -440,8 +439,7 @@ function Checkout() {
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}`, gold: true },
                     { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
                     { label: 'Shipping & insurance', val: `$${shippingFeeVal.toFixed(2)}` },
-                        { label: 'Sales tax', val: 'TBD at launch' },
-                    { label: 'Total locked in escrow', val: `$${total} USDC`, gold: true, total: true },
+                                            { label: 'Total locked in escrow', val: `$${total} USDC`, gold: true, total: true },
                   ]
                 },
                 {
@@ -635,8 +633,7 @@ function Checkout() {
                 { label: 'Card price', val: `$${cardPrice}` },
                 { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
                 { label: 'Shipping & insurance', val: 'Calculated at checkout' },
-                { label: 'Sales tax', val: 'TBD at launch' },
-              ].map((row, i) => (
+                              ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '0.5px solid var(--border)' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
                   <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-primary)' }}>{row.val}</span>
