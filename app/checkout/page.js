@@ -147,20 +147,21 @@ function Checkout() {
       const eip1193 = await wallet.getEthereumProvider()
 
       // Enforce Base network — switch if wallet is on wrong chain
-      const chainHex = '0x' + (8453).toString(16)  // 0x2105
+      const chainHex = '0x' + (parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453')).toString(16)
       try {
         await eip1193.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainHex }] })
       } catch (switchErr) {
         // Chain not added yet — add it, then switch
         if (switchErr.code === 4902) {
+          const isTestnet = chainHex === '0x' + (84532).toString(16)
           await eip1193.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: chainHex,
-              chainName: 'Base',
+              chainName: isTestnet ? 'Base Sepolia' : 'Base',
               nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-              rpcUrls: ['https://mainnet.base.org'],
-              blockExplorerUrls: ['https://basescan.org'],
+              rpcUrls: [isTestnet ? 'https://sepolia.base.org' : 'https://mainnet.base.org'],
+              blockExplorerUrls: [isTestnet ? 'https://sepolia.basescan.org' : 'https://basescan.org'],
             }],
           })
         } else {
