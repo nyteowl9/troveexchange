@@ -212,7 +212,8 @@ function SellerDashboard() {
 
   async function handleSubmitListing() {
     setSubmitError('')
-    if (!walletAddress) { setSubmitError('You must connect a wallet before publishing — buyers pay to your wallet address.'); return }
+    const hasWallet = walletAddress || profile?.wallet_address
+    if (!hasWallet) { setSubmitError('You must connect a wallet before publishing — buyers pay to your wallet address.'); return }
     if (!formData.card_name.trim()) { setSubmitError('Listing title is required'); return }
     if (!formData.description.trim()) { setSubmitError('Description is required'); return }
     if (listingType === 'graded') {
@@ -424,6 +425,19 @@ function SellerDashboard() {
                 </div>
                 <button onClick={() => setActiveSection('new-listing')} style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>+ New Listing</button>
               </div>
+
+              {/* No-wallet banner — listings are unpurchasable */}
+              {!walletAddress && !profile?.wallet_address && myListings.filter(l => l.status === 'active').length > 0 && (
+                <div style={{ background: 'rgba(201,168,76,0.07)', border: '1.5px solid rgba(201,168,76,0.35)', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--gold)', marginBottom: '4px' }}>⚠ Your listings can't be purchased yet</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      You have {myListings.filter(l => l.status === 'active').length} active listing{myListings.filter(l => l.status === 'active').length > 1 ? 's' : ''} but no wallet connected. Buyers pay to your wallet address — connect once and all your listings become purchasable immediately.
+                    </div>
+                  </div>
+                  <ConnectWalletButton style={{ padding: '8px 16px', fontSize: '12px', flexShrink: 0 }} />
+                </div>
+              )}
 
               {/* Ship-now alert */}
               {ordersNeedingShip.length > 0 && (
@@ -790,7 +804,7 @@ function SellerDashboard() {
                 <strong style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Ship within 48hrs of sale.</strong> One free extension available. Miss deadline = auto-refund to buyer + Strike 1. Three strikes = permanent ban.
               </div>
 
-              {!walletAddress && (
+              {!walletAddress && !profile?.wallet_address && (
                 <div style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '8px', padding: '12px 14px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                   <div style={{ fontSize: '12px', color: 'var(--gold)', fontFamily: 'DM Sans, sans-serif', lineHeight: 1.5 }}>
                     Connect a wallet to publish — buyers pay to your wallet address.
