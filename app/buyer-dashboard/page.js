@@ -7,10 +7,10 @@ import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import ChatModal from '@/app/components/ChatModal'
 
-const ACTIVE_STATUSES = ['funded', 'shipped', 'in_transit', 'auth_pending', 'inspection_window']
+const ACTIVE_STATUSES = ['awaiting_shipment', 'shipped', 'in_transit', 'auth_pending', 'inspection_window']
 
 const STATUS_MAP = {
-  funded:           { key: 'funded',       label: 'Awaiting Shipment',   steps: [true,  false, false, false, false], activeStep: 0 },
+  awaiting_shipment:{ key: 'funded',       label: 'Awaiting Shipment',   steps: [true,  false, false, false, false], activeStep: 0 },
   shipped:          { key: 'shipped',      label: 'In Transit',          steps: [true,  true,  false, false, false], activeStep: 1 },
   in_transit:       { key: 'shipped',      label: 'In Transit',          steps: [true,  true,  false, false, false], activeStep: 2 },
   auth_pending:     { key: 'auth',         label: 'Authenticating',      steps: [true,  true,  true,  false, false], activeStep: 3 },
@@ -19,7 +19,7 @@ const STATUS_MAP = {
 }
 
 const STATUS_COLORS = {
-  funded:      { bg: 'rgba(232,168,56,0.1)',  border: 'rgba(232,168,56,0.3)',  color: 'var(--accent-amber)' },
+  awaiting_shipment: { bg: 'rgba(232,168,56,0.1)',  border: 'rgba(232,168,56,0.3)',  color: 'var(--accent-amber)' },
   'auto-release': { bg: 'rgba(232,168,56,0.1)', border: 'rgba(232,168,56,0.3)', color: 'var(--accent-amber)' },
   auth:        { bg: 'rgba(201,168,76,0.1)',  border: 'rgba(201,168,76,0.28)', color: 'var(--gold)' },
   shipped:     { bg: 'rgba(60,125,200,0.1)',  border: 'rgba(60,125,200,0.3)',  color: 'var(--accent-blue)' },
@@ -206,7 +206,7 @@ export default function BuyerDashboard() {
           </div>
           {/* Tracking info */}
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-3)', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', lineHeight: 1.6 }}>
-            {order.status === 'funded'            && `Waiting for seller to ship · 48hr deadline`}
+            {order.status === 'awaiting_shipment' && `Waiting for seller to ship · 48hr deadline`}
             {order.status === 'shipped'           && (order.tracking_a ? `Tracking: ${order.tracking_a}` : 'Shipped · Tracking pending')}
             {order.status === 'in_transit'        && (order.tracking_a ? `In transit · ${order.tracking_a}` : 'In transit')}
             {order.status === 'auth_pending'      && `At Chase Hollow HQ · Authentication in progress`}

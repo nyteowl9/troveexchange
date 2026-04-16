@@ -315,7 +315,7 @@ function Checkout() {
 
       if (orderError) throw new Error('Failed to record order: ' + orderError.message)
 
-      await supabase.from('listings').update({ status: 'pending' }).eq('id', listingId)
+      await supabase.from('listings').update({ status: 'sold' }).eq('id', listingId)
       fetch('/api/referral/convert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

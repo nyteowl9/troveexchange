@@ -12,14 +12,14 @@ export default function SellerDashboardPage() {
   return <Suspense><SellerDashboard /></Suspense>
 }
 
-const ACTIVE_ORDER_STATUSES = ['funded', 'shipped', 'in_transit', 'auth_pending', 'inspection_window']
+const ACTIVE_ORDER_STATUSES = ['awaiting_shipment', 'shipped', 'in_transit', 'auth_pending', 'inspection_window']
 
 const BOND_RATE  = { new: 0.04, trusted: 0.03, pro: 0.02, elite: 0.01, legend: 0.01 }
 const TIER_LABEL = { new: 'New', trusted: 'Trusted', pro: 'Pro', elite: 'Elite', legend: 'Legend' }
 const BOND_FLOOR = 20 // $20 flat floor added to every bond
 
 const SELLER_STATUS_MAP = {
-  funded:           { label: '⚡ Ship Now',      color: 'var(--accent-red)',   bg: 'rgba(200,75,60,0.1)',   border: 'rgba(200,75,60,0.3)',   urgent: true  },
+  awaiting_shipment:{ label: '⚡ Ship Now',      color: 'var(--accent-red)',   bg: 'rgba(200,75,60,0.1)',   border: 'rgba(200,75,60,0.3)',   urgent: true  },
   shipped:          { label: 'In Transit',       color: 'var(--accent-blue)',  bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)', urgent: false },
   in_transit:       { label: 'In Transit',       color: 'var(--accent-blue)',  bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)', urgent: false },
   auth_pending:     { label: 'Authenticating',   color: 'var(--gold)',          bg: 'rgba(201,168,76,0.1)', border: 'rgba(201,168,76,0.28)',urgent: false },
@@ -162,7 +162,7 @@ function SellerDashboard() {
   const bondRate   = BOND_RATE[profile?.tier] || BOND_RATE.new
   const bondAmount = price ? (BOND_FLOOR + parseFloat(price) * bondRate).toFixed(2) : null
 
-  const ordersNeedingShip = activeOrders.filter(o => o.status === 'funded')
+  const ordersNeedingShip = activeOrders.filter(o => o.status === 'awaiting_shipment')
   const totalActiveSalesValue = myListings.reduce((sum, l) => sum + Number(l.price || 0), 0)
   const totalCompletedRevenue = completedSales.reduce((sum, s) => sum + Number(s.escrow_amount || 0), 0)
   const bondInFlight = activeOrders.reduce((sum, o) => sum + (Number(o.escrow_amount || 0) * bondRate), 0)
