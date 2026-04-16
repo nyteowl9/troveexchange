@@ -41,7 +41,7 @@ export default function ListingPage() {
       .from('listings')
       .select(`
         id, card_name, game, set, card_number, grade, grader, cert_number,
-        condition, listing_type, price, auth_tier, photos, created_at, expires_at, status,
+        condition, description, listing_type, price, auth_tier, photos, created_at, expires_at, status,
         seller:seller_id (id, username, full_name, tier, strike_count, wallet_address)
       `)
       .eq('id', id)
@@ -79,7 +79,7 @@ export default function ListingPage() {
     )
   }
 
-  const { card_name, game, set, card_number, grade, grader, cert_number, condition, listing_type, price, auth_tier, photos, seller } = listing
+  const { card_name, game, set, card_number, grade, grader, cert_number, condition, description, listing_type, price, auth_tier, photos, seller } = listing
   const isGraded = listing_type === 'graded' && grader
   const isPhysical = auth_tier === 'physical'
   const authFee = isPhysical ? 25 : 10
@@ -200,8 +200,8 @@ export default function ListingPage() {
               )}
               {isGraded && (
                 <>
-                  <div style={{ position: 'absolute', top: '16px', left: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '4px 12px', borderRadius: '6px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)', color: 'var(--gold)', fontWeight: 500 }}>{grader}</div>
-                  <div style={{ position: 'absolute', top: '16px', right: '16px', width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(201,168,76,0.15)', border: '2px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)' }}>{grade}</div>
+                  <div style={{ position: 'absolute', top: '16px', left: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '4px 12px', borderRadius: '6px', background: 'rgba(10,10,11,0.82)', border: '1px solid rgba(201,168,76,0.5)', color: 'var(--gold)', fontWeight: 600, backdropFilter: 'blur(4px)' }}>{grader}</div>
+                  <div style={{ position: 'absolute', top: '16px', right: '16px', width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(10,10,11,0.82)', border: '2px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Sans, sans-serif', fontSize: '16px', fontWeight: 700, color: 'var(--gold)', backdropFilter: 'blur(4px)' }}>{grade}</div>
                 </>
               )}
             </div>
@@ -224,7 +224,11 @@ export default function ListingPage() {
             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>
               {card_name}{card_number ? <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}> {card_number}</em> : ''}
             </div>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '18px' }}>{game}{set ? ` · ${set}` : ''}</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: description ? '14px' : '18px' }}>{game}{set ? ` · ${set}` : ''}</div>
+
+            <div style={{ fontSize: '14px', color: description ? 'var(--text-secondary)' : 'var(--text-muted)', lineHeight: 1.7, marginBottom: '18px', fontStyle: description ? 'normal' : 'italic' }}>
+              {description || 'No description provided.'}
+            </div>
 
             {detailCells.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '1px', background: 'var(--border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '16px' }}>

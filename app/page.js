@@ -176,25 +176,27 @@ export default function Home() {
               ))
             ) : featuredListings.map((card) => (
               <Link key={card.id} href={`/listing/${card.id}`} style={{ textDecoration: 'none' }}>
-                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, border-color 0.2s' }}
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, border-color 0.2s', display: 'flex', flexDirection: 'column', height: '100%' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = 'var(--teal-border)' }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border)' }}
                 >
-                  <div style={{ aspectRatio: '3/4', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ aspectRatio: '3/4', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
                     {card.photos?.[0]
                       ? <img src={card.photos[0]} alt={card.card_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : <div style={{ fontSize: '36px', opacity: 0.3 }}>🃏</div>
                     }
-                    {card.grader && <div style={{ position: 'absolute', top: '10px', left: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 9px', borderRadius: '6px', fontWeight: 500, background: 'rgba(201,168,76,0.12)', border: '1px solid var(--teal-border)', color: 'var(--gold)' }}>{card.grader}</div>}
-                    {card.grade && <div style={{ position: 'absolute', top: '10px', right: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 8px', borderRadius: '6px', fontWeight: 600, background: 'rgba(201,168,76,0.15)', border: '1.5px solid var(--gold)', color: 'var(--gold)', whiteSpace: 'nowrap' }}>{card.grade}</div>}
+                    {card.grader && <div style={{ position: 'absolute', top: '8px', left: '8px', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 8px', borderRadius: '5px', fontWeight: 600, background: 'rgba(10,10,11,0.82)', border: '1px solid rgba(201,168,76,0.5)', color: 'var(--gold)', backdropFilter: 'blur(4px)' }}>{card.grader}</div>}
+                    {card.grade && <div style={{ position: 'absolute', top: '8px', right: '8px', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 8px', borderRadius: '5px', fontWeight: 700, background: 'rgba(10,10,11,0.82)', border: '1.5px solid var(--gold)', color: 'var(--gold)', backdropFilter: 'blur(4px)', whiteSpace: 'nowrap' }}>{card.grade}</div>}
                   </div>
-                  <div style={{ padding: '14px 16px' }}>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 500 }}>{card.game}</div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '19px', fontWeight: 400, lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)' }}>{card.card_name}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px' }}>{card.set}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)' }}>${Number(card.price).toLocaleString()}</div>
-                      <div style={{ width: '30px', height: '30px', border: '1.5px solid var(--border)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>→</div>
+                  <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 500 }}>{card.game}</div>
+                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', fontWeight: 400, lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{card.card_name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.set}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px' }}>
+                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '16px', fontWeight: 700, color: 'var(--gold)' }}>${Number(card.price).toLocaleString()}</div>
+                      <div style={{ width: '28px', height: '28px', border: '1.5px solid var(--border)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>→</div>
                     </div>
                   </div>
                 </div>

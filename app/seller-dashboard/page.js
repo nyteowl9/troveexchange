@@ -68,9 +68,12 @@ function SellerDashboard() {
   const [grader, setGrader]           = useState('PSA')
   const [price, setPrice]             = useState('')
   const [photos, setPhotos]           = useState([])
-  const [submitting, setSubmitting]   = useState(false)
-  const [submitError, setSubmitError] = useState('')
-  const [formData, setFormData]       = useState({ game: 'Pokémon TCG', language: 'English', card_name: '', set: '', card_number: '', grade: '', cert_number: '', grader_other: '', condition: 'Near Mint (NM)', condition_notes: '', quantity: '', seal_condition: 'Factory Sealed — Unopened', lot_description: '' })
+  const [submitting, setSubmitting]     = useState(false)
+  const [submitError, setSubmitError]   = useState('')
+  const [photoError, setPhotoError]     = useState('')
+  const [dragOver, setDragOver]         = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [formData, setFormData]       = useState({ game: 'Pokémon TCG', language: 'English', card_name: '', set: '', card_number: '', grade: '', cert_number: '', grader_other: '', condition: 'Near Mint (NM)', description: '', quantity: '', seal_condition: 'Factory Sealed — Unopened' })
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -148,7 +151,7 @@ function SellerDashboard() {
   const calcFees = (p) => {
     const num = parseFloat(p) || 0
     const platform = (num * 0.035).toFixed(2)
-    const shipCost = 15
+    const shipCost = 8
     const net = (num - parseFloat(platform) - shipCost).toFixed(2)
     return { platform, shipCost, net }
   }
@@ -179,60 +182,100 @@ function SellerDashboard() {
     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{text}</div>
   )
 
-  async function handlePhotoUpload(e) {
-    const files = Array.from(e.target.files)
-    if (!files.length) return
-    const urls = []
-    for (const file of files) {
-      const ext = file.name.split('.').pop()
-      const path = `listings/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const { error } = await supabase.storage.from('listing-photos').upload(path, file, { upsert: false })
-      if (!error) {
-        const { data: { publicUrl } } = supabase.storage.from('listing-photos').getPublicUrl(path)
-        urls.push(publicUrl)
-      }
+  // photos state shape: [{ file: File, preview: string (blob URL) }]
+  function addPhotoFiles(files) {
+    const imageFiles = files.filter(f => f.type.startsWith('image/'))
+    if (!imageFiles.length) return
+    if (photos.length + imageFiles.length > 15) {
+      setPhotoError('Maximum 15 photos allowed per listing')
+      return
     }
-    setPhotos(prev => [...prev, ...urls])
+    setPhotoError('')
+    const newPhotos = imageFiles.map(file => ({ file, preview: URL.createObjectURL(file) }))
+    setPhotos(prev => [...prev, ...newPhotos])
   }
+
+  function handlePhotoUpload(e) {
+    addPhotoFiles(Array.from(e.target.files))
+    e.target.value = ''
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    setDragOver(false)
+    addPhotoFiles(Array.from(e.dataTransfer.files))
+  }
+
+  const minPhotos = listingType === 'graded' ? 2 : listingType === 'raw' ? 2 : listingType === 'lot' ? 2 : 2
 
   async function handleSubmitListing() {
     setSubmitError('')
-    if (!formData.card_name.trim()) { setSubmitError('Card name is required'); return }
+    if (!formData.card_name.trim()) { setSubmitError('Listing title is required'); return }
+    if (!formData.description.trim()) { setSubmitError('Description is required'); return }
+    if (listingType === 'graded') {
+      if (!formData.grade.trim()) { setSubmitError('Grade is required for graded listings'); return }
+    }
+    if (listingType === 'raw' && !formData.condition) { setSubmitError('Condition is required for raw cards'); return }
     if (!price || parseFloat(price) < 1) { setSubmitError('Price must be at least $1'); return }
-    if (photos.length < 1) { setSubmitError('At least 1 photo is required'); return }
+    if (parseFloat(price) > 50000) { setSubmitError('Maximum listing price is $50,000'); return }
+    if (photos.length < minPhotos) { setSubmitError(`At least ${minPhotos} photos are required`); return }
 
     setSubmitting(true)
-    const isGraded = listingType === 'graded'
-    const priceNum = parseFloat(price)
-    const authTier = priceNum <= 300 ? 'remote' : 'physical'
-    const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+    try {
+      const isGraded = listingType === 'graded'
+      const priceNum = parseFloat(price)
+      const authTier = priceNum <= 300 ? 'remote' : 'physical'
+      const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
 
-    const payload = {
-      seller_id:    user.id,
-      listing_type: listingType,
-      game:         formData.game,
-      card_name:    formData.card_name.trim(),
-      set:          formData.set.trim() || null,
-      card_number:  formData.card_number.trim() || null,
-      grade:        isGraded ? formData.grade.trim() || null : null,
-      grader:       isGraded ? (grader === 'Other' ? formData.grader_other.trim() : grader) : null,
-      cert_number:  isGraded && grader !== 'Other' ? formData.cert_number.trim() || null : null,
-      condition:    listingType === 'raw' ? formData.condition : null,
-      price:        priceNum,
-      auth_tier:    authTier,
-      photos:       photos,
-      status:       'active',
-      expires_at:   expiresAt,
-    }
+      // Upload photos to Supabase storage at submit time
+      // Path starts with user.id to match standard storage RLS policies
+      const uploadedUrls = []
+      for (const { file } of photos) {
+        const ext = file.name.split('.').pop()
+        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error: uploadError } = await supabase.storage.from('listing-photos').upload(path, file, { upsert: false, contentType: file.type })
+        if (uploadError) {
+          setSubmitError(`Photo upload failed: ${uploadError.message}`)
+          setSubmitting(false)
+          return
+        }
+        const { data: { publicUrl } } = supabase.storage.from('listing-photos').getPublicUrl(path)
+        uploadedUrls.push(publicUrl)
+      }
 
-    const { error } = await supabase.from('listings').insert(payload)
-    setSubmitting(false)
-    if (error) {
-      setSubmitError('Failed to publish listing. Please try again.')
-    } else {
-      setPrice(''); setPhotos([]); setFormData({ game: 'Pokémon TCG', language: 'English', card_name: '', set: '', card_number: '', grade: '', cert_number: '', grader_other: '', condition: 'Near Mint (NM)', condition_notes: '', quantity: '', seal_condition: 'Factory Sealed — Unopened', lot_description: '' })
-      await fetchData()
-      setActiveSection('listings')
+      const payload = {
+        seller_id:       user.id,
+        listing_type:    listingType,
+        game:            formData.game,
+        card_name:       formData.card_name.trim(),
+        set:             formData.set.trim() || null,
+        card_number:     formData.card_number.trim() || null,
+        grade:           isGraded ? formData.grade.trim() || null : null,
+        grader:          isGraded ? (grader === 'Other' ? formData.grader_other.trim() : grader) : null,
+        cert_number:     isGraded && grader !== 'Other' ? formData.cert_number.trim() || null : null,
+        condition:       listingType === 'raw' ? formData.condition : null,
+        description:     formData.description.trim() || null,
+        price:           priceNum,
+        auth_tier:       authTier,
+        photos:          uploadedUrls,
+        status:          'active',
+        expires_at:      expiresAt,
+      }
+
+      const { error } = await supabase.from('listings').insert(payload)
+      console.log('[listing insert]', { error, payload })
+      if (error) {
+        setSubmitError(`Failed to publish listing: ${error.message} (code: ${error.code})`)
+      } else {
+        photos.forEach(p => URL.revokeObjectURL(p.preview))
+        setPrice(''); setPhotos([]); setFormData({ game: 'Pokémon TCG', language: 'English', card_name: '', set: '', card_number: '', grade: '', cert_number: '', grader_other: '', condition: 'Near Mint (NM)', description: '', quantity: '', seal_condition: 'Factory Sealed — Unopened' })
+        await fetchData()
+        setActiveSection('listings')
+      }
+    } catch (err) {
+      setSubmitError(`Unexpected error: ${err.message}`)
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -471,7 +514,14 @@ function SellerDashboard() {
                             <Link href={`/listing/${listing.id}`} style={{ textDecoration: 'none', flex: 1 }}>
                               <button style={btn({ fontSize: '10px', padding: '5px 10px', width: '100%', textAlign: 'center' })}>View</button>
                             </Link>
-                            <button onClick={() => handleDeleteListing(listing.id)} style={btn({ fontSize: '10px', padding: '5px 10px', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)' })}>Remove</button>
+                            {confirmDeleteId === listing.id ? (
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button onClick={() => { handleDeleteListing(listing.id); setConfirmDeleteId(null) }} style={btn({ fontSize: '9px', padding: '5px 8px', background: 'rgba(200,75,60,0.15)', border: '1px solid rgba(200,75,60,0.5)', color: 'var(--accent-red)', fontWeight: 700 })}>Confirm</button>
+                                <button onClick={() => setConfirmDeleteId(null)} style={btn({ fontSize: '9px', padding: '5px 8px' })}>Cancel</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirmDeleteId(listing.id)} style={btn({ fontSize: '10px', padding: '5px 10px', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)' })}>Remove</button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -526,8 +576,8 @@ function SellerDashboard() {
                     </div>
                   </div>
                   <div>
-                    <Label text="CARD NAME *" />
-                    <input type="text" placeholder="e.g. Charizard Holo" value={formData.card_name} onChange={e => setFormData(p => ({ ...p, card_name: e.target.value }))} style={inputStyle} />
+                    <Label text="LISTING TITLE *" />
+                    <input type="text" placeholder="e.g. Charizard Base Set Holo" value={formData.card_name} onChange={e => setFormData(p => ({ ...p, card_name: e.target.value }))} style={inputStyle} />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
@@ -570,6 +620,10 @@ function SellerDashboard() {
                           <input type="text" placeholder="e.g. TAG, HGA, Arena Club…" value={formData.grader_other} onChange={e => setFormData(p => ({ ...p, grader_other: e.target.value }))} style={inputStyle} />
                         </div>
                       )}
+                      <div>
+                        <Label text="LISTING DESCRIPTION *" />
+                        <textarea placeholder="Describe the card — centering, surface quality, any notable characteristics buyers should know." value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
+                      </div>
                     </div>
                   )}
 
@@ -577,7 +631,7 @@ function SellerDashboard() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                         <div>
-                          <Label text="CONDITION" />
+                          <Label text="CONDITION *" />
                           <select value={formData.condition} onChange={e => setFormData(p => ({ ...p, condition: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
                             <option>Near Mint (NM)</option>
                             <option>Lightly Played (LP)</option>
@@ -592,34 +646,40 @@ function SellerDashboard() {
                         </div>
                       </div>
                       <div>
-                        <Label text="CONDITION NOTES (Required)" />
-                        <textarea placeholder="Describe any flaws, wear, creases, or notable details buyers should know." value={formData.condition_notes} onChange={e => setFormData(p => ({ ...p, condition_notes: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
+                        <Label text="ITEM DESCRIPTION & CONDITION NOTES *" />
+                        <textarea placeholder="Describe the card — key details, any flaws, wear, creases, or notable characteristics buyers should know." value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
                       </div>
                       <div style={{ background: 'rgba(232,168,56,0.06)', border: '1px solid rgba(232,168,56,0.25)', borderRadius: '8px', padding: '10px 12px', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>⚠ Raw cards are authenticated for condition match. Misrepresented condition results in rejection, full buyer refund, and a strike.</div>
                     </div>
                   )}
 
                   {(listingType === 'pack' || listingType === 'box' || listingType === 'case') && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <div>
-                        <Label text="QUANTITY" />
-                        <input type="number" placeholder="e.g. 1" value={formData.quantity} onChange={e => setFormData(p => ({ ...p, quantity: e.target.value }))} style={inputStyle} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div>
+                          <Label text="QUANTITY" />
+                          <input type="number" placeholder="e.g. 1" value={formData.quantity} onChange={e => setFormData(p => ({ ...p, quantity: e.target.value }))} style={inputStyle} />
+                        </div>
+                        <div>
+                          <Label text="SEAL CONDITION" />
+                          <select value={formData.seal_condition} onChange={e => setFormData(p => ({ ...p, seal_condition: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                            <option>Factory Sealed — Unopened</option>
+                            <option>Resealed — Disclosed</option>
+                            <option>Open / Loose</option>
+                          </select>
+                        </div>
                       </div>
                       <div>
-                        <Label text="SEAL CONDITION" />
-                        <select value={formData.seal_condition} onChange={e => setFormData(p => ({ ...p, seal_condition: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
-                          <option>Factory Sealed — Unopened</option>
-                          <option>Resealed — Disclosed</option>
-                          <option>Open / Loose</option>
-                        </select>
+                        <Label text="LISTING DESCRIPTION *" />
+                        <textarea placeholder="Describe the product — set, language, any notable details." value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
                       </div>
                     </div>
                   )}
 
                   {listingType === 'lot' && (
                     <div>
-                      <Label text="LOT DESCRIPTION" />
-                      <textarea placeholder="Describe all cards included — names, sets, conditions, grades if any." value={formData.lot_description} onChange={e => setFormData(p => ({ ...p, lot_description: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
+                      <Label text="LOT DESCRIPTION *" />
+                      <textarea placeholder="Describe all cards included — names, sets, conditions, grades if any." value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
                     </div>
                   )}
                 </div>
@@ -627,26 +687,47 @@ function SellerDashboard() {
 
               {/* Photos */}
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Photos (Required · Min 1)</div>
-                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={{ display: 'none' }} />
-                <div onClick={() => fileInputRef.current?.click()} style={{ border: '2px dashed var(--border)', borderRadius: '10px', padding: '32px', textAlign: 'center', cursor: 'pointer', background: 'var(--bg-3)', marginBottom: photos.length ? '12px' : '0' }}>
-                  <div style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.4 }}>📷</div>
-                  <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 500 }}>Upload Card Photos</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {listingType === 'graded' && 'Front, back, full slab, grade label · Min 3 required'}
-                    {listingType === 'raw'    && 'Front, back, all four corners · Min 4 required'}
-                    {(listingType === 'pack' || listingType === 'box' || listingType === 'case') && 'All sides of sealed product · Min 3 required'}
-                    {listingType === 'lot'   && 'All cards spread out + individual shots · Min 4 required'}
-                  </div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>
+                  Photos (Required · Min {minPhotos} · Max 15)
                 </div>
+                <input id="photo-upload-input" type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={{ display: 'none' }} />
+                <label htmlFor="photo-upload-input"
+                  onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                  onDragEnter={e => { e.preventDefault(); setDragOver(true) }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  style={{ display: 'block', border: `2px dashed ${dragOver ? 'var(--teal)' : 'var(--border)'}`, borderRadius: '10px', padding: '32px', textAlign: 'center', cursor: 'pointer', background: dragOver ? 'var(--teal-bg)' : 'var(--bg-3)', marginBottom: photos.length ? '12px' : '0', transition: 'border-color 0.15s, background 0.15s' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '8px', opacity: dragOver ? 1 : 0.4 }}>📷</div>
+                  <div style={{ fontSize: '14px', color: dragOver ? 'var(--teal)' : 'var(--text-secondary)', marginBottom: '4px', fontWeight: 500 }}>{dragOver ? 'Drop to add photos' : 'Click or drag photos here'}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {listingType === 'graded' && 'Front, back, full slab, grade label — min 2, more photos help buyers'}
+                    {listingType === 'raw'    && 'Front, back, all four corners — min 2, more photos help buyers'}
+                    {(listingType === 'pack' || listingType === 'box' || listingType === 'case') && 'All sides of sealed product — min 2, more photos help buyers'}
+                    {listingType === 'lot'   && 'All cards spread out + individual shots — min 2, more photos help buyers'}
+                  </div>
+                </label>
+                {photoError && (
+                  <div style={{ fontSize: '12px', color: 'var(--accent-red)', marginBottom: '8px', marginTop: '8px' }}>{photoError}</div>
+                )}
                 {photos.length > 0 && (
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {photos.map((url, i) => (
-                      <div key={i} style={{ position: 'relative', width: '60px', height: '84px', borderRadius: '4px', overflow: 'hidden', border: '1.5px solid var(--border)' }}>
-                        <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        <button onClick={() => setPhotos(p => p.filter((_, j) => j !== i))} style={{ position: 'absolute', top: '2px', right: '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
-                      </div>
-                    ))}
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'DM Mono, monospace' }}>
+                      First photo is your primary listing image — click any photo to make it primary
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {photos.map((photo, i) => (
+                        <div key={photo.preview} style={{ position: 'relative', width: '60px', height: '84px', borderRadius: '4px', overflow: 'hidden', border: `1.5px solid ${i === 0 ? 'var(--gold)' : 'var(--border)'}`, cursor: i > 0 ? 'pointer' : 'default' }}
+                          onClick={() => { if (i > 0) setPhotos(p => [p[i], ...p.filter((_, j) => j !== i)]) }}
+                          title={i === 0 ? 'Primary photo' : 'Click to set as primary'}
+                        >
+                          <img src={photo.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          {i === 0 && (
+                            <div style={{ position: 'absolute', bottom: '2px', left: '2px', background: 'var(--gold)', borderRadius: '3px', padding: '1px 4px', fontFamily: 'DM Mono, monospace', fontSize: '8px', color: '#0A0A0B', fontWeight: 700 }}>★</div>
+                          )}
+                          <button onClick={e => { e.stopPropagation(); URL.revokeObjectURL(photo.preview); setPhotos(p => p.filter((_, j) => j !== i)) }} style={{ position: 'absolute', top: '2px', right: '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -655,15 +736,19 @@ function SellerDashboard() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Price & Fee Calculator</div>
                 <Label text="LISTING PRICE (USDC) *" />
-                <input type="number" placeholder="Minimum $1" value={price} onChange={e => setPrice(e.target.value)} style={{ ...inputStyle, marginBottom: '14px', fontSize: '18px', fontFamily: 'Cormorant Garamond, serif' }} />
-                {price && (
+                <input type="number" placeholder="Minimum $1" value={price} onChange={e => setPrice(e.target.value)} style={{ ...inputStyle, marginBottom: parseFloat(price) > 50000 ? '8px' : '14px', fontSize: '18px', fontFamily: 'Cormorant Garamond, serif', borderColor: parseFloat(price) > 50000 ? 'rgba(200,75,60,0.6)' : undefined }} />
+                {parseFloat(price) > 50000 && (
+                  <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 700 }}>⚠</span> Maximum listing price is $50,000. Please lower your price to publish.
+                  </div>
+                )}
+                {price && parseFloat(price) <= 50000 && (
                   <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px' }}>
                     {[
-                      { label: 'Your listing price',       val: `$${parseFloat(price).toLocaleString()}` },
-                      { label: 'Platform fee (3.5%)',      val: `-$${fees.platform}` },
-                      { label: 'Shipping & insurance',     val: `-$${fees.shipCost}` },
-                      { label: 'Auth tier',                val: parseFloat(price) <= 300 ? 'Remote Photo ($10 buyer)' : 'Physical ($25 buyer)' },
-                      { label: 'You receive on settlement',val: `$${fees.net}`, green: true, total: true },
+                      { label: 'Your listing price',           val: `$${parseFloat(price).toLocaleString()}` },
+                      { label: 'Platform fee (3.5%)',          val: `-$${fees.platform}` },
+                      { label: 'Shipping & insurance (est.)',  val: `~$${fees.shipCost}` },
+                      { label: 'You receive on settlement',    val: `~$${fees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
                         <span style={{ color: row.total ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row.total ? 600 : 400 }}>{row.label}</span>
@@ -675,19 +760,28 @@ function SellerDashboard() {
               </div>
 
               {/* Bond notice */}
-              <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px', marginBottom: '8px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', fontWeight: 500 }}>Bond — Separate from fees</div>
-                {[
-                  { label: 'Bond posted at purchase', val: price && bondAmount ? `-$${bondAmount} ($20 + ${(bondRate * 100).toFixed(0)}% of $${price})` : `$20 + ${(bondRate * 100).toFixed(0)}% of sale price`, amber: true },
-                  { label: 'Bond returned',            val: 'Within 5–7 days', green: true },
-                  { label: 'Net bond cost',            val: '$0.00', green: true },
-                ].map((row, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: i < 2 ? '0.5px solid var(--border)' : 'none' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
-                    <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: row.green ? 'var(--accent-green)' : row.amber ? 'var(--accent-amber)' : 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
-                  </div>
-                ))}
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>Bond is collateral — not a fee. It posts when a buyer purchases and returns in full on successful completion.</div>
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '8px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px', fontWeight: 500 }}>Seller Bond — What is this?</div>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 14px' }}>
+                  When a buyer purchases your listing, a <strong style={{ color: 'var(--text-primary)' }}>bond is held as collateral</strong> alongside the buyer's payment in escrow. It is <strong style={{ color: 'var(--accent-green)' }}>not a fee</strong> — it is returned to you in full within 5–7 business days after the sale completes. On every clean sale, your net bond cost is <strong style={{ color: 'var(--accent-green)' }}>$0.00.</strong>
+                </p>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 14px' }}>
+                  The bond only becomes relevant if a dispute is opened after delivery. In that case it covers return shipping costs — Chase Hollow manages the full return process and generates all labels. The bond is only forfeited if you lose the dispute, which is rare and entirely avoidable with accurate listings.
+                </p>
+                <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px', marginBottom: '4px' }}>
+                  {[
+                    { label: 'Bond formula',       val: price && bondAmount ? `$${bondAmount}  ($20 + ${(bondRate * 100).toFixed(0)}% × $${price})` : `$20 + ${(bondRate * 100).toFixed(0)}% of sale price`, amber: true },
+                    { label: 'Posted',             val: 'When buyer purchases — not when you list' },
+                    { label: 'Returned',           val: 'Within 5–7 days after settlement', green: true },
+                    { label: 'Forfeited only if',  val: 'You lose a dispute' },
+                    { label: 'Net cost (clean sale)', val: '$0.00', green: true },
+                  ].map((row, i, arr) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '6px 0', borderBottom: i < arr.length - 1 ? '0.5px solid var(--border)' : 'none', gap: '12px' }}>
+                      <span style={{ color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '10px', flexShrink: 0 }}>{row.label}</span>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: row.green ? 'var(--accent-green)' : row.amber ? 'var(--accent-amber)' : 'var(--text-secondary)', fontWeight: 500, textAlign: 'right' }}>{row.val}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div style={{ background: 'rgba(200,75,60,0.05)', border: '1px solid rgba(200,75,60,0.2)', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 <strong style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Ship within 48hrs of sale.</strong> One free extension available. Miss deadline = auto-refund to buyer + Strike 1. Three strikes = permanent ban.
@@ -698,7 +792,7 @@ function SellerDashboard() {
               )}
 
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={handleSubmitListing} disabled={submitting} style={{ flex: 1, background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '14px', fontSize: '14px', fontWeight: 700, borderRadius: '10px', cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: submitting ? 0.7 : 1 }}>{submitting ? 'Publishing…' : 'Publish Listing — Go Live'}</button>
+                <button onClick={handleSubmitListing} disabled={submitting || parseFloat(price) > 50000} style={{ flex: 1, background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '14px', fontSize: '14px', fontWeight: 700, borderRadius: '10px', cursor: (submitting || parseFloat(price) > 50000) ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: (submitting || parseFloat(price) > 50000) ? 0.4 : 1 }}>{submitting ? 'Publishing…' : 'Publish Listing — Go Live'}</button>
               </div>
             </div>
           )}
@@ -716,7 +810,7 @@ function SellerDashboard() {
                 {[
                   { label: 'Gross Revenue',  val: fmtUSD(totalCompletedRevenue), sub: 'All completed sales', color: 'var(--gold)' },
                   { label: 'Fees Paid (3.5%)',val: fmtUSD(totalCompletedRevenue * 0.035), sub: 'Platform fee',    color: 'var(--accent-red)' },
-                  { label: 'Net Received',   val: fmtUSD(totalCompletedRevenue * (1 - 0.035) - completedSales.length * 15), sub: 'After fees + shipping', color: 'var(--accent-green)' },
+                  { label: 'Net Received',   val: fmtUSD(totalCompletedRevenue * (1 - 0.035) - completedSales.length * 8), sub: 'After fees + shipping (est.)', color: 'var(--accent-green)' },
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
@@ -741,7 +835,7 @@ function SellerDashboard() {
                       {completedSales.map((sale, i) => {
                         const gross = Number(sale.escrow_amount || 0)
                         const fee   = gross * 0.035
-                        const ship  = Number(sale.shipping_cost || 15)
+                        const ship  = Number(sale.shipping_cost || 8)
                         const net   = gross - fee - ship
                         return (
                           <tr key={sale.id} style={{ borderBottom: i < completedSales.length - 1 ? '0.5px solid var(--border)' : 'none' }}

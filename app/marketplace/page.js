@@ -23,7 +23,7 @@ const CATEGORIES = [
   { id: 'sports',   label: 'Sports',    match: 'sports' },
 ]
 
-const GRADE_FILTERS = ['PSA 10', 'PSA 9', 'PSA 8', 'BGS 9.5', 'BGS 9', 'CGC 9.5', 'CGC 9', 'Raw']
+const GRADE_FILTERS = ['10', '9.5', '9', '8.5', '8', '7', '6', 'Raw']
 const GRADER_FILTERS = ['PSA', 'BGS', 'CGC', 'SGC', 'Raw/Ungraded']
 
 export default function Marketplace() {
@@ -101,20 +101,28 @@ export default function Marketplace() {
 
     const { data, count } = await query
 
-    // Tier filter is client-side (filtering on joined seller.tier server-side
-    // requires a subquery — applying after fetch for simplicity)
-    const filtered = tierFilters.length > 0
-      ? (data || []).filter(c => tierFilters.includes(c.seller?.tier || 'new'))
-      : (data || [])
+    // Client-side filters: tier and grade+grader combos (e.g. "PSA 10")
+    let filtered = data || []
+    if (gradeFilters.length > 0) {
+      filtered = filtered.filter(listing =>
+        gradeFilters.some(f => {
+          if (f === 'Raw') return !listing.grader
+          return parseFloat(listing.grade) === parseFloat(f)
+        })
+      )
+    }
+    if (tierFilters.length > 0) {
+      filtered = filtered.filter(c => tierFilters.includes(c.seller?.tier || 'new'))
+    }
     setListings(filtered)
     setTotal(count || 0)
     setLoading(false)
-  }, [category, search, sortBy, priceMin, priceMax, graderFilters, page])
+  }, [category, search, sortBy, priceMin, priceMax, graderFilters, gradeFilters, tierFilters, page])
 
   useEffect(() => { load() }, [load])
 
   // Reset to page 1 on any filter change
-  useEffect(() => { setPage(1) }, [category, search, sortBy, priceMin, priceMax, graderFilters])
+  useEffect(() => { setPage(1) }, [category, search, sortBy, priceMin, priceMax, graderFilters, gradeFilters, tierFilters])
 
   function toggleFilter(arr, setArr, val) {
     setArr(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
@@ -330,20 +338,20 @@ export default function Marketplace() {
                         ) : (
                           <div style={{ width: '72%', aspectRatio: '2.5/3.5', borderRadius: '6px', background: 'var(--bg-4)', border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', opacity: 0.4 }}>🃏</div>
                         )}
-                        <div style={{ position: 'absolute', top: '10px', left: '10px', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 8px', borderRadius: '5px', fontWeight: 500, background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)' }}>{graderLabel}</div>
+                        <div style={{ position: 'absolute', top: '8px', left: '8px', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 8px', borderRadius: '5px', fontWeight: 600, background: 'rgba(10,10,11,0.82)', border: '1px solid rgba(201,168,76,0.5)', color: '#C9A84C', backdropFilter: 'blur(4px)' }}>{graderLabel}</div>
                         {gradeLabel !== '' && (
-                          <div style={{ position: 'absolute', top: '10px', right: '10px', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: 600, background: 'rgba(201,168,76,0.15)', border: '1.5px solid var(--gold)', color: 'var(--gold)', whiteSpace: 'nowrap' }}>{gradeLabel}</div>
+                          <div style={{ position: 'absolute', top: '8px', right: '8px', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 8px', borderRadius: '5px', fontWeight: 700, background: 'rgba(10,10,11,0.82)', border: '1.5px solid #C9A84C', color: '#C9A84C', backdropFilter: 'blur(4px)', whiteSpace: 'nowrap' }}>{gradeLabel}</div>
                         )}
                       </div>
                       <div style={{ padding: '12px 14px' }}>
                         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '3px', fontWeight: 500 }}>{card.game}{card.set ? ` · ${card.set}` : ''}</div>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', lineHeight: 1.2, marginBottom: '6px', color: 'var(--text-primary)' }}>{card.card_name}</div>
+                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', lineHeight: 1.2, marginBottom: '6px', color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{card.card_name}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                           <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color, fontWeight: 500 }}>{tc.label}</span>
                           <span style={{ fontSize: '11px', color: 'var(--teal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{card.seller?.username || '—'}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)' }}>${parseFloat(card.price).toLocaleString()}</div>
+                          <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '16px', fontWeight: 700, color: 'var(--gold)' }}>${parseFloat(card.price).toLocaleString()}</div>
                           <button style={{ background: 'var(--teal)', border: 'none', color: 'var(--bg)', padding: '8px 14px', fontSize: '11px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', cursor: 'pointer' }}>Buy</button>
                         </div>
                       </div>
@@ -373,15 +381,15 @@ export default function Marketplace() {
                         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{card.game}{card.set ? ` · ${card.set}` : ''}</div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {card.grader && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '6px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>{card.grader}</span>}
-                        {card.grade != null && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-primary)', fontWeight: 600 }}>{card.grade}</span>}
+                        {card.grader && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '6px', background: 'var(--bg-4)', border: '1px solid var(--border)', color: 'var(--gold)', fontWeight: 600 }}>{card.grader}</span>}
+                        {card.grade != null && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--gold)', fontWeight: 700 }}>{card.grade}</span>}
                       </div>
                       <div style={{ minWidth: '80px', textAlign: 'right' }}>
                         <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color, fontWeight: 500 }}>{tc.label}</span>
                         <div style={{ fontSize: '11px', color: 'var(--teal)', marginTop: '3px' }}>@{card.seller?.username || '—'}</div>
                       </div>
                       <div style={{ textAlign: 'right', minWidth: '100px' }}>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)' }}>${parseFloat(card.price).toLocaleString()}</div>
+                        <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '18px', fontWeight: 700, color: 'var(--gold)' }}>${parseFloat(card.price).toLocaleString()}</div>
                       </div>
                       <button style={{ background: 'var(--teal)', border: 'none', color: 'var(--bg)', padding: '10px 20px', fontSize: '12px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', cursor: 'pointer', flexShrink: 0 }}>Buy Now</button>
                     </div>

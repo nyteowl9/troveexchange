@@ -116,9 +116,16 @@ export default function Nav() {
           {/* Auth buttons */}
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Link href={profile?.role === 'owner' ? '/admin' : profile?.role === 'authenticator' ? '/authenticator' : profile?.role === 'staff' ? '/customer-support' : '/buyer-dashboard'} style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', textDecoration: 'none', fontFamily: 'DM Sans, sans-serif', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {profile?.username ? `@${profile.username}` : user.email}
-              </Link>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                <Link href={profile?.role === 'owner' ? '/admin' : profile?.role === 'authenticator' ? '/authenticator' : profile?.role === 'staff' ? '/customer-support' : '/buyer-dashboard'} style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', textDecoration: 'none', fontFamily: 'DM Sans, sans-serif', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {profile?.username ? `@${profile.username}` : user.email}
+                </Link>
+                {(!profile?.role || profile.role === 'buyer') && (
+                  <Link href={pathname === '/buyer-dashboard' ? '/seller-dashboard' : pathname === '/seller-dashboard' ? '/buyer-dashboard' : '/seller-dashboard'} style={{ fontSize: '10px', color: 'var(--teal)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
+                    {pathname === '/buyer-dashboard' ? 'Seller Dashboard →' : pathname === '/seller-dashboard' ? 'Buyer Dashboard →' : 'Seller Dashboard →'}
+                  </Link>
+                )}
+              </div>
               <button onClick={async () => { await signOut(); router.push('/') }} style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '6px 14px', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 Sign Out
               </button>
