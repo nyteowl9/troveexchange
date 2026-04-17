@@ -7,23 +7,26 @@ import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import ChatModal from '@/app/components/ChatModal'
 
-const ACTIVE_STATUSES = ['awaiting_shipment', 'shipped', 'in_transit', 'auth_pending', 'inspection_window']
+const ACTIVE_STATUSES = ['awaiting_shipment', 'in_transit', 'auth_review', 'auth_passed', 'delivered', 'inspection_window', 'disputed']
 
 const STATUS_MAP = {
-  awaiting_shipment:{ key: 'funded',       label: 'Awaiting Shipment',   steps: [true,  false, false, false, false], activeStep: 0 },
-  shipped:          { key: 'shipped',      label: 'In Transit',          steps: [true,  true,  false, false, false], activeStep: 1 },
-  in_transit:       { key: 'shipped',      label: 'In Transit',          steps: [true,  true,  false, false, false], activeStep: 2 },
-  auth_pending:     { key: 'auth',         label: 'Authenticating',      steps: [true,  true,  true,  false, false], activeStep: 3 },
-  inspection_window:{ key: 'auto-release', label: 'Auto-Release Window', steps: [true,  true,  true,  true,  false], activeStep: 4 },
+  awaiting_shipment:{ key: 'awaiting',     label: 'Awaiting Shipment',   steps: [true,  false, false, false, false], activeStep: 0 },
+  in_transit:       { key: 'shipped',      label: 'In Transit',          steps: [true,  true,  false, false, false], activeStep: 1 },
+  auth_review:      { key: 'auth',         label: 'Authenticating',      steps: [true,  true,  true,  false, false], activeStep: 2 },
+  auth_passed:      { key: 'auth',         label: 'Auth Passed',         steps: [true,  true,  true,  false, false], activeStep: 2 },
+  delivered:        { key: 'auto-release', label: 'Delivered',           steps: [true,  true,  true,  true,  false], activeStep: 3 },
+  inspection_window:{ key: 'auto-release', label: 'Auto-Release Window', steps: [true,  true,  true,  true,  false], activeStep: 3 },
+  disputed:         { key: 'disputed',     label: 'Disputed',            steps: [true,  true,  true,  true,  false], activeStep: 3 },
   released:         { key: 'complete',     label: 'Complete',            steps: [true,  true,  true,  true,  true],  activeStep: 4 },
 }
 
 const STATUS_COLORS = {
-  awaiting_shipment: { bg: 'rgba(232,168,56,0.1)',  border: 'rgba(232,168,56,0.3)',  color: 'var(--accent-amber)' },
-  'auto-release': { bg: 'rgba(232,168,56,0.1)', border: 'rgba(232,168,56,0.3)', color: 'var(--accent-amber)' },
-  auth:        { bg: 'rgba(201,168,76,0.1)',  border: 'rgba(201,168,76,0.28)', color: 'var(--gold)' },
-  shipped:     { bg: 'rgba(60,125,200,0.1)',  border: 'rgba(60,125,200,0.3)',  color: 'var(--accent-blue)' },
-  complete:    { bg: 'rgba(76,175,124,0.1)',  border: 'rgba(76,175,124,0.3)',  color: 'var(--accent-green)' },
+  awaiting:     { bg: 'rgba(232,168,56,0.1)',  border: 'rgba(232,168,56,0.3)',  color: 'var(--accent-amber)' },
+  'auto-release':{ bg: 'rgba(232,168,56,0.1)', border: 'rgba(232,168,56,0.3)', color: 'var(--accent-amber)' },
+  auth:         { bg: 'rgba(201,168,76,0.1)',  border: 'rgba(201,168,76,0.28)', color: 'var(--gold)' },
+  shipped:      { bg: 'rgba(60,125,200,0.1)',  border: 'rgba(60,125,200,0.3)',  color: 'var(--accent-blue)' },
+  disputed:     { bg: 'rgba(200,75,60,0.1)',   border: 'rgba(200,75,60,0.3)',   color: 'var(--accent-red)' },
+  complete:     { bg: 'rgba(76,175,124,0.1)',  border: 'rgba(76,175,124,0.3)',  color: 'var(--accent-green)' },
 }
 
 const TIER_LABEL = { new: 'New', trusted: 'Trusted', pro: 'Pro', elite: 'Elite' }

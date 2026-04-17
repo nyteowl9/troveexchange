@@ -7,12 +7,15 @@ import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import ChatModal from '@/app/components/ChatModal'
 import ConnectWalletButton, { useWalletConnection } from '@/app/components/ConnectWallet'
+import { usePrivy, useWallets } from '@privy-io/react-auth'
+import { ethers } from 'ethers'
+import { ESCROW_ADDRESS, USDC_ADDRESS, USDC_ABI, ESCROW_ABI } from '@/lib/escrow'
 
 export default function SellerDashboardPage() {
   return <Suspense><SellerDashboard /></Suspense>
 }
 
-const ACTIVE_ORDER_STATUSES = ['awaiting_shipment', 'shipped', 'in_transit', 'auth_pending', 'inspection_window']
+const ACTIVE_ORDER_STATUSES = ['awaiting_shipment', 'in_transit', 'auth_review', 'auth_passed', 'delivered', 'inspection_window', 'disputed']
 
 const BOND_RATE  = { new: 0.04, trusted: 0.03, pro: 0.02, elite: 0.01, legend: 0.01 }
 const TIER_LABEL = { new: 'New', trusted: 'Trusted', pro: 'Pro', elite: 'Elite', legend: 'Legend' }
@@ -20,10 +23,12 @@ const BOND_FLOOR = 20 // $20 flat floor added to every bond
 
 const SELLER_STATUS_MAP = {
   awaiting_shipment:{ label: '⚡ Ship Now',      color: 'var(--accent-red)',   bg: 'rgba(200,75,60,0.1)',   border: 'rgba(200,75,60,0.3)',   urgent: true  },
-  shipped:          { label: 'In Transit',       color: 'var(--accent-blue)',  bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)', urgent: false },
   in_transit:       { label: 'In Transit',       color: 'var(--accent-blue)',  bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)', urgent: false },
-  auth_pending:     { label: 'Authenticating',   color: 'var(--gold)',          bg: 'rgba(201,168,76,0.1)', border: 'rgba(201,168,76,0.28)',urgent: false },
+  auth_review:      { label: 'Authenticating',   color: 'var(--gold)',          bg: 'rgba(201,168,76,0.1)', border: 'rgba(201,168,76,0.28)',urgent: false },
+  auth_passed:      { label: 'Auth Passed',       color: 'var(--accent-blue)',  bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)', urgent: false },
+  delivered:        { label: 'Delivered',         color: 'var(--accent-green)', bg: 'rgba(76,175,124,0.1)', border: 'rgba(76,175,124,0.3)', urgent: false },
   inspection_window:{ label: 'Auto-Releasing',   color: 'var(--accent-green)', bg: 'rgba(76,175,124,0.1)', border: 'rgba(76,175,124,0.3)', urgent: false },
+  disputed:         { label: 'Disputed',          color: 'var(--accent-red)',   bg: 'rgba(200,75,60,0.1)',  border: 'rgba(200,75,60,0.3)',  urgent: true  },
 }
 
 function fmtUSD(n) {
@@ -54,6 +59,7 @@ function hoursUntil(ts) {
 function SellerDashboard() {
   const { user, profile, loading: authLoading } = useAuth()
   const { walletAddress, ready: walletReady, connect: connectWallet, disconnect: disconnectWallet } = useWalletConnection()
+  const { wallets } = useWallets()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -64,6 +70,11 @@ function SellerDashboard() {
   const [myListings, setMyListings]         = useState([])
   const [completedSales, setCompletedSales] = useState([])
   const [dataLoading, setDataLoading]       = useState(true)
+  const [labelLoading, setLabelLoading]     = useState({}) // { [orderId]: true }
+  const [labelError, setLabelError]         = useState({}) // { [orderId]: message }
+  const [bondLoading, setBondLoading]       = useState({}) // { [orderId]: true }
+  const [bondError, setBondError]           = useState({}) // { [orderId]: message }
+  const [bondStatus, setBondStatus]         = useState({}) // { [orderId]: status string }
 
   // New listing form
   const [listingType, setListingType] = useState('graded')
@@ -94,7 +105,7 @@ function SellerDashboard() {
     const [ordersRes, listingsRes, salesRes] = await Promise.all([
       supabase
         .from('orders')
-        .select(`id, status, escrow_amount, auth_tier, tracking_a, shipped_at, created_at, auto_release_at,
+        .select(`id, status, escrow_amount, auth_tier, bond_amount, bond_tx_hash, onchain_order_id, tracking_a, label_a_url, shipped_at, created_at, auto_release_at,
                  listing:listing_id (id, card_name, game, set, grade, grader, photos, price, auth_tier),
                  buyer:buyer_id (id, username)`)
         .eq('seller_id', user.id)
@@ -165,7 +176,7 @@ function SellerDashboard() {
   const ordersNeedingShip = activeOrders.filter(o => o.status === 'awaiting_shipment')
   const totalActiveSalesValue = myListings.reduce((sum, l) => sum + Number(l.price || 0), 0)
   const totalCompletedRevenue = completedSales.reduce((sum, s) => sum + Number(s.escrow_amount || 0), 0)
-  const bondInFlight = activeOrders.reduce((sum, o) => sum + (Number(o.escrow_amount || 0) * bondRate), 0)
+  const bondInFlight = activeOrders.reduce((sum, o) => sum + Number(o.bond_amount || 0), 0)
 
   const btn = (extra = {}) => ({
     background: 'transparent', border: '1.5px solid var(--border)',
@@ -304,10 +315,99 @@ function SellerDashboard() {
     return null
   }
 
+  const handlePostBond = async (order) => {
+    setBondError(prev  => ({ ...prev, [order.id]: null }))
+    setBondLoading(prev => ({ ...prev, [order.id]: true }))
+    try {
+      if (!walletAddress) throw new Error('Connect your wallet first (Bond Wallet section).')
+      if (!order.onchain_order_id) throw new Error('Missing on-chain order ID. Contact support.')
+      if (!order.bond_amount)      throw new Error('Bond amount not set on this order.')
+
+      // Find the connected wallet matching the seller's stored wallet address
+      const wallet = wallets.find(w => w.address?.toLowerCase() === walletAddress.toLowerCase())
+        || wallets[0]
+      if (!wallet) throw new Error('No wallet connected. Please connect in the Bond Wallet section.')
+
+      const isTestnet = process.env.NEXT_PUBLIC_CHAIN_ID === '84532'
+      const targetChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453')
+      const chainHex = '0x' + targetChainId.toString(16)
+
+      const eip1193 = await wallet.getEthereumProvider()
+      const currentChain = await eip1193.request({ method: 'eth_chainId' })
+      if (currentChain !== chainHex) {
+        try {
+          await eip1193.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainHex }] })
+        } catch {
+          await eip1193.request({
+            method: 'wallet_addEthereumChain',
+            params: [{ chainId: chainHex, chainName: isTestnet ? 'Base Sepolia' : 'Base', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: [isTestnet ? 'https://sepolia.base.org' : 'https://mainnet.base.org'], blockExplorerUrls: [isTestnet ? 'https://sepolia.basescan.org' : 'https://basescan.org'] }],
+          })
+        }
+      }
+
+      const provider = new ethers.BrowserProvider(eip1193)
+      const signer   = await provider.getSigner()
+      const bondU    = ethers.parseUnits(parseFloat(order.bond_amount).toFixed(6), 6)
+
+      setBondStatus(prev => ({ ...prev, [order.id]: 'Step 1 of 2 — Approve USDC · confirm in wallet…' }))
+      const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
+      const approveTx = await usdcContract.approve(ESCROW_ADDRESS, bondU)
+      setBondStatus(prev => ({ ...prev, [order.id]: 'Approval submitted — waiting for confirmation…' }))
+      await approveTx.wait()
+
+      setBondStatus(prev => ({ ...prev, [order.id]: 'Step 2 of 2 — Post bond · confirm in wallet…' }))
+      const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
+      const confirmTx = await escrowContract.confirmOrder(order.onchain_order_id)
+      setBondStatus(prev => ({ ...prev, [order.id]: 'Submitted — waiting for block confirmation…' }))
+      await confirmTx.wait()
+
+      // Save bond_tx_hash to Supabase
+      await supabase
+        .from('orders')
+        .update({ bond_tx_hash: confirmTx.hash })
+        .eq('id', order.id)
+
+      setBondStatus(prev => ({ ...prev, [order.id]: 'Bond posted ✓' }))
+      await fetchData()
+    } catch (err) {
+      const msg = err?.reason || err?.message || 'Bond posting failed'
+      setBondError(prev => ({ ...prev, [order.id]: msg }))
+      setBondStatus(prev => ({ ...prev, [order.id]: null }))
+    } finally {
+      setBondLoading(prev => ({ ...prev, [order.id]: false }))
+    }
+  }
+
+  const handlePrintLabel = async (order) => {
+    // If label already exists, open it
+    if (order.label_a_url) {
+      window.open(order.label_a_url, '_blank')
+      return
+    }
+    setLabelLoading(prev => ({ ...prev, [order.id]: true }))
+    setLabelError(prev => ({ ...prev, [order.id]: null }))
+    try {
+      const res = await fetch('/api/shipping/seller-label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Label generation failed')
+      // Refresh orders so the stored label_a_url is picked up
+      await fetchData()
+      window.open(data.label_url, '_blank')
+    } catch (err) {
+      setLabelError(prev => ({ ...prev, [order.id]: err.message }))
+    } finally {
+      setLabelLoading(prev => ({ ...prev, [order.id]: false }))
+    }
+  }
+
   const OrderRow = ({ order }) => {
-    const sm  = SELLER_STATUS_MAP[order.status] || SELLER_STATUS_MAP.shipped
+    const sm  = SELLER_STATUS_MAP[order.status] || SELLER_STATUS_MAP.in_transit
     const dl  = shipDeadline(order.created_at)
-    const hrs = order.status === 'funded' ? hoursUntil(dl) : null
+    const hrs = order.status === 'awaiting_shipment' ? hoursUntil(dl) : null
     const photo = order.listing?.photos?.[0]
     return (
       <div style={{ background: 'var(--bg-2)', border: `1.5px solid ${sm.urgent ? 'rgba(200,75,60,0.4)' : 'var(--border)'}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '10px' }}>
@@ -324,21 +424,40 @@ function SellerDashboard() {
         </div>
         <div style={{ padding: '12px 18px' }}>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: sm.urgent ? 'var(--accent-amber)' : 'var(--text-secondary)', background: 'var(--bg-3)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', lineHeight: 1.5 }}>
-            {order.status === 'funded'            && `⚠ Ship within ${hrs}hrs · Deadline ${fmtDate(dl)} · Auto-refund + Strike if missed`}
-            {order.status === 'shipped'           && (order.tracking_a ? `Tracking: ${order.tracking_a}` : 'Shipped · En route to buyer')}
-            {order.status === 'in_transit'        && (order.tracking_a ? `In transit · ${order.tracking_a}` : 'In transit')}
-            {order.status === 'auth_pending'      && `At Chase Hollow HQ · Authentication in progress`}
-            {order.status === 'inspection_window' && (order.auto_release_at ? `Delivered · Buyer inspection window · Auto-releases ${fmtDate(order.auto_release_at)}` : 'Delivered · Buyer inspection window open')}
+            {order.status === 'awaiting_shipment' && `⚠ Ship within ${hrs !== null ? hrs : '—'}hrs · Deadline ${fmtDate(dl)} · Auto-refund + Strike if missed`}
+            {order.status === 'in_transit'        && (order.tracking_a ? `In transit · ${order.tracking_a}` : 'In transit · En route')}
+            {order.status === 'auth_review'       && `At Chase Hollow HQ · Authentication in progress`}
+            {order.status === 'auth_passed'       && `Authentication passed · Shipping to buyer`}
+            {order.status === 'delivered'         && `Delivered · Buyer inspection window open`}
+            {order.status === 'inspection_window' && (order.auto_release_at ? `Delivered · Auto-releases ${fmtDate(order.auto_release_at)}` : 'Delivered · Buyer inspection window open')}
+            {order.status === 'disputed'          && `Buyer opened a dispute · Chase Hollow reviewing`}
           </div>
+          {(bondError[order.id] || labelError[order.id]) && (
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)', marginBottom: '8px' }}>{bondError[order.id] || labelError[order.id]}</div>
+          )}
+          {bondStatus[order.id] && (
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-amber)', marginBottom: '8px' }}>{bondStatus[order.id]}</div>
+          )}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {order.status === 'funded' && order.listing?.auth_tier === 'remote' && (
+            {order.status === 'awaiting_shipment' && (
               <>
-                <button style={{ background: 'rgba(60,125,200,0.15)', border: '1.5px solid rgba(60,125,200,0.4)', color: 'var(--accent-blue)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>📷 Upload 3 Photos</button>
-                <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>🖨 Print Label</button>
+                {/* Upload Photos — remote (photo auth) tier only */}
+                {order.listing?.auth_tier === 'remote' && (
+                  <button style={{ background: 'rgba(60,125,200,0.15)', border: '1.5px solid rgba(60,125,200,0.4)', color: 'var(--accent-blue)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>📷 Upload 3 Photos</button>
+                )}
+                {/* Post Bond */}
+                {order.bond_tx_hash ? (
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)', padding: '8px 12px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px' }}>🔒 Bond Posted</span>
+                ) : (
+                  <button onClick={() => handlePostBond(order)} disabled={bondLoading[order.id]} style={{ background: 'var(--accent-amber)', border: 'none', color: '#0A0A0B', padding: '8px 16px', fontSize: '12px', fontWeight: 700, borderRadius: '8px', cursor: bondLoading[order.id] ? 'wait' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: bondLoading[order.id] ? 0.7 : 1 }}>
+                    {bondLoading[order.id] ? '⏳ Posting Bond…' : `🔒 Post Bond — $${Number(order.bond_amount || 0).toFixed(2)}`}
+                  </button>
+                )}
+                {/* Print Label */}
+                <button onClick={() => handlePrintLabel(order)} disabled={labelLoading[order.id]} style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: labelLoading[order.id] ? 'wait' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: labelLoading[order.id] ? 0.7 : 1 }}>
+                  {labelLoading[order.id] ? '⏳ Generating…' : order.label_a_url ? (order.listing?.auth_tier === 'physical' ? '🖨 Print Label → Auth Center' : '🖨 Print Label') : (order.listing?.auth_tier === 'physical' ? '🖨 Get Label → Auth Center' : '🖨 Get Label')}
+                </button>
               </>
-            )}
-            {order.status === 'funded' && order.listing?.auth_tier === 'physical' && (
-              <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>🖨 Print Label → Ship to Auth Center</button>
             )}
             <button onClick={() => setChatOrder({ id: order.id, label: order.listing?.card_name })} style={btn({ border: '1.5px solid var(--teal-border)', color: 'var(--teal)' })}>Message Buyer</button>
             {order.listing?.id && (
@@ -444,7 +563,7 @@ function SellerDashboard() {
                     <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>⚡ Action required — {ordersNeedingShip.length} order{ordersNeedingShip.length > 1 ? 's' : ''} waiting to ship</div>
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{ordersNeedingShip[0].listing?.card_name || '—'} ({shortId(ordersNeedingShip[0].id)}). {hoursUntil(shipDeadline(ordersNeedingShip[0].created_at))}hrs remaining. Miss deadline = auto-refund + Strike 1.</div>
                   </div>
-                  <button onClick={() => setActiveSection('orders')} style={{ background: 'var(--accent-red)', border: 'none', color: '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>Print Label →</button>
+                  <button onClick={() => { setActiveSection('orders'); }} style={{ background: 'var(--accent-red)', border: 'none', color: '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>Ship Now →</button>
                 </div>
               )}
 

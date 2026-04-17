@@ -53,7 +53,7 @@ export default function ListingPage() {
       .eq('id', id)
       .single()
 
-    if (!data || data.status !== 'active') {
+    if (!data || (data.status !== 'active' && data.status !== 'sold')) {
       setNotFound(true)
     } else {
       setListing(data)
@@ -189,6 +189,13 @@ export default function ListingPage() {
           <span style={{ color: 'var(--text-primary)' }}>{card_name}{isGraded ? ` ${grader} ${grade}` : ''}</span>
         </div>
       </div>
+
+      {/* SOLD BANNER */}
+      {listing?.status === 'sold' && (
+        <div style={{ background: 'rgba(76,175,124,0.08)', borderBottom: '1px solid rgba(76,175,124,0.25)', padding: '10px 2rem', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--accent-green)', letterSpacing: '0.1em' }}>
+          This listing has been sold — displayed for reference only
+        </div>
+      )}
 
       {/* MAIN */}
       <div className="listing-grid" style={{ maxWidth: '1300px', margin: '0 auto', padding: isMobile ? '12px 0.75rem 40px' : '24px 2rem 60px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 360px', gap: isMobile ? '16px' : '32px', alignItems: 'flex-start', width: '100%', boxSizing: 'border-box' }}>
@@ -361,7 +368,11 @@ export default function ListingPage() {
 
             {/* Buy button */}
             <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)' }}>
-              {currentUserId && currentUserId === seller?.id ? (
+              {listing?.status === 'sold' ? (
+                <div style={{ width: '100%', background: 'rgba(76,175,124,0.08)', border: '1.5px solid rgba(76,175,124,0.3)', color: 'var(--accent-green)', padding: '16px', fontSize: '13px', fontFamily: 'DM Mono, monospace', fontWeight: 600, borderRadius: '10px', textAlign: 'center', letterSpacing: '0.08em' }}>
+                  SOLD — Order in Progress
+                </div>
+              ) : currentUserId && currentUserId === seller?.id ? (
                 <div style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', color: 'var(--text-muted)', padding: '16px', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', borderRadius: '10px', textAlign: 'center' }}>
                   This is your listing
                 </div>
