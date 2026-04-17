@@ -355,6 +355,15 @@ function SellerDashboard() {
       setBondStatus(prev => ({ ...prev, [order.id]: 'Approval submitted — waiting for confirmation…' }))
       await approveTx.wait()
 
+      // Verify allowance is readable — Sepolia RPC can lag a block behind
+      let allowanceConfirmed = false
+      for (let i = 0; i < 5; i++) {
+        const allowance = await usdcContract.allowance(walletAddress, ESCROW_ADDRESS)
+        if (allowance >= bondU) { allowanceConfirmed = true; break }
+        await new Promise(r => setTimeout(r, 1000))
+      }
+      if (!allowanceConfirmed) throw new Error('USDC approval did not confirm. Please try again.')
+
       setBondStatus(prev => ({ ...prev, [order.id]: 'Step 2 of 2 — Post bond · confirm in wallet…' }))
       const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
       const confirmTx = await escrowContract.confirmOrder(order.onchain_order_id)
