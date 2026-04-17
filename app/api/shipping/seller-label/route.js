@@ -100,7 +100,9 @@ export async function POST(request) {
     })
 
     if (transaction.status !== 'SUCCESS') {
-      return NextResponse.json({ error: 'Label purchase failed', details: transaction.messages }, { status: 500 })
+      const msgs = (transaction.messages || []).map(m => m.text || m.message || JSON.stringify(m)).join(' | ')
+      console.error('[seller-label] transaction failed:', transaction.status, transaction.messages)
+      return NextResponse.json({ error: `Label purchase failed: ${msgs || transaction.status}` }, { status: 500 })
     }
 
     // Save label URL + tracking to order
