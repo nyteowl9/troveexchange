@@ -392,6 +392,9 @@ RESEND_API_KEY=
 ALCHEMY_RPC_URL=
 WALLETCONNECT_PROJECT_ID=
 NEXT_PUBLIC_CHAIN_ID=8453
+OPERATOR_PRIVATE_KEY=          # Hot wallet — must be added as operator on the contract
+NEXT_PUBLIC_ESCROW_ADDRESS=    # ChaseHollowEscrow deployed address
+NEXT_PUBLIC_USDC_ADDRESS=      # USDC contract address (MockUSDC on testnet)
 ```
 
 ---

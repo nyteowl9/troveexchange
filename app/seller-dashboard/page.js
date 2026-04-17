@@ -96,40 +96,44 @@ function SellerDashboard() {
   }, [])
 
   useEffect(() => {
-    if (!authLoading && !user) router.replace('/sign-in')
+    if (!authLoading && !user) router.replace('/sign-in?next=/seller-dashboard')
   }, [authLoading, user, router])
 
   const fetchData = useCallback(async () => {
     if (!user) return
-    setDataLoading(true)
-    const [ordersRes, listingsRes, salesRes] = await Promise.all([
-      supabase
-        .from('orders')
-        .select(`id, status, escrow_amount, auth_tier, bond_amount, bond_tx_hash, onchain_order_id, tracking_a, label_a_url, shipped_at, created_at, auto_release_at,
-                 listing:listing_id (id, card_name, game, set, grade, grader, photos, price, auth_tier),
-                 buyer:buyer_id (id, username)`)
-        .eq('seller_id', user.id)
-        .in('status', ACTIVE_ORDER_STATUSES)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('listings')
-        .select('id, card_name, game, set, grade, grader, photos, price, status, listing_type, created_at, expires_at')
-        .eq('seller_id', user.id)
-        .in('status', ['active', 'paused'])
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('orders')
-        .select(`id, escrow_amount, platform_fee, shipping_cost, released_at,
-                 listing:listing_id (card_name, game, set, grade, grader)`)
-        .eq('seller_id', user.id)
-        .eq('status', 'released')
-        .order('released_at', { ascending: false })
-        .limit(50),
-    ])
-    setActiveOrders(ordersRes.data || [])
-    setMyListings(listingsRes.data || [])
-    setCompletedSales(salesRes.data || [])
-    setDataLoading(false)
+    try {
+      const [ordersRes, listingsRes, salesRes] = await Promise.all([
+        supabase
+          .from('orders')
+          .select(`id, status, escrow_amount, auth_tier, bond_amount, bond_tx_hash, onchain_order_id, tracking_a, label_a_url, shipped_at, created_at, auto_release_at,
+                   listing:listing_id (id, card_name, game, set, grade, grader, photos, price, auth_tier),
+                   buyer:buyer_id (id, username)`)
+          .eq('seller_id', user.id)
+          .in('status', ACTIVE_ORDER_STATUSES)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('listings')
+          .select('id, card_name, game, set, grade, grader, photos, price, status, listing_type, created_at, expires_at')
+          .eq('seller_id', user.id)
+          .in('status', ['active', 'paused'])
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('orders')
+          .select(`id, platform_fee, creator_fee, shipping_cost, bond_amount, released_at,
+                   listing:listing_id (card_name, game, set, grade, grader, price)`)
+          .eq('seller_id', user.id)
+          .eq('status', 'released')
+          .order('released_at', { ascending: false })
+          .limit(50),
+      ])
+      setActiveOrders(ordersRes.data || [])
+      setMyListings(listingsRes.data || [])
+      setCompletedSales(salesRes.data || [])
+    } catch (err) {
+      console.error('[seller-dashboard] fetchData error:', err)
+    } finally {
+      setDataLoading(false)
+    }
   }, [user])
 
   useEffect(() => { fetchData() }, [fetchData])
@@ -175,7 +179,10 @@ function SellerDashboard() {
 
   const ordersNeedingShip = activeOrders.filter(o => o.status === 'awaiting_shipment')
   const totalActiveSalesValue = myListings.reduce((sum, l) => sum + Number(l.price || 0), 0)
-  const totalCompletedRevenue = completedSales.reduce((sum, s) => sum + Number(s.escrow_amount || 0), 0)
+  const totalCompletedRevenue = completedSales.reduce((sum, s) => sum + Number(s.listing?.price || 0), 0)
+  const totalFeesPaid        = completedSales.reduce((sum, s) => sum + Number(s.platform_fee || 0) + Number(s.creator_fee || 0), 0)
+  const totalShippingPaid    = completedSales.reduce((sum, s) => sum + Number(s.shipping_cost || 0), 0)
+  const totalNetReceived     = Math.max(0, totalCompletedRevenue - totalFeesPaid - totalShippingPaid)
   const bondInFlight = activeOrders.reduce((sum, o) => sum + Number(o.bond_amount || 0), 0)
 
   const btn = (extra = {}) => ({
@@ -439,7 +446,9 @@ function SellerDashboard() {
         <div style={{ padding: '12px 18px' }}>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: sm.urgent ? 'var(--accent-amber)' : 'var(--text-secondary)', background: 'var(--bg-3)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', lineHeight: 1.5 }}>
             {order.status === 'awaiting_shipment' && `⚠ Ship within ${hrs !== null ? hrs : '—'}hrs · Deadline ${fmtDate(dl)} · Auto-refund + Strike if missed`}
-            {order.status === 'in_transit'        && (order.tracking_a ? `In transit · ${order.tracking_a}` : 'In transit · En route')}
+            {order.status === 'in_transit'        && (order.tracking_a
+              ? <><span>In transit · </span><a href={(/^1Z/i.test(order.tracking_a) ? `https://www.ups.com/track?tracknum=` : /^9[0-9]{21}$/.test(order.tracking_a) ? `https://tools.usps.com/go/TrackConfirmAction?tLabels=` : `https://www.fedex.com/fedextrack/?trknbr=`) + order.tracking_a} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'none', fontFamily: 'DM Mono, monospace' }}>{order.tracking_a} ↗</a></>
+              : 'In transit · En route')}
             {order.status === 'auth_review'       && `At Chase Hollow HQ · Authentication in progress`}
             {order.status === 'auth_passed'       && `Authentication passed · Shipping to buyer`}
             {order.status === 'delivered'         && `Delivered · Buyer inspection window open`}
@@ -499,7 +508,11 @@ function SellerDashboard() {
     )
   }
 
-  if (authLoading || (!user && !authLoading)) return null
+  if (authLoading || !user) return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)' }}>Loading…</div>
+    </div>
+  )
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
@@ -979,9 +992,9 @@ function SellerDashboard() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
                 {[
-                  { label: 'Gross Revenue',  val: fmtUSD(totalCompletedRevenue), sub: 'All completed sales', color: 'var(--gold)' },
-                  { label: 'Fees Paid (3.5%)',val: fmtUSD(totalCompletedRevenue * 0.035), sub: 'Platform fee',    color: 'var(--accent-red)' },
-                  { label: 'Net Received',   val: fmtUSD(totalCompletedRevenue * (1 - 0.035) - completedSales.length * 8), sub: 'After fees + shipping (est.)', color: 'var(--accent-green)' },
+                  { label: 'Gross Revenue',   val: fmtUSD(totalCompletedRevenue), sub: 'Sum of listing prices',    color: 'var(--gold)' },
+                  { label: 'Fees Paid (3.5%)', val: fmtUSD(totalFeesPaid),        sub: 'Platform + affiliate fee', color: 'var(--accent-red)' },
+                  { label: 'Net Received',     val: fmtUSD(totalNetReceived),      sub: 'After fees & shipping',    color: 'var(--accent-green)' },
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
@@ -997,17 +1010,18 @@ function SellerDashboard() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
                     <thead>
                       <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
-                        {['Card', 'Date', 'Gross', 'Fee (3.5%)', 'Net'].map((h, i) => (
+                        {['Card', 'Date', 'Sale Price', 'Fee (3.5%)', 'Shipping', 'Net Payout', 'Bond'].map((h, i) => (
                           <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 14px', fontWeight: 500 }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {completedSales.map((sale, i) => {
-                        const gross = Number(sale.escrow_amount || 0)
-                        const fee   = gross * 0.035
-                        const ship  = Number(sale.shipping_cost || 8)
-                        const net   = gross - fee - ship
+                        const gross  = Number(sale.listing?.price || 0)
+                        const fee    = Number(sale.platform_fee || 0) + Number(sale.creator_fee || 0)
+                        const ship   = Number(sale.shipping_cost || 0)
+                        const net    = Math.max(0, gross - fee - ship)
+                        const bond   = Number(sale.bond_amount || 0)
                         return (
                           <tr key={sale.id} style={{ borderBottom: i < completedSales.length - 1 ? '0.5px solid var(--border)' : 'none' }}
                             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
@@ -1016,8 +1030,10 @@ function SellerDashboard() {
                             <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{sale.listing?.card_name || '—'}</td>
                             <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(sale.released_at)}</td>
                             <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--gold)', fontWeight: 600 }}>{fmtUSD(gross)}</td>
-                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>-{fmtUSD(fee)}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>−{fmtUSD(fee)}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>−{fmtUSD(ship)}</td>
                             <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--accent-green)', fontWeight: 600 }}>{fmtUSD(net)}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: bond > 0 ? 'var(--accent-green)' : 'var(--text-muted)' }}>{bond > 0 ? `${fmtUSD(bond)} ✓` : '—'}</td>
                           </tr>
                         )
                       })}

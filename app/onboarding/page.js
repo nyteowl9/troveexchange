@@ -52,24 +52,10 @@ function Onboarding() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.replace('/sign-in'); return }
 
-    // Check username availability
-    const { data: existing } = await supabase
-      .from('users')
-      .select('id')
-      .eq('username', username.toLowerCase().trim())
-      .single()
-
-    if (existing) {
-      setError('That username is already taken.')
-      setLoading(false)
-      return
-    }
-
-    const { error: updateError } = await supabase
-      .from('users')
-      .upsert({
-        id:        user.id,
-        email:     user.email,
+    const res = await fetch('/api/onboarding/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         username:  username.toLowerCase().trim(),
         full_name: fullName.trim(),
         street1:   street1.trim(),
@@ -77,11 +63,12 @@ function Onboarding() {
         city:      city.trim(),
         state:     state.trim().toUpperCase(),
         zip:       zip.trim(),
-        country:   'US',
-      }, { onConflict: 'id' })
+      }),
+    })
 
-    if (updateError) {
-      setError(updateError.message)
+    const result = await res.json()
+    if (!res.ok) {
+      setError(result.error || 'Setup failed. Please try again.')
       setLoading(false)
       return
     }

@@ -42,6 +42,7 @@ function Checkout() {
   const [addressLoading, setAddressLoading] = useState(false)
   const [addressEditing, setAddressEditing] = useState(false)
   const [addressSaving, setAddressSaving]   = useState(false)
+  const [addressError, setAddressError]     = useState(null)
   const [addressForm, setAddressForm]       = useState({ street1: '', city: '', state: '', zip: '', country: 'US' })
 
   const { walletAddress, wallet, connect } = useWalletConnection()
@@ -147,7 +148,28 @@ function Checkout() {
   async function saveAddress() {
     if (!addressForm.street1 || !addressForm.city || !addressForm.zip) return
     setAddressSaving(true)
+    setAddressError(null)
     try {
+      // Validate with Shippo before saving — catch ambiguous addresses at entry time
+      const vRes = await fetch('/api/address/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          street1: addressForm.street1.trim(),
+          city:    addressForm.city.trim(),
+          state:   addressForm.state.trim(),
+          zip:     addressForm.zip.trim(),
+          country: addressForm.country || 'US',
+        }),
+      })
+      const vData = await vRes.json()
+      if (!vData.valid && vData.messages?.length) {
+        // Block save and surface the carrier's exact message
+        setAddressError(vData.messages.join(' · '))
+        setAddressSaving(false)
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       await supabase.from('users').update({
         street1: addressForm.street1.trim(),
@@ -504,9 +526,9 @@ function Checkout() {
                 ) : addressEditing ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <input
-                      placeholder="Street address"
+                      placeholder="Street address (include apt/unit if applicable)"
                       value={addressForm.street1}
-                      onChange={e => setAddressForm({ ...addressForm, street1: e.target.value })}
+                      onChange={e => { setAddressForm({ ...addressForm, street1: e.target.value }); setAddressError(null) }}
                       style={inputStyle}
                     />
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -537,9 +559,15 @@ function Checkout() {
                         style={inputStyle}
                       />
                     </div>
+                    {addressError && (
+                      <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--accent-red)', lineHeight: 1.6 }}>
+                        Address issue: {addressError}<br />
+                        <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Try adding a unit/apt number, or check the street name spelling and directional (N/S/E/W).</span>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
                       {buyerAddress?.street1 && (
-                        <button onClick={() => setAddressEditing(false)} style={btn({ padding: '10px 18px', fontSize: '12px' })}>Cancel</button>
+                        <button onClick={() => { setAddressEditing(false); setAddressError(null) }} style={btn({ padding: '10px 18px', fontSize: '12px' })}>Cancel</button>
                       )}
                       <button
                         onClick={saveAddress}

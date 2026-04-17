@@ -25,11 +25,11 @@ export async function POST(request) {
       .eq('id', user.id)
       .single()
 
-    // Labels A/B: staff or owner only
-    // Labels C/D: authenticator, staff, or owner (auth center generates return labels)
-    const allowedRoles = ['C', 'D'].includes(label)
-      ? ['authenticator', 'staff', 'owner']
-      : ['staff', 'owner']
+    // Labels A: staff or owner only (seller-side label)
+    // Labels B/C/D: authenticator, staff, or owner (auth center operations)
+    const allowedRoles = label === 'A'
+      ? ['staff', 'owner']
+      : ['authenticator', 'staff', 'owner']
     if (!allowedRoles.includes(profile?.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
@@ -68,6 +68,19 @@ export async function POST(request) {
       zip: order.seller.zip,
       country: order.seller.country || 'US',
       email: order.seller.email,
+    }
+
+    // Validate address completeness before calling Shippo
+    const missingBuyer = ['street1', 'city', 'state', 'zip'].filter(f => !order.buyer?.[f])
+    const missingSeller = ['street1', 'city', 'state', 'zip'].filter(f => !order.seller?.[f])
+    if (label === 'A' && missingSeller.length) {
+      return NextResponse.json({ error: `Seller address incomplete — missing: ${missingSeller.join(', ')}` }, { status: 400 })
+    }
+    if (label === 'B' && missingBuyer.length) {
+      return NextResponse.json({ error: `Buyer address incomplete — missing: ${missingBuyer.join(', ')}` }, { status: 400 })
+    }
+    if (label === 'A' && !isTier2 && missingBuyer.length) {
+      return NextResponse.json({ error: `Buyer address incomplete — missing: ${missingBuyer.join(', ')}` }, { status: 400 })
     }
 
     let addressFrom, addressTo
@@ -112,10 +125,12 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid label type. Must be A, B, C, or D' }, { status: 400 })
     }
 
-    // Create shipment
+    // Create shipment — validate:false bypasses USPS CASS address disambiguation,
+    // which rejects valid addresses it can't uniquely resolve (e.g. "multiple found").
+    // Carriers accept the address as-is on label purchase.
     const shipment = await shippo.shipments.create({
-      addressFrom,
-      addressTo,
+      addressFrom: { ...addressFrom, validate: false },
+      addressTo:   { ...addressTo,   validate: false },
       parcels: [{
         length: '6',
         width: '4',
@@ -133,7 +148,7 @@ export async function POST(request) {
     )[0]
 
     if (!bestRate) {
-      return NextResponse.json({ error: 'No shipping rates available' }, { status: 400 })
+      return NextResponse.json({ error: 'No shipping rates available for this shipment. Check that both addresses are complete.' }, { status: 400 })
     }
 
     // Purchase label
@@ -144,7 +159,15 @@ export async function POST(request) {
     })
 
     if (transaction.status !== 'SUCCESS') {
-      return NextResponse.json({ error: 'Label purchase failed', details: transaction.messages }, { status: 500 })
+      const msgs = transaction.messages || []
+      const detail = msgs.map(m => m.text || m.message || JSON.stringify(m)).join('; ') || 'Unknown Shippo error'
+      console.error('[shipping/label] Shippo transaction error:', msgs)
+      // Detect address ambiguity and surface which party needs to fix their address
+      const isAddrError = detail.toLowerCase().includes('address') || detail.toLowerCase().includes('recipient') || detail.toLowerCase().includes('multiple')
+      const addrHint = isAddrError
+        ? ` — Ask the ${label === 'A' ? 'seller' : 'buyer'} to update their address with a more specific street (add unit/apt number, or include directional like N/S/E/W).`
+        : ''
+      return NextResponse.json({ error: `Label purchase failed: ${detail}${addrHint}` }, { status: 500 })
     }
 
     // Save label URL + tracking; advance order status

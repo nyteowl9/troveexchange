@@ -31,6 +31,14 @@ const STATUS_COLORS = {
 
 const TIER_LABEL = { new: 'New', trusted: 'Trusted', pro: 'Pro', elite: 'Elite' }
 
+// Detect carrier from tracking number and return a tracking URL
+function trackingUrl(num) {
+  if (!num) return null
+  if (/^1Z/i.test(num)) return `https://www.ups.com/track?tracknum=${num}`
+  if (/^9[0-9]{21}$/.test(num)) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${num}`
+  return `https://www.fedex.com/fedextrack/?trknbr=${num}`
+}
+
 function fmtUSD(n) {
   if (!n && n !== 0) return '—'
   return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -56,6 +64,8 @@ export default function BuyerDashboard() {
   const [disputes, setDisputes]           = useState([])
   const [dataLoading, setDataLoading]     = useState(true)
   const [chatOrder, setChatOrder]         = useState(null) // { id, label }
+  const [releasingId, setReleasingId]     = useState(null) // order ID currently being released
+  const [releaseError, setReleaseError]   = useState(null)
 
   // Countdown for the most urgent inspection_window order
   const [countdown, setCountdown] = useState({ h: 0, m: 0, s: 0 })
@@ -69,7 +79,7 @@ export default function BuyerDashboard() {
 
   // Auth guard
   useEffect(() => {
-    if (!authLoading && !user) router.replace('/sign-in')
+    if (!authLoading && !user) router.replace('/sign-in?next=/buyer-dashboard')
   }, [authLoading, user, router])
 
   // Countdown timer from auto_release_at
@@ -87,34 +97,37 @@ export default function BuyerDashboard() {
 
   const fetchData = useCallback(async () => {
     if (!user) return
-    setDataLoading(true)
-    const [activeRes, histRes, dispRes] = await Promise.all([
-      supabase
-        .from('orders')
-        .select(`id, status, escrow_amount, auth_tier, tracking_a, tracking_b, shipped_at, delivered_at, auto_release_at, created_at,
-                 listing:listing_id (id, card_name, game, set, grade, grader, photos, price),
-                 seller:seller_id (id, username, tier)`)
-        .eq('buyer_id', user.id)
-        .in('status', ACTIVE_STATUSES)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('orders')
-        .select(`id, status, escrow_amount, released_at, created_at,
-                 listing:listing_id (id, card_name, game, set, grade, grader, photos)`)
-        .eq('buyer_id', user.id)
-        .eq('status', 'released')
-        .order('released_at', { ascending: false })
-        .limit(50),
-      supabase
-        .from('disputes')
-        .select(`id, reason, outcome, created_at,
-                 order:order_id (id, listing:listing_id (card_name, set))`)
-        .eq('raised_by', user.id)
-        .order('created_at', { ascending: false }),
-    ])
-    setActiveOrders(activeRes.data || [])
-    setHistoryOrders(histRes.data || [])
-    setDisputes(dispRes.data || [])
+    try {
+      const [activeRes, histRes, dispRes] = await Promise.all([
+        supabase
+          .from('orders')
+          .select(`id, status, escrow_amount, auth_tier, tracking_a, tracking_b, shipped_at, delivered_at, auto_release_at, created_at,
+                   listing:listing_id (id, card_name, game, set, grade, grader, photos, price),
+                   seller:seller_id (id, username, tier)`)
+          .eq('buyer_id', user.id)
+          .in('status', ACTIVE_STATUSES)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('orders')
+          .select(`id, status, escrow_amount, released_at, created_at,
+                   listing:listing_id (id, card_name, game, set, grade, grader, photos)`)
+          .eq('buyer_id', user.id)
+          .eq('status', 'released')
+          .order('released_at', { ascending: false })
+          .limit(50),
+        supabase
+          .from('disputes')
+          .select(`id, reason, outcome, created_at,
+                   order:order_id (id, listing:listing_id (card_name, set))`)
+          .eq('raised_by', user.id)
+          .order('created_at', { ascending: false }),
+      ])
+      setActiveOrders(activeRes.data || [])
+      setHistoryOrders(histRes.data || [])
+      setDisputes(dispRes.data || [])
+    } catch (err) {
+      console.error('[fetchData]', err)
+    }
     setDataLoading(false)
   }, [user])
 
@@ -134,6 +147,25 @@ export default function BuyerDashboard() {
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [user, fetchData])
+
+  const handleRelease = async (orderId) => {
+    setReleasingId(orderId)
+    setReleaseError(null)
+    try {
+      const res = await fetch('/api/orders/release', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Release failed')
+      await fetchData()
+    } catch (err) {
+      setReleaseError(err.message)
+    } finally {
+      setReleasingId(null)
+    }
+  }
 
   const pad = n => String(n).padStart(2, '0')
 
@@ -174,6 +206,31 @@ export default function BuyerDashboard() {
     const card = order.listing
     const photo = card?.photos?.[0]
     const isUrgent = order.status === 'inspection_window'
+    const isPhysical = order.auth_tier === 'physical'
+
+    // Tier 2 (physical): Funded → Shipped → Auth → Transit → Done
+    // Tier 1 (remote):   Funded → Shipped → Transit → Auth → Done
+    const stepLabels = isPhysical
+      ? ['Funded', 'Shipped', 'Auth', 'Transit', 'Done']
+      : ['Funded', 'Shipped', 'Transit', 'Auth', 'Done']
+
+    const getPhysicalProgress = (status) => {
+      switch (status) {
+        case 'awaiting_shipment': return { steps: [true,  false, false, false, false], activeStep: 0 }
+        case 'in_transit':        return { steps: [true,  true,  false, false, false], activeStep: 1 }
+        case 'auth_review':       return { steps: [true,  true,  true,  false, false], activeStep: 2 }
+        case 'auth_passed':       return { steps: [true,  true,  true,  true,  false], activeStep: 3 }
+        case 'delivered':
+        case 'inspection_window':
+        case 'disputed':          return { steps: [true,  true,  true,  true,  true],  activeStep: 4 }
+        case 'released':          return { steps: [true,  true,  true,  true,  true],  activeStep: 4 }
+        default:                  return sm
+      }
+    }
+
+    const progress = isPhysical ? getPhysicalProgress(order.status) : sm
+    const { steps, activeStep } = progress
+
     return (
       <div style={{ background: 'var(--bg-2)', border: `1.5px solid ${isUrgent ? 'rgba(232,168,56,0.4)' : 'var(--border)'}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '12px' }}>
         <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', borderBottom: '0.5px solid var(--border)', flexWrap: 'wrap' }}>
@@ -194,34 +251,60 @@ export default function BuyerDashboard() {
           {/* Progress */}
           <div style={{ marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
-              {['Funded', 'Shipped', 'Transit', 'Auth', 'Done'].map((label, i) => (
+              {stepLabels.map((label, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', flex: i < 4 ? 1 : 0 }}>
-                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: sm.steps[i] ? (i === sm.activeStep ? 'var(--accent-amber)' : 'var(--accent-green)') : 'var(--bg-4)', border: `2px solid ${sm.steps[i] ? (i === sm.activeStep ? 'var(--accent-amber)' : 'var(--accent-green)') : 'var(--border)'}`, flexShrink: 0 }} />
-                  {i < 4 && <div style={{ flex: 1, height: '2px', background: sm.steps[i] && sm.steps[i + 1] ? 'var(--accent-green)' : 'var(--border)' }} />}
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: steps[i] ? (i === activeStep ? 'var(--accent-amber)' : 'var(--accent-green)') : 'var(--bg-4)', border: `2px solid ${steps[i] ? (i === activeStep ? 'var(--accent-amber)' : 'var(--accent-green)') : 'var(--border)'}`, flexShrink: 0 }} />
+                  {i < 4 && <div style={{ flex: 1, height: '2px', background: steps[i] && steps[i + 1] ? 'var(--accent-green)' : 'var(--border)' }} />}
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              {['Funded', 'Shipped', 'Transit', 'Auth', 'Done'].map((label, i) => (
-                <div key={i} style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: sm.steps[i] ? (i === sm.activeStep ? 'var(--accent-amber)' : 'var(--accent-green)') : 'var(--text-muted)', flex: 1, textAlign: i === 0 ? 'left' : i === 4 ? 'right' : 'center' }}>{label}</div>
+              {stepLabels.map((label, i) => (
+                <div key={i} style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: steps[i] ? (i === activeStep ? 'var(--accent-amber)' : 'var(--accent-green)') : 'var(--text-muted)', flex: 1, textAlign: i === 0 ? 'left' : i === 4 ? 'right' : 'center' }}>{label}</div>
               ))}
             </div>
           </div>
           {/* Tracking info */}
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-3)', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', lineHeight: 1.6 }}>
             {order.status === 'awaiting_shipment' && `Waiting for seller to ship · 48hr deadline`}
-            {order.status === 'shipped'           && (order.tracking_a ? `Tracking: ${order.tracking_a}` : 'Shipped · Tracking pending')}
-            {order.status === 'in_transit'        && (order.tracking_a ? `In transit · ${order.tracking_a}` : 'In transit')}
-            {order.status === 'auth_pending'      && `At Chase Hollow HQ · Authentication in progress`}
-            {order.status === 'inspection_window' && (order.auto_release_at ? `Delivered ${fmtDate(order.delivered_at)} · Auto-release ${fmtDate(order.auto_release_at)} · Inspect and dispute if anything is wrong` : 'Delivered · Inspection window open')}
+            {order.status === 'in_transit' && order.auth_tier === 'physical' &&
+              `In transit to authentication center`}
+            {order.status === 'in_transit' && order.auth_tier !== 'physical' && (
+              order.tracking_a
+                ? <>In transit · <a href={trackingUrl(order.tracking_a)} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>{order.tracking_a} ↗</a></>
+                : 'In transit'
+            )}
+            {order.status === 'auth_review' && `At Chase Hollow authentication center · Inspection in progress`}
+            {order.status === 'auth_passed' && (
+              order.tracking_b
+                ? <>Authenticated · In transit to you · <a href={trackingUrl(order.tracking_b)} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>{order.tracking_b} ↗</a></>
+                : 'Authenticated · Preparing shipment to you'
+            )}
+            {order.status === 'inspection_window' && (() => {
+              const expired = order.auto_release_at && new Date(order.auto_release_at) <= new Date()
+              return expired
+                ? `Inspection window closed · Funds releasing automatically`
+                : (order.auto_release_at ? `Delivered ${fmtDate(order.delivered_at)} · Auto-release ${fmtDate(order.auto_release_at)} · Inspect and dispute if anything is wrong` : 'Delivered · Inspection window open')
+            })()}
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {order.status === 'inspection_window' && (
-              <>
-                <button onClick={() => setActiveSection('inspection')} style={btn({ background: 'var(--accent-green)', border: 'none', color: '#fff', fontWeight: 600 })}>Release Early</button>
-                <button onClick={() => setActiveSection('disputes')} style={btn({ border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)' })}>Raise Dispute</button>
-              </>
-            )}
+            {order.status === 'inspection_window' && (() => {
+              const expired = order.auto_release_at && new Date(order.auto_release_at) <= new Date()
+              if (expired) return null
+              return (
+                <>
+                  <button
+                    onClick={() => handleRelease(order.id)}
+                    disabled={releasingId === order.id}
+                    style={btn({ background: 'var(--accent-green)', border: 'none', color: '#fff', fontWeight: 600, opacity: releasingId === order.id ? 0.6 : 1, cursor: releasingId === order.id ? 'not-allowed' : 'pointer' })}
+                  >
+                    {releasingId === order.id ? 'Releasing…' : 'Release Early'}
+                  </button>
+                  <button onClick={() => setActiveSection('disputes')} style={btn({ border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)' })}>Raise Dispute</button>
+                  {releaseError && <div style={{ width: '100%', fontSize: '11px', color: 'var(--accent-red)', marginTop: '4px' }}>{releaseError}</div>}
+                </>
+              )
+            })()}
             <button onClick={() => setChatOrder({ id: order.id, label: card?.card_name })} style={btn({ border: '1.5px solid var(--teal-border)', color: 'var(--teal)' })}>Message Seller</button>
             <Link href={`/listing/${order.listing?.id || ''}`} style={{ textDecoration: 'none' }}>
               <button style={btn()}>View Listing</button>
@@ -232,7 +315,11 @@ export default function BuyerDashboard() {
     )
   }
 
-  if (authLoading || (!user && !authLoading)) return null
+  if (authLoading || !user) return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)' }}>Loading…</div>
+    </div>
+  )
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
@@ -328,25 +415,38 @@ export default function BuyerDashboard() {
               </div>
 
               {/* Inspection Alert — only when there's an order in inspection_window */}
-              {urgentOrder && (
-                <div style={{ background: 'rgba(232,168,56,0.08)', border: '1.5px solid rgba(232,168,56,0.35)', borderRadius: '12px', padding: '20px 24px', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(232,168,56,0.15)', border: '1px solid rgba(232,168,56,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>⏱</div>
+              {urgentOrder && (() => {
+                const windowExpired = countdown.h === 0 && countdown.m === 0 && countdown.s === 0
+                return (
+                <div style={{ background: windowExpired ? 'rgba(108,106,102,0.08)' : 'rgba(232,168,56,0.08)', border: `1.5px solid ${windowExpired ? 'var(--border)' : 'rgba(232,168,56,0.35)'}`, borderRadius: '12px', padding: '20px 24px', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: windowExpired ? 'rgba(108,106,102,0.1)' : 'rgba(232,168,56,0.15)', border: `1px solid ${windowExpired ? 'var(--border)' : 'rgba(232,168,56,0.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>{windowExpired ? '✓' : '⏱'}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Delivery Confirmed — Funds Auto-Release in {pad(countdown.h)}h {pad(countdown.m)}m</div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '8px' }}>
-                      Your <strong>{urgentOrder.listing?.card_name}</strong> ({shortId(urgentOrder.id)}) was delivered {fmtDate(urgentOrder.delivered_at)}. <strong>{fmtUSD(urgentOrder.escrow_amount)} USDC releases automatically to the seller on {fmtDate(urgentOrder.auto_release_at)}</strong> — no action needed. Raise a dispute before then if anything is wrong.
+                    <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      {windowExpired
+                        ? 'Inspection Window Closed — Funds Releasing Automatically'
+                        : `Delivery Confirmed — Funds Auto-Release in ${pad(countdown.h)}h ${pad(countdown.m)}m`}
                     </div>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-amber)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-amber)', display: 'inline-block' }} />
-                      {pad(countdown.h)}:{pad(countdown.m)}:{pad(countdown.s)} remaining
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: windowExpired ? '0' : '8px' }}>
+                      {windowExpired
+                        ? <>Your <strong>{urgentOrder.listing?.card_name}</strong> inspection window has closed. <strong>{fmtUSD(urgentOrder.escrow_amount)} USDC</strong> will be released to the seller automatically — no action needed.</>
+                        : <>Your <strong>{urgentOrder.listing?.card_name}</strong> ({shortId(urgentOrder.id)}) was delivered {fmtDate(urgentOrder.delivered_at)}. <strong>{fmtUSD(urgentOrder.escrow_amount)} USDC releases automatically to the seller on {fmtDate(urgentOrder.auto_release_at)}</strong> — no action needed. Raise a dispute before then if anything is wrong.</>}
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <button onClick={() => setActiveSection('inspection')} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Release Funds Early</button>
-                      <button onClick={() => setActiveSection('disputes')} style={{ background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Something is Wrong — Dispute</button>
-                    </div>
+                    {!windowExpired && (
+                      <>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-amber)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px', marginTop: '8px' }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-amber)', display: 'inline-block' }} />
+                          {pad(countdown.h)}:{pad(countdown.m)}:{pad(countdown.s)} remaining
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button onClick={() => setActiveSection('inspection')} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Release Funds Early</button>
+                          <button onClick={() => setActiveSection('disputes')} style={{ background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Something is Wrong — Dispute</button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
-              )}
+                )
+              })()}
 
               {/* Metrics */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
@@ -413,14 +513,19 @@ export default function BuyerDashboard() {
 
               {inspectionOrders.length === 0 ? (
                 <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '13px' }}>No orders in the inspection window</div>
-              ) : inspectionOrders.map((order) => (
+              ) : inspectionOrders.map((order) => {
+                const expired = order.auto_release_at && new Date(order.auto_release_at) <= new Date()
+                const isUrgent = order.id === urgentOrder?.id
+                return (
                 <div key={order.id}>
-                  <div style={{ background: 'rgba(232,168,56,0.08)', border: '1.5px solid rgba(232,168,56,0.35)', borderRadius: '12px', padding: '20px 24px', marginBottom: '20px' }}>
+                  <div style={{ background: expired ? 'rgba(108,106,102,0.06)' : 'rgba(232,168,56,0.08)', border: `1.5px solid ${expired ? 'var(--border)' : 'rgba(232,168,56,0.35)'}`, borderRadius: '12px', padding: '20px 24px', marginBottom: '20px' }}>
                     <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>{shortId(order.id)} — {order.listing?.card_name}</div>
                     <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '8px' }}>
-                      Your card was delivered {fmtDate(order.delivered_at)}. <strong>{fmtUSD(order.escrow_amount)} USDC releases automatically to the seller on {fmtDate(order.auto_release_at)}</strong> — you don't need to do anything if everything is fine.
+                      {expired
+                        ? <>Inspection window closed. <strong>{fmtUSD(order.escrow_amount)} USDC</strong> is releasing automatically to the seller — no action needed.</>
+                        : <>Your card was delivered {fmtDate(order.delivered_at)}. <strong>{fmtUSD(order.escrow_amount)} USDC releases automatically to the seller on {fmtDate(order.auto_release_at)}</strong> — you don't need to do anything if everything is fine.</>}
                     </div>
-                    {order.id === urgentOrder?.id && (
+                    {!expired && isUrgent && (
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-amber)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-amber)', display: 'inline-block' }} />
                         {pad(countdown.h)}:{pad(countdown.m)}:{pad(countdown.s)} remaining · Expires {fmtDate(order.auto_release_at)}
@@ -428,37 +533,44 @@ export default function BuyerDashboard() {
                     )}
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
-                    <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>What to Check</div>
-                      {['Card matches listing photos exactly', 'Slab is intact — no cracks or tampering', order.listing?.grade ? `Grade label matches listing (${order.listing.grader} ${order.listing.grade})` : 'Condition matches listing', 'No shipping damage to card or slab'].map((item, i) => (
-                        <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                          <span style={{ color: 'var(--teal)', flexShrink: 0 }}>✓</span>{item}
+                  {!expired && (
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+                        <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>What to Check</div>
+                          {['Card matches listing photos exactly', 'Slab is intact — no cracks or tampering', order.listing?.grade ? `Grade label matches listing (${order.listing.grader} ${order.listing.grade})` : 'Condition matches listing', 'No shipping damage to card or slab'].map((item, i) => (
+                            <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                              <span style={{ color: 'var(--teal)', flexShrink: 0 }}>✓</span>{item}
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Order Summary</div>
-                      {[
-                        { label: 'Card',          val: order.listing?.card_name },
-                        { label: 'Seller',        val: order.seller?.username || '—', teal: true },
-                        { label: 'You paid',      val: fmtUSD(order.escrow_amount), gold: true },
-                      ].map((row, i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '5px 0', borderBottom: i < 2 ? '0.5px solid var(--border)' : 'none' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
-                          <span style={{ color: row.gold ? 'var(--gold)' : row.teal ? 'var(--teal)' : 'var(--text-primary)', fontFamily: row.gold ? 'Cormorant Garamond, serif' : 'inherit', fontSize: row.gold ? '17px' : '13px', fontWeight: 500 }}>{row.val}</span>
+                        <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Order Summary</div>
+                          {[
+                            { label: 'Card',     val: order.listing?.card_name },
+                            { label: 'Seller',   val: order.seller?.username || '—', teal: true },
+                            { label: 'You paid', val: fmtUSD(order.escrow_amount), gold: true },
+                          ].map((row, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '5px 0', borderBottom: i < 2 ? '0.5px solid var(--border)' : 'none' }}>
+                              <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
+                              <span style={{ color: row.gold ? 'var(--gold)' : row.teal ? 'var(--teal)' : 'var(--text-primary)', fontFamily: row.gold ? 'Cormorant Garamond, serif' : 'inherit', fontSize: row.gold ? '17px' : '13px', fontWeight: 500 }}>{row.val}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
 
-                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <button style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '14px 28px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>✓ Release Funds Early — Everything is Good</button>
-                    <button onClick={() => setActiveSection('disputes')} style={{ background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '14px 28px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>⚠ Something is Wrong — Raise Dispute</button>
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.6 }}>Releasing early sends funds to the seller immediately. Funds release automatically on {fmtDate(order.auto_release_at)} with no action needed.</div>
+                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        <button onClick={() => handleRelease(order.id)} disabled={releasingId === order.id} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '14px 28px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: releasingId === order.id ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: releasingId === order.id ? 0.6 : 1 }}>
+                          {releasingId === order.id ? 'Releasing…' : '✓ Release Funds Early — Everything is Good'}
+                        </button>
+                        <button onClick={() => setActiveSection('disputes')} style={{ background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '14px 28px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>⚠ Something is Wrong — Raise Dispute</button>
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.6 }}>Releasing early sends funds to the seller immediately. Funds release automatically on {fmtDate(order.auto_release_at)} with no action needed.</div>
+                    </>
+                  )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
 

@@ -25,23 +25,31 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) loadProfile(session.user.id)
-      setLoading(false)
+    // getSession() is the single source of truth for initial load.
+    // It reads from localStorage synchronously (fast) and clears loading when done.
+    // We await loadProfile so the Nav's username check never fires on a null profile.
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      try {
+        setUser(session?.user ?? null)
+        if (session?.user) await loadProfile(session.user.id)
+      } catch (e) {
+        console.error('[AuthContext] init error:', e)
+      } finally {
+        setLoading(false)
+      }
     })
 
-    // Listen for auth changes
+    // onAuthStateChange handles subsequent events only (sign-in, sign-out,
+    // token refresh). Skip INITIAL_SESSION — already handled above.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (event === 'INITIAL_SESSION') return
         setUser(session?.user ?? null)
         if (session?.user) {
           await loadProfile(session.user.id)
         } else {
           setProfile(null)
         }
-        setLoading(false)
       }
     )
 

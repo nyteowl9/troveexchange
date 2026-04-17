@@ -69,6 +69,8 @@ export async function POST(request) {
             auto_release_at: autoReleaseAt,
           })
           .eq('id', order.id)
+        // Tell the contract the card is delivered — starts 72hr window on-chain
+        await callMarkDelivered(order.onchain_order_id)
 
       } else if (label === 'B' && order.auth_tier === 'physical') {
         // Tier 2 Label B delivered to buyer — open 72hr inspection window
@@ -81,6 +83,8 @@ export async function POST(request) {
             auto_release_at: autoReleaseAt,
           })
           .eq('id', order.id)
+        // Tell the contract the card is delivered — starts 72hr window on-chain
+        await callMarkDelivered(order.onchain_order_id)
 
       } else if (label === 'C') {
         if (order.auth_tier === 'remote') {
@@ -172,14 +176,41 @@ async function handleBuyerWinsResolve(order) {
   }
 }
 
-// ── On-chain resolveDispute call ───────────────────────────────
+// ── On-chain markDelivered call (operator) ─────────────────────
+// Called when Shippo confirms delivery — starts 72hr window on-chain.
+// Uses OPERATOR_PRIVATE_KEY (not owner) since markDelivered is operator-accessible.
+// Silently skips if onchain_order_id is null (pre-Phase-3 orders).
+async function callMarkDelivered(onchainOrderId) {
+  if (!onchainOrderId) return
+  const rpc          = process.env.ALCHEMY_RPC_URL
+  const escrowAddr   = process.env.NEXT_PUBLIC_ESCROW_ADDRESS
+  const operatorKey  = process.env.OPERATOR_PRIVATE_KEY
+  if (!rpc || !escrowAddr || !operatorKey) return
+
+  try {
+    const provider = new ethers.JsonRpcProvider(rpc)
+    const wallet   = new ethers.Wallet(operatorKey, provider)
+    const escrow   = new ethers.Contract(
+      escrowAddr,
+      ['function markDelivered(bytes32 orderId) external'],
+      wallet
+    )
+    const tx = await escrow.markDelivered(onchainOrderId)
+    await tx.wait()
+  } catch (err) {
+    // Log but don't throw — DB is already updated, on-chain can be retried manually
+    console.error('[webhooks/shippo] callMarkDelivered failed:', err.message)
+  }
+}
+
+// ── On-chain resolveDispute call (owner) ───────────────────────
 async function callResolveDispute(onchainOrderId, buyerWins) {
   const rpc        = process.env.ALCHEMY_RPC_URL
-  const escrowAddr = process.env.ESCROW_CONTRACT_ADDRESS
+  const escrowAddr = process.env.NEXT_PUBLIC_ESCROW_ADDRESS
   const ownerKey   = process.env.OWNER_PRIVATE_KEY
 
   if (!rpc || !escrowAddr || !ownerKey) {
-    throw new Error('Missing ALCHEMY_RPC_URL, ESCROW_CONTRACT_ADDRESS, or OWNER_PRIVATE_KEY env var')
+    throw new Error('Missing ALCHEMY_RPC_URL, NEXT_PUBLIC_ESCROW_ADDRESS, or OWNER_PRIVATE_KEY env var')
   }
 
   const provider = new ethers.JsonRpcProvider(rpc)

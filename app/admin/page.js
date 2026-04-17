@@ -13,9 +13,113 @@ export default function AdminPanel() {
   const [tierConfigSaving, setTierConfigSaving] = useState(false)
   const [tierConfigMsg, setTierConfigMsg] = useState(null)
 
+  // Users state
+  const [userSearch, setUserSearch] = useState('')
+  const [userResults, setUserResults] = useState([])
+  const [userLoading, setUserLoading] = useState(false)
+  const [userRoleEdits, setUserRoleEdits] = useState({})
+  const [userRoleSaving, setUserRoleSaving] = useState({})
+  const [userRoleMsg, setUserRoleMsg] = useState({})
+
+  // Orders state
+  const [adminOrders, setAdminOrders] = useState([])
+  const [adminOrdersTotal, setAdminOrdersTotal] = useState(0)
+  const [adminOrdersLoading, setAdminOrdersLoading] = useState(false)
+  const [adminOrdersSearch, setAdminOrdersSearch] = useState('')
+  const [adminOrdersStatus, setAdminOrdersStatus] = useState('all')
+
+  // Order detail modal
+  const [detailOrder, setDetailOrder] = useState(null)      // { order, inspection }
+  const [detailLoading, setDetailLoading] = useState(false)
+
   useEffect(() => {
     if (activeSection === 'settings' && !tierConfig) loadTierConfig()
+    if (activeSection === 'users') searchUsers('')
+    if (activeSection === 'orders') fetchAdminOrders()
   }, [activeSection])
+
+  async function fetchAdminOrders(q = adminOrdersSearch, status = adminOrdersStatus) {
+    setAdminOrdersLoading(true)
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      const params = new URLSearchParams({ limit: '100', offset: '0' })
+      if (q)      params.set('q', q)
+      if (status && status !== 'all') params.set('status', status)
+      const res = await fetch(`/api/admin/orders?${params}`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAdminOrders(data.orders || [])
+        setAdminOrdersTotal(data.total || 0)
+      }
+    } catch {}
+    setAdminOrdersLoading(false)
+  }
+
+  async function fetchOrderDetail(orderId) {
+    setDetailLoading(true)
+    setDetailOrder(null)
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setDetailOrder(data)
+      }
+    } catch {}
+    setDetailLoading(false)
+  }
+
+  async function searchUsers(q) {
+    setUserLoading(true)
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(q)}&limit=30`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setUserResults(data)
+        // Initialize role edits to current values
+        const edits = {}
+        data.forEach(u => { edits[u.id] = u.role || '' })
+        setUserRoleEdits(prev => ({ ...edits, ...prev }))
+      }
+    } catch {}
+    setUserLoading(false)
+  }
+
+  async function saveUserRole(userId) {
+    setUserRoleSaving(prev => ({ ...prev, [userId]: true }))
+    setUserRoleMsg(prev => ({ ...prev, [userId]: null }))
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      const role = userRoleEdits[userId] || null
+      const res = await fetch('/api/admin/users/search', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ user_id: userId, role: role === '' ? null : role }),
+      })
+      if (res.ok) {
+        setUserRoleMsg(prev => ({ ...prev, [userId]: { type: 'ok', text: 'Saved' } }))
+        setUserResults(prev => prev.map(u => u.id === userId ? { ...u, role: role === '' ? null : role } : u))
+      } else {
+        const data = await res.json()
+        setUserRoleMsg(prev => ({ ...prev, [userId]: { type: 'err', text: data.error || 'Failed' } }))
+      }
+    } catch {
+      setUserRoleMsg(prev => ({ ...prev, [userId]: { type: 'err', text: 'Failed' } }))
+    }
+    setUserRoleSaving(prev => ({ ...prev, [userId]: false }))
+    setTimeout(() => setUserRoleMsg(prev => ({ ...prev, [userId]: null })), 3000)
+  }
 
   async function loadTierConfig() {
     try {
@@ -140,8 +244,129 @@ export default function AdminPanel() {
     cursor: 'pointer', borderRadius: '8px', ...extra
   })
 
+  const fmtUSD = n => n != null ? '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'
+  const fmtDate = ts => ts ? new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
+
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
+
+      {/* ── ORDER DETAIL MODAL ── */}
+      {(detailLoading || detailOrder) && (
+        <div onClick={() => setDetailOrder(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', overflowY: 'auto' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '16px', width: '100%', maxWidth: '720px', padding: '28px', position: 'relative' }}>
+            <button onClick={() => setDetailOrder(null)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+
+            {detailLoading ? (
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', padding: '40px', textAlign: 'center' }}>Loading…</div>
+            ) : detailOrder && (() => {
+              const { order, inspection } = detailOrder
+              const card = order.listing || {}
+              const buyer = order.buyer || {}
+              const seller = order.seller || {}
+              const passed = inspection?.decision === 'pass'
+              const statusColors = { awaiting_shipment: 'var(--accent-amber)', in_transit: 'var(--accent-blue)', auth_review: 'var(--gold)', auth_passed: 'var(--accent-green)', inspection_window: 'var(--accent-amber)', disputed: 'var(--accent-red)', released: 'var(--text-muted)', auth_failed: 'var(--accent-red)' }
+              const sc = statusColors[order.status] || 'var(--text-muted)'
+              return (
+                <div>
+                  {/* Header */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: '4px' }}>{card.card_name || '—'}</div>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{'#' + order.id.slice(0, 8).toUpperCase()}</span>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18` }}>{order.status?.replace(/_/g, ' ')}</span>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{order.auth_tier} auth</span>
+                    </div>
+                  </div>
+
+                  {/* Two-col grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                    {[
+                      { label: 'Buyer',        val: buyer.username || buyer.full_name || buyer.email || '—' },
+                      { label: 'Seller',       val: seller.username || seller.full_name || seller.email || '—' },
+                      { label: 'Escrow',       val: fmtUSD(order.escrow_amount) },
+                      { label: 'Listing Price',val: fmtUSD(card.price) },
+                      { label: 'Platform Fee', val: fmtUSD(order.platform_fee) },
+                      { label: 'Auth Fee',     val: fmtUSD(order.auth_fee) },
+                      { label: 'Shipping',     val: fmtUSD(order.shipping_cost) },
+                      { label: 'Created',      val: fmtDate(order.created_at) },
+                      { label: 'Shipped',      val: fmtDate(order.shipped_at) },
+                      { label: 'Delivered',    val: fmtDate(order.delivered_at) },
+                    ].map(({ label, val }) => (
+                      <div key={label} style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '10px 14px' }}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '3px' }}>{label}</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-primary)' }}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tracking / Labels */}
+                  {(order.label_a_url || order.label_b_url) && (
+                    <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px', marginBottom: '20px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Shipping Labels</div>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        {order.label_a_url && <a href={order.label_a_url} target="_blank" rel="noreferrer" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--teal-border)', borderRadius: '6px', background: 'var(--teal-bg)' }}>Label A ↗{order.tracking_a ? ` · ${order.tracking_a}` : ''}</a>}
+                        {order.label_b_url && <a href={order.label_b_url} target="_blank" rel="noreferrer" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--teal-border)', borderRadius: '6px', background: 'var(--teal-bg)' }}>Label B ↗{order.tracking_b ? ` · ${order.tracking_b}` : ''}</a>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Auth Inspection */}
+                  <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '20px' }}>
+                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '12px' }}>Authentication <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Record</em></div>
+                    {!inspection ? (
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', padding: '16px', background: 'var(--bg-3)', borderRadius: '8px' }}>No inspection record found for this order.</div>
+                    ) : (
+                      <div>
+                        {/* Decision + meta */}
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap' }}>
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', padding: '4px 14px', borderRadius: '20px', fontWeight: 600, background: passed ? 'rgba(76,175,124,0.12)' : 'rgba(200,75,60,0.12)', border: `1px solid ${passed ? 'rgba(76,175,124,0.4)' : 'rgba(200,75,60,0.4)'}`, color: passed ? 'var(--accent-green)' : 'var(--accent-red)' }}>{passed ? '✓ Passed' : '✕ Rejected'}</span>
+                          {inspection.authenticator_name && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)' }}>by {inspection.authenticator_name}</span>}
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(inspection.created_at)}</span>
+                        </div>
+
+                        {/* Notes */}
+                        {inspection.notes && (
+                          <div style={{ background: passed ? 'rgba(76,175,124,0.06)' : 'rgba(200,75,60,0.06)', border: `1px solid ${passed ? 'rgba(76,175,124,0.2)' : 'rgba(200,75,60,0.2)'}`, borderRadius: '8px', padding: '12px 14px', marginBottom: '14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Authenticator Notes</div>
+                            {inspection.notes}
+                          </div>
+                        )}
+
+                        {/* Checklist */}
+                        {inspection.checklist && Object.keys(inspection.checklist).length > 0 && (
+                          <div style={{ marginBottom: '14px' }}>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Checklist</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {Object.entries(inspection.checklist).map(([key, checked]) => (
+                                <span key={key} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: checked ? 'rgba(76,175,124,0.1)' : 'rgba(200,75,60,0.1)', border: `1px solid ${checked ? 'rgba(76,175,124,0.3)' : 'rgba(200,75,60,0.3)'}`, color: checked ? 'var(--accent-green)' : 'var(--accent-red)' }}>{checked ? '✓' : '✕'} {key.replace(/_/g, ' ')}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Auth Photos */}
+                        {inspection.photos?.length > 0 && (
+                          <div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Auth Photos ({inspection.photos.length})</div>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                              {inspection.photos.map((url, i) => (
+                                <a key={i} href={url} target="_blank" rel="noreferrer">
+                                  <img src={url} alt={`Auth photo ${i + 1}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)' }} />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        </div>
+      )}
+
 
       {/* ACTION MODAL */}
       {showActionModal && (
@@ -390,41 +615,84 @@ export default function AdminPanel() {
           {activeSection === 'orders' && (
             <div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>All <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>47 active · $312k in escrow · Full order history</div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>{adminOrdersLoading ? 'Loading…' : `${adminOrdersTotal} total orders`}</div>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                <input type="text" placeholder="Search orders, cards, users..." style={{ flex: 1, minWidth: '200px', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '9px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-primary)', outline: 'none' }} />
-                {['All', 'Active', 'Authenticating', 'Dispute', 'Auto-Release', 'Complete'].map((f, i) => (
-                  <button key={i} style={btn({ fontSize: '10px', padding: '6px 12px', background: i === 0 ? 'var(--teal-bg)' : 'transparent', border: i === 0 ? '1.5px solid var(--teal-border)' : '1.5px solid var(--border)', color: i === 0 ? 'var(--teal)' : 'var(--text-muted)' })}>{f}</button>
-                ))}
+                <input
+                  type="text"
+                  placeholder="Search by card name, buyer, seller, or order ID…"
+                  value={adminOrdersSearch}
+                  onChange={e => setAdminOrdersSearch(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && fetchAdminOrders(adminOrdersSearch, adminOrdersStatus)}
+                  style={{ flex: 1, minWidth: '200px', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '9px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-primary)', outline: 'none' }}
+                />
+                <button onClick={() => fetchAdminOrders(adminOrdersSearch, adminOrdersStatus)} style={btn({ fontSize: '10px', padding: '6px 14px', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', color: 'var(--teal)' })}>Search</button>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                {[
+                  { label: 'All',              val: 'all' },
+                  { label: 'Awaiting Ship',    val: 'awaiting_shipment' },
+                  { label: 'In Transit',       val: 'in_transit' },
+                  { label: 'Auth Review',      val: 'auth_review' },
+                  { label: 'Auth Passed',      val: 'auth_passed' },
+                  { label: 'Inspection',       val: 'inspection_window' },
+                  { label: 'Disputed',         val: 'disputed' },
+                  { label: 'Released',         val: 'released' },
+                ].map(f => {
+                  const active = adminOrdersStatus === f.val
+                  return (
+                    <button key={f.val} onClick={() => { setAdminOrdersStatus(f.val); fetchAdminOrders(adminOrdersSearch, f.val) }}
+                      style={btn({ fontSize: '10px', padding: '5px 10px', background: active ? 'var(--teal-bg)' : 'transparent', border: active ? '1.5px solid var(--teal-border)' : '1.5px solid var(--border)', color: active ? 'var(--teal)' : 'var(--text-muted)' })}>
+                      {f.label}
+                    </button>
+                  )
+                })}
               </div>
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '580px' }}>
                   <thead>
                     <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
-                      {['Order', 'Card', 'Buyer', 'Seller', 'Value', 'Status', 'Actions'].map((h, i) => (
+                      {['Order ID', 'Card', 'Buyer', 'Seller', 'Value', 'Tier', 'Status', 'Date'].map((h, i) => (
                         <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {recentOrders.map((order, i) => (
-                      <tr key={i} style={{ borderBottom: i < recentOrders.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
-                        <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{order.id}</td>
-                        <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '14px', color: 'var(--text-primary)' }}>{order.card}</td>
-                        <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--accent-blue)' }}>{order.buyer}</td>
-                        <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--gold)' }}>{order.seller}</td>
-                        <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', fontWeight: 600, color: 'var(--gold)' }}>{order.value}</td>
-                        <td style={{ padding: '11px 14px' }}>
-                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${order.statusColor}`, color: order.statusColor, background: `${order.statusColor}18`, fontWeight: 500 }}>{order.status}</span>
-                        </td>
-                        <td style={{ padding: '11px 14px' }}>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button style={btn({ fontSize: '10px', padding: '4px 8px' })}>View</button>
-                            <button style={btn({ fontSize: '10px', padding: '4px 8px', color: 'var(--accent-amber)', border: '1px solid rgba(232,168,56,0.3)' })}>Force</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {adminOrdersLoading ? (
+                      <tr><td colSpan={8} style={{ padding: '40px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Loading…</td></tr>
+                    ) : adminOrders.length === 0 ? (
+                      <tr><td colSpan={8} style={{ padding: '40px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>No orders found</td></tr>
+                    ) : adminOrders.map((order, i) => {
+                      const statusColors = {
+                        awaiting_shipment: 'var(--accent-amber)',
+                        in_transit: 'var(--accent-blue)',
+                        auth_review: 'var(--gold)',
+                        auth_passed: 'var(--accent-green)',
+                        inspection_window: 'var(--accent-amber)',
+                        disputed: 'var(--accent-red)',
+                        released: 'var(--text-muted)',
+                        auth_failed: 'var(--accent-red)',
+                      }
+                      const sc = statusColors[order.status] || 'var(--text-muted)'
+                      const buyer = order.buyer?.username || order.buyer?.full_name || order.buyer?.email || '—'
+                      const seller = order.seller?.username || order.seller?.full_name || order.seller?.email || '—'
+                      const val = order.escrow_amount ? '$' + Number(order.escrow_amount).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'
+                      const dateStr = order.created_at ? new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'
+                      const shortId = '#' + order.id.slice(0, 6).toUpperCase()
+                      return (
+                        <tr key={order.id} onClick={() => fetchOrderDetail(order.id)} style={{ borderBottom: i < adminOrders.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background='var(--bg-3)'} onMouseLeave={e => e.currentTarget.style.background=''}>
+                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{shortId}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '14px', color: 'var(--text-primary)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.listing?.card_name || '—'}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-blue)' }}>{buyer}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--gold)' }}>{seller}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', fontWeight: 600, color: 'var(--gold)' }}>{val}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{order.auth_tier || '—'}</td>
+                          <td style={{ padding: '11px 14px' }}>
+                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18`, fontWeight: 500, whiteSpace: 'nowrap' }}>{order.status?.replace(/_/g, ' ')}</span>
+                          </td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{dateStr}</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -435,54 +703,103 @@ export default function AdminPanel() {
           {activeSection === 'users' && (
             <div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>User <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Management</em></div>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>1,284 registered · 312 sellers · 972 buyers</div>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                <input type="text" placeholder="Search users..." style={{ flex: 1, minWidth: '200px', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '9px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-primary)', outline: 'none' }} />
-                {['All', 'Sellers', 'Buyers', 'Suspended', 'Banned'].map((f, i) => (
-                  <button key={i} style={btn({ fontSize: '10px', padding: '6px 12px', background: i === 0 ? 'var(--teal-bg)' : 'transparent', border: i === 0 ? '1.5px solid var(--teal-border)' : '1.5px solid var(--border)', color: i === 0 ? 'var(--teal)' : 'var(--text-muted)' })}>{f}</button>
-                ))}
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>{userResults.length} users shown · Search by email, username, or name</div>
+
+              {/* Role legend */}
+              <div style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.8 }}>
+                <span style={{ color: 'var(--gold)', fontWeight: 600 }}>Role Reference:</span>
+                {' '}<span style={{ color: 'var(--accent-red)' }}>owner</span> → /admin + all portals
+                {' · '}<span style={{ color: 'var(--accent-amber)' }}>staff</span> → /authenticator + /dispute-resolution + /customer-support
+                {' · '}<span style={{ color: 'var(--accent-blue)' }}>authenticator</span> → /authenticator only
+                {' · '}(blank) → regular buyer/seller
               </div>
-              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
-                      {['User', 'Type', 'Tier', 'Activity', 'Rating', 'Strikes', 'Status', 'Actions'].map((h, i) => (
-                        <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user, i) => {
-                      const tc = tierColors[user.tier]
-                      return (
-                        <tr key={i} style={{ borderBottom: i < users.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
-                          <td style={{ padding: '11px 14px', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{user.name}</td>
-                          <td style={{ padding: '11px 14px' }}>
-                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: user.type === 'buyer' ? 'rgba(60,125,200,0.1)' : 'rgba(201,168,76,0.1)', border: user.type === 'buyer' ? '1px solid rgba(60,125,200,0.3)' : '1px solid rgba(201,168,76,0.3)', color: user.type === 'buyer' ? 'var(--accent-blue)' : 'var(--gold)', fontWeight: 500 }}>{user.type}</span>
-                          </td>
-                          <td style={{ padding: '11px 14px' }}>
-                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color, fontWeight: 500 }}>{user.tier}</span>
-                          </td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{user.type === 'seller' ? `${user.sales} sales` : `${user.purchases} purchases`}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--gold)' }}>{user.rating} ★</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: user.strikes > 0 ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 600 }}>{user.strikes}</td>
-                          <td style={{ padding: '11px 14px' }}>
-                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: user.status === 'active' ? 'rgba(76,175,124,0.1)' : 'rgba(200,75,60,0.1)', border: user.status === 'active' ? '1px solid rgba(76,175,124,0.3)' : '1px solid rgba(200,75,60,0.3)', color: user.status === 'active' ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: 500 }}>{user.status}</span>
-                          </td>
-                          <td style={{ padding: '11px 14px' }}>
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              <button style={btn({ fontSize: '10px', padding: '4px 8px' })}>View</button>
-                              <button style={btn({ fontSize: '10px', padding: '4px 8px', color: 'var(--accent-red)', border: '1px solid rgba(200,75,60,0.3)' })}>
-                                {user.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={e => { setUserSearch(e.target.value); searchUsers(e.target.value) }}
+                  placeholder="Search by email, username, or name…"
+                  style={{ flex: 1, background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '9px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-primary)', outline: 'none' }}
+                />
+                <button onClick={() => searchUsers(userSearch)} style={btn({ padding: '9px 16px', fontSize: '11px' })}>
+                  {userLoading ? 'Loading…' : 'Search'}
+                </button>
               </div>
+
+              {userLoading && userResults.length === 0 ? (
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', padding: '20px' }}>Loading users…</div>
+              ) : (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
+                        {['User', 'Email', 'Seller Tier', 'Sales', 'Strikes', 'Status', 'Portal Role', ''].map((h, i) => (
+                          <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {userResults.map((u, i) => {
+                        const tc = tierColors[u.seller_tier] || tierColors.new
+                        const isActive = !u.banned && (!u.suspended_until || new Date(u.suspended_until) < new Date())
+                        const roleColor = { owner: 'var(--accent-red)', staff: 'var(--accent-amber)', authenticator: 'var(--accent-blue)' }
+                        const currentRole = userRoleEdits[u.id] ?? (u.role || '')
+                        const dirty = currentRole !== (u.role || '')
+                        const msg = userRoleMsg[u.id]
+                        return (
+                          <tr key={u.id} style={{ borderBottom: i < userResults.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+                            <td style={{ padding: '10px 14px' }}>
+                              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{u.username || '—'}</div>
+                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{u.full_name || ''}</div>
+                            </td>
+                            <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-secondary)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</td>
+                            <td style={{ padding: '10px 14px' }}>
+                              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color, fontWeight: 500 }}>{u.seller_tier || 'new'}</span>
+                            </td>
+                            <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{u.total_sales || 0}</td>
+                            <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: (u.strike_count || 0) > 0 ? 'var(--accent-red)' : 'var(--text-muted)', fontWeight: 600 }}>{u.strike_count || 0}</td>
+                            <td style={{ padding: '10px 14px' }}>
+                              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: isActive ? 'rgba(76,175,124,0.1)' : 'rgba(200,75,60,0.1)', border: isActive ? '1px solid rgba(76,175,124,0.3)' : '1px solid rgba(200,75,60,0.3)', color: isActive ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                                {u.banned ? 'banned' : u.suspended_until && new Date(u.suspended_until) > new Date() ? 'suspended' : 'active'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '10px 14px' }}>
+                              <select
+                                value={currentRole}
+                                onChange={e => setUserRoleEdits(prev => ({ ...prev, [u.id]: e.target.value }))}
+                                style={{ background: 'var(--bg-3)', border: `1.5px solid ${dirty ? 'rgba(201,168,76,0.5)' : 'var(--border)'}`, borderRadius: '6px', padding: '4px 8px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: currentRole ? (roleColor[currentRole] || 'var(--text-primary)') : 'var(--text-muted)', outline: 'none', cursor: 'pointer' }}
+                              >
+                                <option value="">— user —</option>
+                                <option value="authenticator">authenticator</option>
+                                <option value="staff">staff</option>
+                                <option value="owner">owner</option>
+                              </select>
+                            </td>
+                            <td style={{ padding: '10px 14px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {dirty && (
+                                  <button
+                                    onClick={() => saveUserRole(u.id)}
+                                    disabled={userRoleSaving[u.id]}
+                                    style={{ background: 'var(--teal)', border: 'none', color: '#0A0A0B', padding: '4px 10px', fontSize: '10px', fontWeight: 600, borderRadius: '6px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap', opacity: userRoleSaving[u.id] ? 0.6 : 1 }}
+                                  >
+                                    {userRoleSaving[u.id] ? '…' : 'Save'}
+                                  </button>
+                                )}
+                                {msg && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: msg.type === 'ok' ? 'var(--accent-green)' : 'var(--accent-red)' }}>{msg.text}</span>}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                      {!userLoading && userResults.length === 0 && (
+                        <tr><td colSpan={8} style={{ padding: '20px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>No users found</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 

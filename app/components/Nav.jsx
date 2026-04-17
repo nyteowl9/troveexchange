@@ -10,7 +10,17 @@ export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, loading, signOut } = useAuth()
+
+  // If logged in but onboarding never completed (no username), redirect there.
+  // Runs on every page — catches broken OAuth signups.
+  useEffect(() => {
+    if (!loading && user && !profile?.username &&
+        !pathname.startsWith('/onboarding') &&
+        !pathname.startsWith('/sign-')) {
+      router.replace(`/onboarding?next=${encodeURIComponent(pathname)}`)
+    }
+  }, [loading, user, profile, pathname, router])
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
@@ -68,15 +78,36 @@ export default function Nav() {
       '/admin': { label: 'Owner Admin', color: 'rgba(200,75,60,0.3)', textColor: 'var(--accent-red)', bg: 'rgba(200,75,60,0.1)' },
     }
     const portal = portalLabels[pathname]
+    const portalLinks = profile?.role === 'owner'
+      ? [
+          { href: '/admin',              label: 'Admin' },
+          { href: '/authenticator',      label: 'Auth' },
+          { href: '/dispute-resolution', label: 'Disputes' },
+          { href: '/buyer-dashboard',    label: 'Buyer' },
+          { href: '/seller-dashboard',   label: 'Seller' },
+        ]
+      : profile?.role === 'staff'
+        ? [
+            { href: '/authenticator',      label: 'Auth' },
+            { href: '/dispute-resolution', label: 'Disputes' },
+            { href: '/customer-support',   label: 'Support' },
+          ]
+        : []
+
     return (
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, background: 'rgba(10,10,11,0.96)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {logoEl(16, 18)}
           {portal && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: portal.bg, border: `1px solid ${portal.color}`, color: portal.textColor, fontWeight: 500 }}>{portal.label}</div>}
         </div>
-        <button onClick={toggleTheme} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
-          {theme === 'dark' ? '🌙' : '☀️'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {portalLinks.map(({ href, label }) => (
+            <Link key={href} href={href} style={{ fontSize: '10px', fontFamily: 'DM Mono, monospace', color: pathname === href ? 'var(--gold)' : 'var(--text-muted)', textDecoration: 'none', padding: '3px 8px', borderRadius: '6px', border: `1px solid ${pathname === href ? 'rgba(201,168,76,0.35)' : 'transparent'}`, background: pathname === href ? 'rgba(201,168,76,0.08)' : 'transparent', whiteSpace: 'nowrap' }}>{label}</Link>
+          ))}
+          <button onClick={toggleTheme} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>
+            {theme === 'dark' ? '🌙' : '☀️'}
+          </button>
+        </div>
       </nav>
     )
   }
@@ -124,6 +155,17 @@ export default function Nav() {
                   <Link href={pathname === '/buyer-dashboard' ? '/seller-dashboard' : pathname === '/seller-dashboard' ? '/buyer-dashboard' : '/seller-dashboard'} style={{ fontSize: '10px', color: 'var(--teal)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
                     {pathname === '/buyer-dashboard' ? 'Seller Dashboard →' : pathname === '/seller-dashboard' ? 'Buyer Dashboard →' : 'Seller Dashboard →'}
                   </Link>
+                )}
+                {profile?.role === 'owner' && (
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {[
+                      { href: '/buyer-dashboard',  label: 'Buyer' },
+                      { href: '/seller-dashboard', label: 'Seller' },
+                      { href: '/authenticator',    label: 'Auth' },
+                    ].map(({ href, label }) => (
+                      <Link key={href} href={href} style={{ fontSize: '9px', color: pathname === href ? 'var(--gold)' : 'var(--text-muted)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap', padding: '1px 5px', borderRadius: '4px', border: `1px solid ${pathname === href ? 'rgba(201,168,76,0.4)' : 'transparent'}` }}>{label}</Link>
+                    ))}
+                  </div>
                 )}
               </div>
               <button onClick={async () => { await signOut(); router.push('/') }} style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '6px 14px', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>

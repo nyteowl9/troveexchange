@@ -32,8 +32,11 @@ function SignInPage() {
   const { user, refreshProfile } = useAuth()
 
   useEffect(() => {
-    if (user) router.replace('/')
-  }, [user, router])
+    if (user) {
+      const next = searchParams.get('next')
+      router.replace(next || '/')
+    }
+  }, [user, router, searchParams])
 
   useEffect(() => {
     if (searchParams.get('error') === 'auth_failed') {
