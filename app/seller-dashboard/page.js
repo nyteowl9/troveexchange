@@ -438,25 +438,40 @@ function SellerDashboard() {
           {bondStatus[order.id] && (
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-amber)', marginBottom: '8px' }}>{bondStatus[order.id]}</div>
           )}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {order.status === 'awaiting_shipment' && !order.bond_tx_hash && (
-              /* Step 1: Post bond first */
-              <button onClick={() => handlePostBond(order)} disabled={bondLoading[order.id]} style={{ background: 'var(--accent-amber)', border: 'none', color: '#0A0A0B', padding: '8px 16px', fontSize: '12px', fontWeight: 700, borderRadius: '8px', cursor: bondLoading[order.id] ? 'wait' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: bondLoading[order.id] ? 0.7 : 1 }}>
-                {bondLoading[order.id] ? '⏳ Posting Bond…' : `🔒 Post Bond — $${Number(order.bond_amount || 0).toFixed(2)}`}
-              </button>
-            )}
-            {order.status === 'awaiting_shipment' && order.bond_tx_hash && (
-              /* Step 2: Bond posted — now get label (+ upload photos for remote tier) */
-              <>
-                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)', padding: '8px 12px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px' }}>🔒 Bond Posted</span>
-                {order.listing?.auth_tier === 'remote' && (
-                  <button style={{ background: 'rgba(60,125,200,0.15)', border: '1.5px solid rgba(60,125,200,0.4)', color: 'var(--accent-blue)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>📷 Upload 3 Photos</button>
+          {order.status === 'awaiting_shipment' && (
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              {/* STEP 1 — Post Bond */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--accent-green)' : 'var(--accent-amber)', fontWeight: 600 }}>Step 1</span>
+                {order.bond_tx_hash ? (
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)', padding: '8px 14px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', whiteSpace: 'nowrap' }}>✓ Bond Posted</span>
+                ) : (
+                  <button onClick={() => handlePostBond(order)} disabled={bondLoading[order.id]} style={{ background: 'var(--accent-amber)', border: 'none', color: '#0A0A0B', padding: '8px 16px', fontSize: '12px', fontWeight: 700, borderRadius: '8px', cursor: bondLoading[order.id] ? 'wait' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: bondLoading[order.id] ? 0.7 : 1, whiteSpace: 'nowrap' }}>
+                    {bondLoading[order.id] ? '⏳ Posting…' : `🔒 Post Bond — $${Number(order.bond_amount || 0).toFixed(2)}`}
+                  </button>
                 )}
-                <button onClick={() => handlePrintLabel(order)} disabled={labelLoading[order.id]} style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: labelLoading[order.id] ? 'wait' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: labelLoading[order.id] ? 0.7 : 1 }}>
+              </div>
+
+              <div style={{ color: 'var(--text-muted)', fontSize: '14px', paddingBottom: '9px' }}>→</div>
+
+              {/* STEP 2 — Get Label (+ Upload Photos for remote tier) */}
+              {order.listing?.auth_tier === 'remote' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: 600 }}>Step 2</span>
+                  <button disabled={!order.bond_tx_hash} style={{ background: order.bond_tx_hash ? 'rgba(60,125,200,0.15)' : 'var(--bg-3)', border: `1.5px solid ${order.bond_tx_hash ? 'rgba(60,125,200,0.4)' : 'var(--border)'}`, color: order.bond_tx_hash ? 'var(--accent-blue)' : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: order.bond_tx_hash ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
+                    📷 Upload 3 Photos
+                  </button>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--teal)' : 'var(--text-muted)', fontWeight: 600 }}>{order.listing?.auth_tier === 'remote' ? 'Step 3' : 'Step 2'}</span>
+                <button onClick={() => order.bond_tx_hash && handlePrintLabel(order)} disabled={!order.bond_tx_hash || labelLoading[order.id]} style={{ background: order.bond_tx_hash ? 'var(--teal)' : 'var(--bg-3)', border: `1.5px solid ${order.bond_tx_hash ? 'transparent' : 'var(--border)'}`, color: order.bond_tx_hash ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: order.bond_tx_hash && !labelLoading[order.id] ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: labelLoading[order.id] ? 0.7 : 1, whiteSpace: 'nowrap' }}>
                   {labelLoading[order.id] ? '⏳ Generating…' : order.label_a_url ? (order.listing?.auth_tier === 'physical' ? '🖨 Print Label → Auth Center' : '🖨 Print Label') : (order.listing?.auth_tier === 'physical' ? '🖨 Get Label → Auth Center' : '🖨 Get Label')}
                 </button>
-              </>
-            )}
+              </div>
+            </div>
+          )}
             <button onClick={() => setChatOrder({ id: order.id, label: order.listing?.card_name })} style={btn({ border: '1.5px solid var(--teal-border)', color: 'var(--teal)' })}>Message Buyer</button>
             {order.listing?.id && (
               <Link href={`/listing/${order.listing.id}`} style={{ textDecoration: 'none' }}>
