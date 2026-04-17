@@ -370,11 +370,16 @@ function SellerDashboard() {
       setBondStatus(prev => ({ ...prev, [order.id]: 'Submitted — waiting for block confirmation…' }))
       await confirmTx.wait()
 
-      // Save bond_tx_hash to Supabase
-      await supabase
-        .from('orders')
-        .update({ bond_tx_hash: confirmTx.hash })
-        .eq('id', order.id)
+      // Save bond_tx_hash via API (direct Supabase update blocked by RLS)
+      const saveRes = await fetch('/api/orders/confirm-bond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, tx_hash: confirmTx.hash }),
+      })
+      if (!saveRes.ok) {
+        const err = await saveRes.json()
+        throw new Error(err.error || 'Failed to save bond confirmation')
+      }
 
       setBondStatus(prev => ({ ...prev, [order.id]: 'Bond posted ✓' }))
       await fetchData()
