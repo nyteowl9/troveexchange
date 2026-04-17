@@ -80,21 +80,13 @@ export async function POST(request) {
 
     // Create shipment
     const shipment = await shippo.shipments.create({
-      address_from: sellerAddr,
-      address_to:   addressTo,
+      addressFrom: sellerAddr,
+      addressTo,
       parcels: [{
         length: '6', width: '4', height: '1',
-        distance_unit: 'in',
-        weight: '0.5', mass_unit: 'lb',
+        distanceUnit: 'in',
+        weight: '0.5', massUnit: 'lb',
       }],
-      extra: {
-        insurance: {
-          amount:   String(order.declared_value || order.escrow_amount || 0),
-          currency: 'USD',
-          provider: 'SHIPPO',
-          content:  'Trading card — graded/raw collectible',
-        },
-      },
       async: false,
     })
 
@@ -103,7 +95,7 @@ export async function POST(request) {
 
     const transaction = await shippo.transactions.create({
       rate: bestRate.objectId,
-      label_file_type: 'PDF',
+      labelFileType: 'PDF',
       async: false,
     })
 

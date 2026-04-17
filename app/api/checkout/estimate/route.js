@@ -77,13 +77,13 @@ export async function POST(request) {
 
     const parcel = {
       length: '6', width: '4', height: '1',
-      distance_unit: 'in', weight: '0.5', mass_unit: 'lb',
+      distanceUnit: 'in', weight: '0.5', massUnit: 'lb',
     }
 
     const cheapest = async (from, to) => {
       const shipment = await shippo.shipments.create({
-        address_from: from,
-        address_to: to,
+        addressFrom: from,
+        addressTo: to,
         parcels: [parcel],
         async: false,
       })
