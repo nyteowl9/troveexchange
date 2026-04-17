@@ -472,6 +472,7 @@ function SellerDashboard() {
               </div>
             </div>
           )}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
             <button onClick={() => setChatOrder({ id: order.id, label: order.listing?.card_name })} style={btn({ border: '1.5px solid var(--teal-border)', color: 'var(--teal)' })}>Message Buyer</button>
             {order.listing?.id && (
               <Link href={`/listing/${order.listing.id}`} style={{ textDecoration: 'none' }}>
