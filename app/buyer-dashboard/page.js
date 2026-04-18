@@ -429,11 +429,12 @@ export default function BuyerDashboard() {
     )
   }
 
-  if (authLoading || !user) return (
+  if (authLoading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)' }}>Loading…</div>
     </div>
   )
+  if (!user) return null
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>

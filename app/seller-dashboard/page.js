@@ -87,8 +87,6 @@ function SellerDashboard() {
   const [dragOver, setDragOver]         = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [formData, setFormData]       = useState({ game: 'Pokémon TCG', language: 'English', card_name: '', set: '', card_number: '', grade: '', cert_number: '', grader_other: '', condition: 'Near Mint (NM)', description: '', quantity: '', seal_condition: 'Factory Sealed — Unopened' })
-  const fileInputRef = useRef(null)
-
   // Edit listing state
   const [editingListingId, setEditingListingId]   = useState(null)
   const [editListingType, setEditListingType]     = useState('graded')
@@ -126,7 +124,7 @@ function SellerDashboard() {
           .order('created_at', { ascending: false }),
         supabase
           .from('listings')
-          .select('id, card_name, game, set, grade, grader, photos, price, status, listing_type, created_at, expires_at')
+          .select('id, card_name, game, set, grade, grader, cert_number, condition, description, card_number, photos, price, status, listing_type, created_at, expires_at')
           .eq('seller_id', user.id)
           .in('status', ['active', 'paused'])
           .order('created_at', { ascending: false }),
@@ -330,7 +328,7 @@ function SellerDashboard() {
       card_name:      listing.card_name || '',
       set:            listing.set || '',
       card_number:    listing.card_number || '',
-      grade:          listing.grade || '',
+      grade:          String(listing.grade ?? ''),
       cert_number:    listing.cert_number || '',
       grader_other:   '',
       condition:      listing.condition || 'Near Mint (NM)',
@@ -618,11 +616,12 @@ function SellerDashboard() {
     )
   }
 
-  if (authLoading || !user) return (
+  if (authLoading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)' }}>Loading…</div>
     </div>
   )
+  if (!user) return null
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
