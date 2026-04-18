@@ -5,7 +5,7 @@ const path = require("path");
 // ─── Deployment Parameters ───────────────────────────────────────────────────
 
 const FEE_RECIPIENT = "0xE39a2128b7CeA98992E59ae3a7Ab2669E5801983";
-const GUARDIAN      = "0xF91ddA9227E3593E9336aeED081A90CD81Aa136F";
+const GUARDIAN      = "0x14721FdFfBE152d7fAC3910870257e0B1b1078B3";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

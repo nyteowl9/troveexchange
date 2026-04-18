@@ -117,24 +117,24 @@ export async function POST(req, { params }) {
 /**
  * Calls resolveDispute(bytes32 orderId, bool buyerWins) on the escrow contract.
  * Requires env vars:
- *   ESCROW_CONTRACT_ADDRESS — deployed ChaseHollowEscrow address
- *   OWNER_PRIVATE_KEY       — owner wallet private key (server-side only)
- *   ALCHEMY_RPC_URL         — Base RPC endpoint
+ *   NEXT_PUBLIC_ESCROW_ADDRESS     — deployed ChaseHollowEscrow address
+ *   DISPUTE_RESOLVER_PRIVATE_KEY   — dispute resolver hot wallet key (server-side only)
+ *   ALCHEMY_RPC_URL                — Base RPC endpoint
  */
 async function callResolveDispute(onchainOrderId, buyerWins) {
-  const rpc      = process.env.ALCHEMY_RPC_URL
-  const escrowAddr = process.env.ESCROW_CONTRACT_ADDRESS
-  const ownerKey = process.env.OWNER_PRIVATE_KEY
+  const rpc         = process.env.ALCHEMY_RPC_URL
+  const escrowAddr  = process.env.NEXT_PUBLIC_ESCROW_ADDRESS
+  const resolverKey = process.env.DISPUTE_RESOLVER_PRIVATE_KEY
 
-  if (!rpc || !escrowAddr || !ownerKey) {
-    throw new Error('Missing ALCHEMY_RPC_URL, ESCROW_CONTRACT_ADDRESS, or OWNER_PRIVATE_KEY env var')
+  if (!rpc || !escrowAddr || !resolverKey) {
+    throw new Error('Missing ALCHEMY_RPC_URL, NEXT_PUBLIC_ESCROW_ADDRESS, or DISPUTE_RESOLVER_PRIVATE_KEY env var')
   }
   if (!onchainOrderId) {
     throw new Error('Order is missing onchain_order_id — must be stored at checkout')
   }
 
   const provider = new ethers.JsonRpcProvider(rpc)
-  const wallet   = new ethers.Wallet(ownerKey, provider)
+  const wallet   = new ethers.Wallet(resolverKey, provider)
   const escrow   = new ethers.Contract(
     escrowAddr,
     ['function resolveDispute(bytes32,bool) external'],
