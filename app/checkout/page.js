@@ -298,12 +298,22 @@ function Checkout() {
       }
       if (!allowanceConfirmed) throw new Error('USDC approval did not confirm. Please try again.')
 
+      // Resolve creator wallet from attribution cookie (server-side read, never blocks checkout)
+      let creatorWallet = ethers.ZeroAddress
+      try {
+        const cwRes = await fetch('/api/referral/creator-wallet')
+        const cwData = await cwRes.json()
+        if (cwData.wallet && ethers.isAddress(cwData.wallet)) {
+          creatorWallet = cwData.wallet
+        }
+      } catch { /* no-op — falls back to ZeroAddress */ }
+
       setSigningStatus('Step 2 of 2 — Lock USDC in escrow · confirm in wallet...')
       const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
       const fundTx = await escrowContract.fundOrder(
         onchainOrderId,
         listing.seller.wallet_address,
-        ethers.ZeroAddress,
+        creatorWallet,
         escrowAmountU,
         sellerBondU,
         platformFeeU,

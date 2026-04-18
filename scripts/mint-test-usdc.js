@@ -5,10 +5,10 @@
  * Set RECIPIENT and AMOUNT below before running.
  */
 
-const RECIPIENT = "0x332Ba86020aDED718Ce07ea2181c259EE7122f7e"  // ← paste your MetaMask address
-const AMOUNT_USD = 1000  // dollars to mint
+const RECIPIENT = "0x1B35Ac1eAC85844A738A406D4A4cF850B5614363"
+const AMOUNT_USD = 10000  // dollars to mint
 
-const MOCK_USDC_ADDRESS = "0x386CD6738aBaBd37E957eD76A7d3f862b6eC819A"
+const MOCK_USDC_ADDRESS = "0x20999D752c6C19094230206426e952bC64eE0DfC"
 
 async function main() {
   const [deployer] = await ethers.getSigners()
