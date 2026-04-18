@@ -203,18 +203,18 @@ async function callMarkDelivered(onchainOrderId) {
   }
 }
 
-// ── On-chain resolveDispute call (owner) ───────────────────────
+// ── On-chain resolveDispute call (dispute resolver) ────────────
 async function callResolveDispute(onchainOrderId, buyerWins) {
-  const rpc        = process.env.ALCHEMY_RPC_URL
-  const escrowAddr = process.env.NEXT_PUBLIC_ESCROW_ADDRESS
-  const ownerKey   = process.env.OWNER_PRIVATE_KEY
+  const rpc         = process.env.ALCHEMY_RPC_URL
+  const escrowAddr  = process.env.NEXT_PUBLIC_ESCROW_ADDRESS
+  const resolverKey = process.env.DISPUTE_RESOLVER_PRIVATE_KEY
 
-  if (!rpc || !escrowAddr || !ownerKey) {
-    throw new Error('Missing ALCHEMY_RPC_URL, NEXT_PUBLIC_ESCROW_ADDRESS, or OWNER_PRIVATE_KEY env var')
+  if (!rpc || !escrowAddr || !resolverKey) {
+    throw new Error('Missing ALCHEMY_RPC_URL, NEXT_PUBLIC_ESCROW_ADDRESS, or DISPUTE_RESOLVER_PRIVATE_KEY env var')
   }
 
   const provider = new ethers.JsonRpcProvider(rpc)
-  const wallet   = new ethers.Wallet(ownerKey, provider)
+  const wallet   = new ethers.Wallet(resolverKey, provider)
   const escrow   = new ethers.Contract(
     escrowAddr,
     ['function resolveDispute(bytes32,bool) external'],

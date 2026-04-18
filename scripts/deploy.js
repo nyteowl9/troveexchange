@@ -58,6 +58,17 @@ async function main() {
   const escrowAddress = await escrow.getAddress();
   console.log(`ChaseHollowEscrow deployed: ${escrowAddress}`);
 
+  // ── 3. Register deployer as operator + dispute resolver (testnet) ──
+  // On mainnet: Safe calls addOperator() and addDisputeResolver()
+  // with separate dedicated hot wallets. On testnet deployer fills both.
+  console.log("\n[post-deploy] Registering deployer as operator...");
+  await (await escrow.addOperator(deployer.address)).wait();
+  console.log("  ✓ Operator added:", deployer.address);
+
+  console.log("[post-deploy] Registering deployer as dispute resolver...");
+  await (await escrow.addDisputeResolver(deployer.address)).wait();
+  console.log("  ✓ Dispute resolver added:", deployer.address);
+
   // ── Summary ──────────────────────────────────────────────────
   console.log("\n" + "=".repeat(60));
   console.log("DEPLOYMENT COMPLETE");

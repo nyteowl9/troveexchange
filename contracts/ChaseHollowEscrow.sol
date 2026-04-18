@@ -8,17 +8,23 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 // ============================================================
-// Chase Hollow Escrow — v1.0
+// Chase Hollow Escrow — v1.1
 // Handles USDC escrow for TCG card transactions on Base L2.
 //
 // Authority:
-//   Owner (Safe multisig) — disputes, refunds, fees, pause,
-//                           add/remove operators
+//   Owner (Safe multisig) — fees, pause, add/remove operators,
+//                           add/remove dispute resolvers,
+//                           emergency sweep (when paused)
 //   Operator (hot wallet) — markDelivered, releaseEscrow (auto),
-//                           cancelOrder, batch operations.
+//                           cancelOrder, refundBuyer (auth fail),
+//                           batch operations.
 //                           Multiple operators. Changeable by owner.
-//   Buyer               — fundOrder, releaseEscrow (early), openDispute
-//   Seller              — confirmOrder (post bond)
+//   DisputeResolver       — resolveDispute, batchResolveDisputes.
+//                           Hot wallet used by dispute staff (not Safe).
+//                           Multiple resolvers allowed. Changeable by owner.
+//                           Owner also passes this check as fallback.
+//   Buyer                 — fundOrder, releaseEscrow (early), openDispute
+//   Seller                — confirmOrder (post bond)
 //
 // Order flow:
 //   1. Buyer calls fundOrder()       → status: AwaitingConfirmation
@@ -29,10 +35,13 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 //
 // Dispute flow:
 //   1. Buyer calls openDispute() during inspection window → status: Disputed
-//   2. Owner (Safe) calls resolveDispute() → Released or RefundedToBuyer
+//   2. Dispute resolver calls resolveDispute() → Released or RefundedToBuyer
 //
-// Batch operations allow owner/operator to process hundreds of
-// orders in a single Safe signature.
+// Auth fail flow:
+//   Authenticator marks fail → Shippo webhook → operator calls refundBuyer()
+//
+// Batch operations allow operator to process hundreds of
+// orders in a single transaction.
 // ============================================================
 
 contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
@@ -108,6 +117,7 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
 
     mapping(bytes32 => Order)   public orders;
     mapping(address => bool)    public isOperator;
+    mapping(address => bool)    public isDisputeResolver;
 
     // ── Events ───────────────────────────────────────────────
 
@@ -122,6 +132,8 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     event BondReturned(bytes32 indexed orderId, address indexed seller, uint256 amount);
     event OperatorAdded(address indexed operator);
     event OperatorRemoved(address indexed operator);
+    event DisputeResolverAdded(address indexed resolver);
+    event DisputeResolverRemoved(address indexed resolver);
     event FeeRecipientProposed(address indexed proposed, uint256 executeAt);
     event FeeRecipientChanged(address indexed oldRecipient, address indexed newRecipient);
     event FeeRecipientChangeCancelled(address indexed cancelled);
@@ -164,6 +176,11 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         _;
     }
 
+    modifier onlyDisputeResolverOrOwner() {
+        require(isDisputeResolver[msg.sender] || msg.sender == owner(), "Not dispute resolver or owner");
+        _;
+    }
+
     // ============================================================
     // OPERATOR MANAGEMENT — owner (Safe) only
     // ============================================================
@@ -182,6 +199,28 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         require(isOperator[operator], "Not an operator");
         isOperator[operator] = false;
         emit OperatorRemoved(operator);
+    }
+
+    // ============================================================
+    // DISPUTE RESOLVER MANAGEMENT — owner (Safe) only
+    // ============================================================
+
+    // Dispute resolvers are hot wallets used by dispute staff.
+    // Separate from the owner Safe so staff can execute decisions
+    // without requiring a multisig ceremony for every dispute.
+    // Owner retains resolveDispute access as a fallback.
+
+    function addDisputeResolver(address resolver) external onlyOwner {
+        require(resolver != address(0), "Invalid address");
+        require(!isDisputeResolver[resolver], "Already a dispute resolver");
+        isDisputeResolver[resolver] = true;
+        emit DisputeResolverAdded(resolver);
+    }
+
+    function removeDisputeResolver(address resolver) external onlyOwner {
+        require(isDisputeResolver[resolver], "Not a dispute resolver");
+        isDisputeResolver[resolver] = false;
+        emit DisputeResolverRemoved(resolver);
     }
 
     // ============================================================
@@ -368,7 +407,7 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
 
     function resolveDispute(bytes32 orderId, bool buyerWins)
         external
-        onlyOwner
+        onlyDisputeResolverOrOwner
         nonReentrant
         orderExists(orderId)
     {
@@ -394,12 +433,13 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     }
 
     // ── 7. Refund Buyer ──────────────────────────────────────
-    // Owner (Safe) calls on auth fail.
+    // Operator calls on auth fail (triggered via webhook when authenticator
+    // marks a card as failed). Owner (Safe) can also call as fallback.
     // Full refund. Seller bond forfeited to Safe.
 
     function refundBuyer(bytes32 orderId)
         external
-        onlyOwner
+        onlyOperatorOrOwner
         nonReentrant
         orderExists(orderId)
     {
@@ -490,7 +530,7 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
 
     function batchRefundBuyers(bytes32[] calldata orderIds)
         external
-        onlyOwner
+        onlyOperatorOrOwner
         nonReentrant
     {
         for (uint256 i = 0; i < orderIds.length; i++) {
@@ -536,7 +576,7 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     function batchResolveDisputes(
         bytes32[] calldata orderIds,
         bool[]    calldata outcomes  // true = buyer wins
-    ) external onlyOwner nonReentrant {
+    ) external onlyDisputeResolverOrOwner nonReentrant {
         require(orderIds.length == outcomes.length, "Length mismatch");
         for (uint256 i = 0; i < orderIds.length; i++) {
             Order storage order = orders[orderIds[i]];
