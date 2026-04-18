@@ -75,6 +75,11 @@ function SellerDashboard() {
   const [bondLoading, setBondLoading]       = useState({}) // { [orderId]: true }
   const [bondError, setBondError]           = useState({}) // { [orderId]: message }
   const [bondStatus, setBondStatus]         = useState({}) // { [orderId]: status string }
+  const [photoOrderId, setPhotoOrderId]     = useState(null) // which order has upload modal open
+  const [authPhotoFiles, setAuthPhotoFiles] = useState([])   // { file, preview }[]
+  const [authPhotoUploading, setAuthPhotoUploading] = useState(false)
+  const [authPhotoError, setAuthPhotoError] = useState('')
+  const [authPhotosDone, setAuthPhotosDone] = useState({}) // { [orderId]: true }
 
   // New listing form
   const [listingType, setListingType] = useState('graded')
@@ -533,6 +538,40 @@ function SellerDashboard() {
     }
   }
 
+  async function handleSubmitAuthPhotos(orderId) {
+    if (authPhotoFiles.length < 3) { setAuthPhotoError('Please upload all 3 photos'); return }
+    setAuthPhotoUploading(true)
+    setAuthPhotoError('')
+    try {
+      const urls = []
+      for (const { file } of authPhotoFiles) {
+        const ext = file.name.split('.').pop()
+        const path = `${user.id}/${orderId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error } = await supabase.storage.from('auth-photos').upload(path, file, { upsert: false, contentType: file.type })
+        if (error) throw new Error(`Upload failed: ${error.message}`)
+        const { data: { publicUrl } } = supabase.storage.from('auth-photos').getPublicUrl(path)
+        urls.push(publicUrl)
+      }
+      // Store in auth_inspections so authenticator can review
+      const { error: inspErr } = await supabase.from('auth_inspections').insert({
+        order_id:         orderId,
+        authenticator_id: user.id,
+        type:             'remote',
+        photos:           urls,
+        decision:         null,
+        notes:            'Seller-submitted auth photos',
+      })
+      if (inspErr) throw new Error(inspErr.message)
+      setAuthPhotosDone(prev => ({ ...prev, [orderId]: true }))
+      setPhotoOrderId(null)
+      setAuthPhotoFiles([])
+    } catch (err) {
+      setAuthPhotoError(err.message)
+    } finally {
+      setAuthPhotoUploading(false)
+    }
+  }
+
   const OrderRow = ({ order }) => {
     const sm  = SELLER_STATUS_MAP[order.status] || SELLER_STATUS_MAP.in_transit
     const dl  = shipDeadline(order.created_at)
@@ -585,21 +624,31 @@ function SellerDashboard() {
 
               <div style={{ color: 'var(--text-muted)', fontSize: '14px', paddingBottom: '9px' }}>→</div>
 
-              {/* STEP 2 — Get Label (+ Upload Photos for remote tier) */}
+              {/* STEP 2 — Upload 3 Auth Photos (remote tier only) */}
               {order.listing?.auth_tier === 'remote' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: 600 }}>Step 2</span>
-                  <button disabled={!order.bond_tx_hash} style={{ background: order.bond_tx_hash ? 'rgba(60,125,200,0.15)' : 'var(--bg-3)', border: `1.5px solid ${order.bond_tx_hash ? 'rgba(60,125,200,0.4)' : 'var(--border)'}`, color: order.bond_tx_hash ? 'var(--accent-blue)' : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: order.bond_tx_hash ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
-                    📷 Upload 3 Photos
-                  </button>
+                  {authPhotosDone[order.id] ? (
+                    <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)', padding: '8px 14px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', whiteSpace: 'nowrap' }}>✓ 3 Photos Uploaded</span>
+                  ) : (
+                    <button onClick={() => { if (order.bond_tx_hash) { setPhotoOrderId(order.id); setAuthPhotoFiles([]); setAuthPhotoError('') } }} disabled={!order.bond_tx_hash} style={{ background: order.bond_tx_hash ? 'rgba(60,125,200,0.15)' : 'var(--bg-3)', border: `1.5px solid ${order.bond_tx_hash ? 'rgba(60,125,200,0.4)' : 'var(--border)'}`, color: order.bond_tx_hash ? 'var(--accent-blue)' : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: order.bond_tx_hash ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
+                      📷 Upload 3 Photos
+                    </button>
+                  )}
                 </div>
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--teal)' : 'var(--text-muted)', fontWeight: 600 }}>{order.listing?.auth_tier === 'remote' ? 'Step 3' : 'Step 2'}</span>
-                <button onClick={() => order.bond_tx_hash && handlePrintLabel(order)} disabled={!order.bond_tx_hash || labelLoading[order.id]} style={{ background: order.bond_tx_hash ? 'var(--teal)' : 'var(--bg-3)', border: `1.5px solid ${order.bond_tx_hash ? 'transparent' : 'var(--border)'}`, color: order.bond_tx_hash ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: order.bond_tx_hash && !labelLoading[order.id] ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: labelLoading[order.id] ? 0.7 : 1, whiteSpace: 'nowrap' }}>
-                  {labelLoading[order.id] ? '⏳ Generating…' : order.label_a_url ? (order.listing?.auth_tier === 'physical' ? '🖨 Print Label → Auth Center' : '🖨 Print Label') : (order.listing?.auth_tier === 'physical' ? '🖨 Get Label → Auth Center' : '🖨 Get Label')}
-                </button>
+                {(() => {
+                  const photosRequired = order.listing?.auth_tier === 'remote' && !authPhotosDone[order.id]
+                  const canLabel = order.bond_tx_hash && !labelLoading[order.id] && !photosRequired
+                  return (
+                    <button onClick={() => canLabel && handlePrintLabel(order)} disabled={!canLabel} title={photosRequired ? 'Upload 3 auth photos first' : ''} style={{ background: canLabel ? 'var(--teal)' : 'var(--bg-3)', border: `1.5px solid ${canLabel ? 'transparent' : 'var(--border)'}`, color: canLabel ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: canLabel ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: labelLoading[order.id] ? 0.7 : 1, whiteSpace: 'nowrap' }}>
+                      {labelLoading[order.id] ? '⏳ Generating…' : order.label_a_url ? (order.listing?.auth_tier === 'physical' ? '🖨 Print Label → Auth Center' : '🖨 Print Label') : (order.listing?.auth_tier === 'physical' ? '🖨 Get Label → Auth Center' : '🖨 Get Label')}
+                    </button>
+                  )
+                })()}
               </div>
             </div>
           )}
@@ -632,6 +681,50 @@ function SellerDashboard() {
           orderLabel={chatOrder.label}
           onClose={() => setChatOrder(null)}
         />
+      )}
+
+      {/* AUTH PHOTO UPLOAD MODAL */}
+      {photoOrderId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '480px' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '6px' }}>Upload Auth Photos</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>3 required: front, back, card in sealed package</div>
+
+            <input id="auth-photo-input" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => {
+              const files = Array.from(e.target.files || [])
+              const combined = [...authPhotoFiles, ...files.map(f => ({ file: f, preview: URL.createObjectURL(f) }))].slice(0, 3)
+              setAuthPhotoFiles(combined)
+              e.target.value = ''
+            }} />
+
+            {authPhotoFiles.length < 3 && (
+              <label htmlFor="auth-photo-input" style={{ display: 'block', border: '2px dashed var(--border)', borderRadius: '10px', padding: '24px', textAlign: 'center', cursor: 'pointer', marginBottom: '16px', color: 'var(--text-muted)', fontFamily: 'DM Sans, sans-serif', fontSize: '13px' }}>
+                + Add photos ({authPhotoFiles.length}/3)
+              </label>
+            )}
+
+            {authPhotoFiles.length > 0 && (
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                {authPhotoFiles.map((p, i) => (
+                  <div key={p.preview} style={{ position: 'relative', width: '80px', height: '110px', borderRadius: '6px', overflow: 'hidden', border: '1.5px solid var(--border)' }}>
+                    <img src={p.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button onClick={() => { URL.revokeObjectURL(p.preview); setAuthPhotoFiles(f => f.filter((_, j) => j !== i)) }} style={{ position: 'absolute', top: '3px', right: '3px', width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: 'none', color: '#fff', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                    <div style={{ position: 'absolute', bottom: '2px', left: '4px', fontFamily: 'DM Mono, monospace', fontSize: '8px', color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>{['Front','Back','Package'][i]}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {authPhotoError && <div style={{ color: 'var(--accent-red)', fontFamily: 'DM Mono, monospace', fontSize: '11px', marginBottom: '12px' }}>{authPhotoError}</div>}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => { setPhotoOrderId(null); authPhotoFiles.forEach(p => URL.revokeObjectURL(p.preview)); setAuthPhotoFiles([]) }} style={{ flex: 1, background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: '13px' }}>Cancel</button>
+              <button onClick={() => handleSubmitAuthPhotos(photoOrderId)} disabled={authPhotoFiles.length < 3 || authPhotoUploading} style={{ flex: 2, background: authPhotoFiles.length >= 3 && !authPhotoUploading ? 'var(--teal)' : 'var(--bg-3)', border: 'none', color: authPhotoFiles.length >= 3 && !authPhotoUploading ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '10px', borderRadius: '8px', cursor: authPhotoFiles.length >= 3 && !authPhotoUploading ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600 }}>
+                {authPhotoUploading ? 'Uploading…' : 'Submit Photos'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <style>{`

@@ -36,6 +36,7 @@ function orderToQueueItem(order) {
     raw:      isRaw,
     auth_tier: order.auth_tier,
     photos:   listing.photos || [],
+    sellerAuthPhotos: order.sellerAuthPhotos || [],
     status:   order.status,
   }
 }
@@ -86,7 +87,21 @@ export default function AuthenticatorPortal() {
       .order('shipped_at', { ascending: true })
     // auth_passed: only include rows still missing label_b_url
     const rows = (data || []).filter(o => o.status === 'auth_review' || !o.label_b_url)
-    setQueue(rows.map(orderToQueueItem))
+
+    // Fetch seller-submitted auth photos for remote orders
+    const remoteIds = rows.filter(o => o.auth_tier === 'remote').map(o => o.id)
+    let sellerPhotoMap = {}
+    if (remoteIds.length) {
+      const { data: inspData } = await supabase
+        .from('auth_inspections')
+        .select('order_id, photos')
+        .in('order_id', remoteIds)
+        .eq('type', 'remote')
+        .is('decision', null)
+      ;(inspData || []).forEach(i => { sellerPhotoMap[i.order_id] = i.photos || [] })
+    }
+
+    setQueue(rows.map(o => orderToQueueItem({ ...o, sellerAuthPhotos: sellerPhotoMap[o.id] || [] })))
     setQueueLoading(false)
   }, [])
 
@@ -550,23 +565,31 @@ export default function AuthenticatorPortal() {
                           <div style={{ position: 'absolute', top: '8px', left: '8px', fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(60,125,200,0.2)', border: '1px solid rgba(60,125,200,0.4)', color: 'var(--accent-blue)', fontWeight: 500 }}>Listing</div>
                         </div>
                       </div>
-                      {/* RECEIVED CARD — auth staff uploads their own photos */}
+                      {/* RIGHT PANEL — seller auth photos (remote) or staff-uploaded photos (physical) */}
                       <div style={{ padding: '14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-green)', fontWeight: 500 }}>RECEIVED CARD</div>
-                          {receivedPhotoIdx !== null && uploadedPhotos[receivedPhotoIdx] && (
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-green)', fontWeight: 500 }}>{card.auth_tier === 'remote' ? 'SELLER AUTH PHOTOS' : 'RECEIVED CARD'}</div>
+                          {card.auth_tier !== 'remote' && receivedPhotoIdx !== null && uploadedPhotos[receivedPhotoIdx] && (
                             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)' }}>{photos[receivedPhotoIdx]}</div>
+                          )}
+                          {card.auth_tier === 'remote' && card.sellerAuthPhotos?.length > 1 && (
+                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                              <button onClick={() => setReceivedPhotoIdx(i => Math.max(0, (i||0) - 1))} disabled={(receivedPhotoIdx||0) === 0} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', width: '18px', height: '18px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', lineHeight: 1, padding: 0 }}>‹</button>
+                              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)' }}>{(receivedPhotoIdx||0)+1}/{card.sellerAuthPhotos.length}</span>
+                              <button onClick={() => setReceivedPhotoIdx(i => Math.min(card.sellerAuthPhotos.length - 1, (i||0) + 1))} disabled={(receivedPhotoIdx||0) === card.sellerAuthPhotos.length - 1} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', width: '18px', height: '18px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', lineHeight: 1, padding: 0 }}>›</button>
+                            </div>
                           )}
                         </div>
                         <div style={{ aspectRatio: '3/4', background: 'var(--bg-3)', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                          {receivedPhotoIdx !== null && uploadedPhotos[receivedPhotoIdx]
-                            ? <img src={uploadedPhotos[receivedPhotoIdx]} alt="Auth photo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                            : <div style={{ textAlign: 'center' }}>
-                                <div style={{ fontSize: '28px', opacity: 0.3, marginBottom: '8px' }}>📷</div>
-                                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>Upload auth photos below</div>
-                              </div>
+                          {card.auth_tier === 'remote'
+                            ? (card.sellerAuthPhotos?.[(receivedPhotoIdx||0)]
+                                ? <img src={card.sellerAuthPhotos[receivedPhotoIdx||0]} alt="Seller auth photo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                : <div style={{ textAlign: 'center' }}><div style={{ fontSize: '28px', opacity: 0.3, marginBottom: '8px' }}>📷</div><div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>Seller photos pending</div></div>)
+                            : (receivedPhotoIdx !== null && uploadedPhotos[receivedPhotoIdx]
+                                ? <img src={uploadedPhotos[receivedPhotoIdx]} alt="Auth photo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                : <div style={{ textAlign: 'center' }}><div style={{ fontSize: '28px', opacity: 0.3, marginBottom: '8px' }}>📷</div><div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>Upload auth photos below</div></div>)
                           }
-                          <div style={{ position: 'absolute', top: '8px', left: '8px', fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(76,175,124,0.2)', border: '1px solid rgba(76,175,124,0.4)', color: 'var(--accent-green)', fontWeight: 500 }}>Received</div>
+                          <div style={{ position: 'absolute', top: '8px', left: '8px', fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(76,175,124,0.2)', border: '1px solid rgba(76,175,124,0.4)', color: 'var(--accent-green)', fontWeight: 500 }}>{card.auth_tier === 'remote' ? ['Front','Back','Package'][(receivedPhotoIdx||0)] || 'Auth Photo' : 'Received'}</div>
                           {/* Slot nav — click strip thumbnails to switch */}
                           {Object.keys(uploadedPhotos).filter(k => uploadedPhotos[k]).length > 1 && (
                             <div style={{ position: 'absolute', bottom: '6px', right: '6px', display: 'flex', gap: '3px' }}>
@@ -578,8 +601,8 @@ export default function AuthenticatorPortal() {
                         </div>
                       </div>
                     </div>
-                    {/* Photo upload strip */}
-                    <div style={{ padding: '10px 14px', borderTop: '0.5px solid var(--border)' }}>
+                    {/* Photo upload strip — physical auth only (remote auth uses seller-uploaded photos) */}
+                    {card.auth_tier !== 'remote' && <div style={{ padding: '10px 14px', borderTop: '0.5px solid var(--border)' }}>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', fontWeight: 500, display: 'flex', justifyContent: 'space-between' }}>
                         <span>Upload Auth Photos</span>
                         <span style={{ color: Object.values(uploadedPhotos).filter(Boolean).length === photos.length ? 'var(--accent-green)' : 'var(--text-muted)' }}>{Object.values(uploadedPhotos).filter(Boolean).length}/{photos.length} uploaded</span>
@@ -599,7 +622,7 @@ export default function AuthenticatorPortal() {
                         ))}
                       </div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>Click each slot to upload. Photos are stored in Supabase and attached permanently to this order record.</div>
-                    </div>
+                    </div>}
                   </div>
 
                   {/* Checklist */}
