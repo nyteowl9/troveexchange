@@ -28,15 +28,10 @@ export function AuthProvider({ children }) {
     // getSession() is the single source of truth for initial load.
     // It reads from localStorage synchronously (fast) and clears loading when done.
     // We await loadProfile so the Nav's username check never fires on a null profile.
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      try {
-        setUser(session?.user ?? null)
-        if (session?.user) await loadProfile(session.user.id)
-      } catch (e) {
-        console.error('[AuthContext] init error:', e)
-      } finally {
-        setLoading(false)
-      }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
+      if (session?.user) loadProfile(session.user.id)
     })
 
     // onAuthStateChange handles subsequent events only (sign-in, sign-out,
