@@ -69,12 +69,12 @@ async function fundOrder(escrow, buyer, seller, creator, orderId, overrides = {}
 
 describe("ChaseHollowEscrow", function () {
   // Signers
-  let owner, operator, buyer, seller, creator, feeRecipient, guardian, stranger;
+  let owner, operator, disputeResolver, buyer, seller, creator, feeRecipient, guardian, stranger;
   // Contracts
   let usdc, escrow;
 
   beforeEach(async function () {
-    [owner, operator, buyer, seller, creator, feeRecipient, guardian, stranger] =
+    [owner, operator, disputeResolver, buyer, seller, creator, feeRecipient, guardian, stranger] =
       await ethers.getSigners();
 
     const USDC = await ethers.getContractFactory("MockUSDC");
@@ -90,8 +90,9 @@ describe("ChaseHollowEscrow", function () {
     await usdc.connect(buyer).approve(await escrow.getAddress(),  u(100_000));
     await usdc.connect(seller).approve(await escrow.getAddress(), u(10_000));
 
-    // Register operator
+    // Register operator and dispute resolver
     await escrow.connect(owner).addOperator(operator.address);
+    await escrow.connect(owner).addDisputeResolver(disputeResolver.address);
   });
 
   // ═══════════════════════════════════════════════════════════════
@@ -172,6 +173,42 @@ describe("ChaseHollowEscrow", function () {
       await expect(
         escrow.connect(owner).removeOperator(stranger.address)
       ).to.be.revertedWith("Not an operator");
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // DISPUTE RESOLVER MANAGEMENT
+  // ═══════════════════════════════════════════════════════════════
+
+  describe("Dispute resolver management", function () {
+    it("owner can add a dispute resolver", async function () {
+      await expect(escrow.connect(owner).addDisputeResolver(stranger.address))
+        .to.emit(escrow, "DisputeResolverAdded")
+        .withArgs(stranger.address);
+      expect(await escrow.isDisputeResolver(stranger.address)).to.be.true;
+    });
+
+    it("owner can remove a dispute resolver", async function () {
+      await escrow.connect(owner).removeDisputeResolver(disputeResolver.address);
+      expect(await escrow.isDisputeResolver(disputeResolver.address)).to.be.false;
+    });
+
+    it("non-owner cannot add dispute resolver", async function () {
+      await expect(
+        escrow.connect(stranger).addDisputeResolver(stranger.address)
+      ).to.be.reverted;
+    });
+
+    it("cannot add same resolver twice", async function () {
+      await expect(
+        escrow.connect(owner).addDisputeResolver(disputeResolver.address)
+      ).to.be.revertedWith("Already a dispute resolver");
+    });
+
+    it("cannot remove non-resolver", async function () {
+      await expect(
+        escrow.connect(owner).removeDisputeResolver(stranger.address)
+      ).to.be.revertedWith("Not a dispute resolver");
     });
   });
 
@@ -523,19 +560,21 @@ describe("ChaseHollowEscrow", function () {
       await escrow.connect(buyer).openDispute(orderId);
     });
 
-    it("owner resolves in buyer's favor — full refund, bond forfeited", async function () {
+    it("owner resolves in buyer's favor — escrow minus shipping refunded, shipping + bond forfeited", async function () {
       const buyerBefore = await usdc.balanceOf(buyer.address);
       const feeBefore   = await usdc.balanceOf(feeRecipient.address);
+      // Shipping is non-refundable (buyer agreed at checkout — Chase Hollow already paid carrier)
+      const buyerRefund = ESCROW - SHIPPING_FEE;
 
       await expect(escrow.connect(owner).resolveDispute(orderId, true))
         .to.emit(escrow, "DisputeResolved").withArgs(orderId, true)
-        .and.to.emit(escrow, "BuyerRefunded").withArgs(orderId, buyer.address, ESCROW);
+        .and.to.emit(escrow, "BuyerRefunded").withArgs(orderId, buyer.address, buyerRefund);
 
-      // Buyer gets full escrow back
-      expect(await usdc.balanceOf(buyer.address)).to.equal(buyerBefore + ESCROW);
-      // Bond goes to feeRecipient
+      // Buyer gets escrow minus shipping fee
+      expect(await usdc.balanceOf(buyer.address)).to.equal(buyerBefore + buyerRefund);
+      // feeRecipient gets: shippingFee (recover carrier cost) + seller bond (forfeited)
       expect(await usdc.balanceOf(feeRecipient.address)).to.equal(
-        feeBefore + SELLER_BOND
+        feeBefore + SHIPPING_FEE + SELLER_BOND
       );
       const order = await escrow.getOrder(orderId);
       expect(order.status).to.equal(5n); // RefundedToBuyer
@@ -553,10 +592,21 @@ describe("ChaseHollowEscrow", function () {
       expect(order.status).to.equal(3n); // Released
     });
 
-    it("non-owner cannot resolve dispute", async function () {
+    it("dispute resolver can resolve (hot wallet — no Safe ceremony required)", async function () {
+      await expect(escrow.connect(disputeResolver).resolveDispute(orderId, false))
+        .to.emit(escrow, "DisputeResolved").withArgs(orderId, false);
+    });
+
+    it("operator cannot resolve dispute (wrong role)", async function () {
       await expect(
         escrow.connect(operator).resolveDispute(orderId, true)
-      ).to.be.reverted;
+      ).to.be.revertedWith("Not dispute resolver or owner");
+    });
+
+    it("stranger cannot resolve dispute", async function () {
+      await expect(
+        escrow.connect(stranger).resolveDispute(orderId, true)
+      ).to.be.revertedWith("Not dispute resolver or owner");
     });
 
     it("reverts if order is not Disputed", async function () {
@@ -602,13 +652,21 @@ describe("ChaseHollowEscrow", function () {
         .to.emit(escrow, "BuyerRefunded");
     });
 
-    it("non-owner cannot refund", async function () {
+    it("operator can refund (auth fail is automated via webhook)", async function () {
       const orderId = makeId("authfail3");
       await fundOrder(escrow, buyer, seller, null, orderId);
       await escrow.connect(seller).confirmOrder(orderId);
+      await expect(escrow.connect(operator).refundBuyer(orderId))
+        .to.emit(escrow, "BuyerRefunded");
+    });
+
+    it("stranger cannot refund", async function () {
+      const orderId = makeId("authfail3b");
+      await fundOrder(escrow, buyer, seller, null, orderId);
+      await escrow.connect(seller).confirmOrder(orderId);
       await expect(
-        escrow.connect(operator).refundBuyer(orderId)
-      ).to.be.reverted;
+        escrow.connect(stranger).refundBuyer(orderId)
+      ).to.be.revertedWith("Not operator or owner");
     });
 
     it("reverts if order is not Active or Delivered", async function () {
@@ -752,10 +810,17 @@ describe("ChaseHollowEscrow", function () {
         expect(await usdc.balanceOf(buyer.address)).to.equal(buyerBefore + ESCROW * 2n);
       });
 
-      it("operator cannot batch refund", async function () {
+      it("operator can batch refund (auth fail is automated)", async function () {
         const id1 = await setupActiveOrder("batch_rb_op");
+        await expect(escrow.connect(operator).batchRefundBuyers([id1]))
+          .to.not.be.reverted;
+        expect((await escrow.getOrder(id1)).status).to.equal(5n); // RefundedToBuyer
+      });
+
+      it("stranger cannot batch refund", async function () {
+        const id1 = await setupActiveOrder("batch_rb_stranger");
         await expect(
-          escrow.connect(operator).batchRefundBuyers([id1])
+          escrow.connect(stranger).batchRefundBuyers([id1])
         ).to.be.reverted;
       });
     });
