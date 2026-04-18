@@ -716,12 +716,16 @@ export default function AuthenticatorPortal() {
                         <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                           <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(76,175,124,0.12)', border: '2px solid rgba(76,175,124,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 12px' }}>✓</div>
                           <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--accent-green)' }}>Authentication Passed</div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Print label and ship to buyer.</div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{card.auth_tier === 'remote' ? 'Card ships directly to buyer — no Label B needed.' : 'Print label and ship to buyer.'}</div>
                         </div>
-                        <button onClick={handlePrintLabelB} disabled={submitting} style={{ width: '100%', background: submitting ? 'var(--bg-4)' : 'var(--teal)', border: 'none', color: submitting ? 'var(--text-muted)' : theme === 'dark' ? '#0A0A0B' : '#fff', padding: '14px', fontSize: '14px', fontWeight: 700, borderRadius: '10px', cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '8px' }}>
-                          {submitting ? 'Generating Label…' : '🖨 Generate Label B — Ship to Buyer'}
-                        </button>
-                        {submitError && <div style={{ fontSize: '11px', color: 'var(--accent-red)', marginBottom: '8px' }}>{submitError}</div>}
+                        {card.auth_tier !== 'remote' && (
+                          <>
+                            <button onClick={handlePrintLabelB} disabled={submitting} style={{ width: '100%', background: submitting ? 'var(--bg-4)' : 'var(--teal)', border: 'none', color: submitting ? 'var(--text-muted)' : theme === 'dark' ? '#0A0A0B' : '#fff', padding: '14px', fontSize: '14px', fontWeight: 700, borderRadius: '10px', cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '8px' }}>
+                              {submitting ? 'Generating Label…' : '🖨 Generate Label B — Ship to Buyer'}
+                            </button>
+                            {submitError && <div style={{ fontSize: '11px', color: 'var(--accent-red)', marginBottom: '8px' }}>{submitError}</div>}
+                          </>
+                        )}
                         <button onClick={() => { setActiveSection('queue'); setActiveCard(null); setDecision(null); setChecklist({}); setUploadedPhotos({}); setSubmitError(null); setLabelUrl(null); setReceivedPhotoIdx(null); fetchQueue() }} style={btn({ width: '100%', padding: '10px', borderRadius: '10px', textAlign: 'center' })}>← Next Card in Queue</button>
                       </div>
                     )}

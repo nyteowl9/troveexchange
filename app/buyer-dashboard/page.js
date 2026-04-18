@@ -342,7 +342,22 @@ export default function BuyerDashboard() {
       }
     }
 
-    const progress = isPhysical ? getPhysicalProgress(order.status) : sm
+    // Tier 1 (remote): Funded → Shipped → Transit → Auth → Done
+    const getRemoteProgress = (status) => {
+      switch (status) {
+        case 'awaiting_shipment': return { steps: [true,  false, false, false, false], activeStep: 0 }
+        case 'in_transit':        return { steps: [true,  true,  true,  false, false], activeStep: 2 }
+        case 'auth_review':       return { steps: [true,  true,  true,  true,  false], activeStep: 3 }
+        case 'auth_passed':       return { steps: [true,  true,  true,  true,  false], activeStep: 3 }
+        case 'delivered':
+        case 'inspection_window':
+        case 'disputed':          return { steps: [true,  true,  true,  true,  true],  activeStep: 4 }
+        case 'released':          return { steps: [true,  true,  true,  true,  true],  activeStep: 4 }
+        default:                  return sm
+      }
+    }
+
+    const progress = isPhysical ? getPhysicalProgress(order.status) : getRemoteProgress(order.status)
     const { steps, activeStep } = progress
 
     return (
