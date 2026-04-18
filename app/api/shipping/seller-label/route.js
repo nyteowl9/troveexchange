@@ -78,6 +78,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Destination address is incomplete.' }, { status: 400 })
     }
 
+    // Declared value = listing/sale price — used for carrier insurance.
+    const declaredValue = parseFloat(order.declared_value || 0)
+
     // Create shipment
     const shipment = await shippo.shipments.create({
       addressFrom: sellerAddr,
@@ -87,6 +90,13 @@ export async function POST(request) {
         distanceUnit: 'in',
         weight: '0.5', massUnit: 'lb',
       }],
+      extra: declaredValue > 0 ? {
+        insurance: {
+          amount:   declaredValue.toFixed(2),
+          currency: 'USD',
+          content:  'Trading Card',
+        },
+      } : undefined,
       async: false,
     })
 

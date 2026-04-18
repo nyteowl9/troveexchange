@@ -80,11 +80,21 @@ export async function POST(request) {
       distanceUnit: 'in', weight: '0.5', massUnit: 'lb',
     }
 
+    // Declared value = listing price — included in estimate so rate reflects insurance cost
+    const declaredValue = parseFloat(listing.price || 0)
+
     const cheapest = async (from, to) => {
       const shipment = await shippo.shipments.create({
         addressFrom: from,
         addressTo: to,
         parcels: [parcel],
+        extra: declaredValue > 0 ? {
+          insurance: {
+            amount:   declaredValue.toFixed(2),
+            currency: 'USD',
+            content:  'Trading Card',
+          },
+        } : undefined,
         async: false,
       })
       const best = shipment.rates.sort((a, b) => parseFloat(a.amount) - parseFloat(b.amount))[0]

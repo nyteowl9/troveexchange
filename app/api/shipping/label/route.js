@@ -125,6 +125,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid label type. Must be A, B, C, or D' }, { status: 400 })
     }
 
+    // Declared value = listing/sale price — used for carrier insurance on every label.
+    const declaredValue = parseFloat(order.declared_value || 0)
+
     // Create shipment — validate:false bypasses USPS CASS address disambiguation,
     // which rejects valid addresses it can't uniquely resolve (e.g. "multiple found").
     // Carriers accept the address as-is on label purchase.
@@ -139,6 +142,13 @@ export async function POST(request) {
         weight: '0.5',
         massUnit: 'lb',
       }],
+      extra: declaredValue > 0 ? {
+        insurance: {
+          amount:   declaredValue.toFixed(2),
+          currency: 'USD',
+          content:  'Trading Card',
+        },
+      } : undefined,
       async: false,
     })
 
