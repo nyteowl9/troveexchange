@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import ChatModal from '@/app/components/ChatModal'
 import ConnectWalletButton, { useWalletConnection } from '@/app/components/ConnectWallet'
-import { usePrivy, useWallets } from '@privy-io/react-auth'
+import { useWallets } from '@privy-io/react-auth'
 import { ethers } from 'ethers'
 import { ESCROW_ADDRESS, USDC_ADDRESS, USDC_ABI, ESCROW_ABI } from '@/lib/escrow'
 
@@ -88,6 +88,19 @@ function SellerDashboard() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [formData, setFormData]       = useState({ game: 'Pokémon TCG', language: 'English', card_name: '', set: '', card_number: '', grade: '', cert_number: '', grader_other: '', condition: 'Near Mint (NM)', description: '', quantity: '', seal_condition: 'Factory Sealed — Unopened' })
   const fileInputRef = useRef(null)
+
+  // Edit listing state
+  const [editingListingId, setEditingListingId]   = useState(null)
+  const [editListingType, setEditListingType]     = useState('graded')
+  const [editGrader, setEditGrader]               = useState('PSA')
+  const [editPrice, setEditPrice]                 = useState('')
+  const [editPhotos, setEditPhotos]               = useState([]) // [{ type:'existing', url } | { type:'new', file, preview }]
+  const [editFormData, setEditFormData]           = useState({})
+  const [editSubmitting, setEditSubmitting]       = useState(false)
+  const [editSubmitError, setEditSubmitError]     = useState('')
+  const [editPhotoError, setEditPhotoError]       = useState('')
+  const [editDragOver, setEditDragOver]           = useState(false)
+  const [editSaved, setEditSaved]                 = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
@@ -303,6 +316,103 @@ function SellerDashboard() {
   async function handleDeleteListing(id) {
     await supabase.from('listings').update({ status: 'expired' }).eq('id', id).eq('seller_id', user.id)
     setMyListings(prev => prev.filter(l => l.id !== id))
+  }
+
+  function handleEditListing(listing) {
+    setEditingListingId(listing.id)
+    setEditListingType(listing.listing_type || 'graded')
+    setEditGrader(listing.grader || 'PSA')
+    setEditPrice(String(listing.price || ''))
+    setEditPhotos((listing.photos || []).map(url => ({ type: 'existing', url })))
+    setEditFormData({
+      game:           listing.game || 'Pokémon TCG',
+      language:       listing.language || 'English',
+      card_name:      listing.card_name || '',
+      set:            listing.set || '',
+      card_number:    listing.card_number || '',
+      grade:          listing.grade || '',
+      cert_number:    listing.cert_number || '',
+      grader_other:   '',
+      condition:      listing.condition || 'Near Mint (NM)',
+      description:    listing.description || '',
+      quantity:       listing.quantity || '',
+      seal_condition: listing.seal_condition || 'Factory Sealed — Unopened',
+    })
+    setEditSubmitError('')
+    setEditSaved(false)
+    setActiveSection('edit-listing')
+  }
+
+  function addEditPhotoFiles(files) {
+    const imageFiles = files.filter(f => f.type.startsWith('image/'))
+    if (!imageFiles.length) return
+    if (editPhotos.length + imageFiles.length > 15) {
+      setEditPhotoError('Maximum 15 photos allowed')
+      return
+    }
+    setEditPhotoError('')
+    setEditPhotos(prev => [...prev, ...imageFiles.map(file => ({ type: 'new', file, preview: URL.createObjectURL(file) }))])
+  }
+
+  async function handleUpdateListing() {
+    setEditSubmitError('')
+    setEditSaved(false)
+    if (!editFormData.card_name?.trim()) { setEditSubmitError('Listing title is required'); return }
+    if (!editFormData.description?.trim()) { setEditSubmitError('Description is required'); return }
+    if (editListingType === 'graded' && !editFormData.grade?.trim()) { setEditSubmitError('Grade is required for graded listings'); return }
+    if (!editPrice || parseFloat(editPrice) < 1) { setEditSubmitError('Price must be at least $1'); return }
+    if (parseFloat(editPrice) > 50000) { setEditSubmitError('Maximum listing price is $50,000'); return }
+    if (editPhotos.length < 2) { setEditSubmitError('At least 2 photos are required'); return }
+
+    setEditSubmitting(true)
+    try {
+      // Upload any new photos
+      const newUploaded = []
+      for (const p of editPhotos.filter(p => p.type === 'new')) {
+        const ext = p.file.name.split('.').pop()
+        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error: upErr } = await supabase.storage.from('listing-photos').upload(path, p.file, { upsert: false, contentType: p.file.type })
+        if (upErr) { setEditSubmitError(`Photo upload failed: ${upErr.message}`); setEditSubmitting(false); return }
+        const { data: { publicUrl } } = supabase.storage.from('listing-photos').getPublicUrl(path)
+        newUploaded.push(publicUrl)
+      }
+
+      const allPhotos = [
+        ...editPhotos.filter(p => p.type === 'existing').map(p => p.url),
+        ...newUploaded,
+      ]
+      const isGraded = editListingType === 'graded'
+      const priceNum = parseFloat(editPrice)
+
+      const { error } = await supabase.from('listings').update({
+        listing_type: editListingType,
+        game:         editFormData.game,
+        card_name:    editFormData.card_name.trim(),
+        set:          editFormData.set?.trim() || null,
+        card_number:  editFormData.card_number?.trim() || null,
+        grade:        isGraded ? editFormData.grade?.trim() || null : null,
+        grader:       isGraded ? (editGrader === 'Other' ? editFormData.grader_other?.trim() : editGrader) : null,
+        cert_number:  isGraded && editGrader !== 'Other' ? editFormData.cert_number?.trim() || null : null,
+        condition:    editListingType === 'raw' ? editFormData.condition : null,
+        description:  editFormData.description?.trim() || null,
+        price:        priceNum,
+        auth_tier:    priceNum <= 300 ? 'remote' : 'physical',
+        photos:       allPhotos,
+      }).eq('id', editingListingId).eq('seller_id', user.id)
+
+      if (error) {
+        setEditSubmitError(`Update failed: ${error.message}`)
+      } else {
+        editPhotos.filter(p => p.type === 'new').forEach(p => URL.revokeObjectURL(p.preview))
+        setEditSaved(true)
+        await fetchData()
+        setTimeout(() => setActiveSection('listings'), 1000)
+      }
+    } catch (err) {
+      setEditSubmitError(`Unexpected error: ${err.message}`)
+    } finally {
+      setEditSubmitting(false)
+    }
   }
 
   const navItems = [
@@ -685,17 +795,20 @@ function SellerDashboard() {
                           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '3px' }}>{listing.game}</div>
                           <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', lineHeight: 1.2, marginBottom: '6px', color: 'var(--text-primary)' }}>{listing.card_name}</div>
                           <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', marginBottom: '10px' }}>{fmtUSD(listing.price)}</div>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <Link href={`/listing/${listing.id}`} style={{ textDecoration: 'none', flex: 1 }}>
-                              <button style={btn({ fontSize: '10px', padding: '5px 10px', width: '100%', textAlign: 'center' })}>View</button>
-                            </Link>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                              <Link href={`/listing/${listing.id}`} style={{ textDecoration: 'none', flex: 1 }}>
+                                <button style={btn({ fontSize: '10px', padding: '5px 8px', width: '100%', textAlign: 'center' })}>View</button>
+                              </Link>
+                              <button onClick={() => handleEditListing(listing)} style={btn({ fontSize: '10px', padding: '5px 8px', flex: 1, border: '1px solid var(--teal-border)', color: 'var(--teal)' })}>Edit</button>
+                            </div>
                             {confirmDeleteId === listing.id ? (
                               <div style={{ display: 'flex', gap: '4px' }}>
                                 <button onClick={() => { handleDeleteListing(listing.id); setConfirmDeleteId(null) }} style={btn({ fontSize: '9px', padding: '5px 8px', background: 'rgba(200,75,60,0.15)', border: '1px solid rgba(200,75,60,0.5)', color: 'var(--accent-red)', fontWeight: 700 })}>Confirm</button>
                                 <button onClick={() => setConfirmDeleteId(null)} style={btn({ fontSize: '9px', padding: '5px 8px' })}>Cancel</button>
                               </div>
                             ) : (
-                              <button onClick={() => setConfirmDeleteId(listing.id)} style={btn({ fontSize: '10px', padding: '5px 10px', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)' })}>Remove</button>
+                              <button onClick={() => setConfirmDeleteId(listing.id)} style={btn({ fontSize: '10px', padding: '5px 10px', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)', width: '100%' })}>Remove</button>
                             )}
                           </div>
                         </div>
@@ -977,6 +1090,172 @@ function SellerDashboard() {
 
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button onClick={handleSubmitListing} disabled={submitting || parseFloat(price) > 50000} style={{ flex: 1, background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '14px', fontSize: '14px', fontWeight: 700, borderRadius: '10px', cursor: (submitting || parseFloat(price) > 50000) ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: (submitting || parseFloat(price) > 50000) ? 0.4 : 1 }}>{submitting ? 'Publishing…' : 'Publish Listing — Go Live'}</button>
+              </div>
+            </div>
+          )}
+
+          {/* EDIT LISTING */}
+          {activeSection === 'edit-listing' && (
+            <div style={{ maxWidth: '720px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '6px' }}>
+                <button onClick={() => setActiveSection('listings')} style={{ background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', padding: 0 }}>← My Listings</button>
+              </div>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Edit <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listing</em></div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '24px', fontFamily: 'DM Mono, monospace' }}>Changes go live immediately — active buyers will see the updated listing</div>
+
+              {/* Listing type */}
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Listing Type</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {['graded', 'raw', 'pack', 'box', 'case', 'lot'].map(type => (
+                    <button key={type} onClick={() => setEditListingType(type)} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '6px 14px', borderRadius: '20px', border: `1.5px solid ${editListingType === type ? 'var(--teal-border)' : 'var(--border)'}`, background: editListingType === type ? 'var(--teal-bg)' : 'transparent', color: editListingType === type ? 'var(--teal)' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize' }}>{type}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Card details */}
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Card Details</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <Label text="GAME" />
+                      <select value={editFormData.game || 'Pokémon TCG'} onChange={e => setEditFormData(p => ({ ...p, game: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                        <option>Pokémon TCG</option><option>Magic: The Gathering</option><option>One Piece TCG</option><option>Yu-Gi-Oh!</option><option>Sports Cards</option><option>Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label text="LANGUAGE" />
+                      <select value={editFormData.language || 'English'} onChange={e => setEditFormData(p => ({ ...p, language: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                        <option>English</option><option>Japanese</option><option>Korean</option><option>Chinese</option><option>Other</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <Label text="LISTING TITLE *" />
+                    <input type="text" value={editFormData.card_name || ''} onChange={e => setEditFormData(p => ({ ...p, card_name: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <Label text="SET / EDITION" />
+                      <input type="text" value={editFormData.set || ''} onChange={e => setEditFormData(p => ({ ...p, set: e.target.value }))} style={inputStyle} />
+                    </div>
+                    <div>
+                      <Label text="CARD NUMBER" />
+                      <input type="text" value={editFormData.card_number || ''} onChange={e => setEditFormData(p => ({ ...p, card_number: e.target.value }))} style={inputStyle} />
+                    </div>
+                  </div>
+
+                  {editListingType === 'graded' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div>
+                          <Label text="GRADING COMPANY" />
+                          <select value={editGrader} onChange={e => setEditGrader(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                            <option>PSA</option><option>BGS / Beckett</option><option>CGC</option><option>SGC</option><option>Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <Label text="GRADE" />
+                          <input type="text" value={editFormData.grade || ''} onChange={e => setEditFormData(p => ({ ...p, grade: e.target.value }))} style={inputStyle} />
+                        </div>
+                      </div>
+                      {editGrader !== 'Other' ? (
+                        <div>
+                          <Label text={`CERT NUMBER (${editGrader})`} />
+                          <input type="text" value={editFormData.cert_number || ''} onChange={e => setEditFormData(p => ({ ...p, cert_number: e.target.value }))} style={inputStyle} />
+                        </div>
+                      ) : (
+                        <div>
+                          <Label text="GRADER NAME" />
+                          <input type="text" value={editFormData.grader_other || ''} onChange={e => setEditFormData(p => ({ ...p, grader_other: e.target.value }))} style={inputStyle} />
+                        </div>
+                      )}
+                      <div>
+                        <Label text="LISTING DESCRIPTION *" />
+                        <textarea value={editFormData.description || ''} onChange={e => setEditFormData(p => ({ ...p, description: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {editListingType === 'raw' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div>
+                        <Label text="CONDITION *" />
+                        <select value={editFormData.condition || 'Near Mint (NM)'} onChange={e => setEditFormData(p => ({ ...p, condition: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                          <option>Near Mint (NM)</option><option>Lightly Played (LP)</option><option>Moderately Played (MP)</option><option>Heavily Played (HP)</option><option>Damaged (DMG)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label text="ITEM DESCRIPTION & CONDITION NOTES *" />
+                        <textarea value={editFormData.description || ''} onChange={e => setEditFormData(p => ({ ...p, description: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {(editListingType === 'pack' || editListingType === 'box' || editListingType === 'case' || editListingType === 'lot') && (
+                    <div>
+                      <Label text="DESCRIPTION *" />
+                      <textarea value={editFormData.description || ''} onChange={e => setEditFormData(p => ({ ...p, description: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Photos */}
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Photos ({editPhotos.length}/15 · Min 2)</div>
+                <input id="edit-photo-input" type="file" accept="image/*" multiple onChange={e => { addEditPhotoFiles(Array.from(e.target.files)); e.target.value = '' }} style={{ display: 'none' }} />
+                <label htmlFor="edit-photo-input"
+                  onDragOver={e => { e.preventDefault(); setEditDragOver(true) }}
+                  onDragLeave={() => setEditDragOver(false)}
+                  onDrop={e => { e.preventDefault(); setEditDragOver(false); addEditPhotoFiles(Array.from(e.dataTransfer.files)) }}
+                  style={{ display: 'block', border: `2px dashed ${editDragOver ? 'var(--teal)' : 'var(--border)'}`, borderRadius: '10px', padding: '24px', textAlign: 'center', cursor: 'pointer', background: editDragOver ? 'var(--teal-bg)' : 'var(--bg-3)', marginBottom: editPhotos.length ? '12px' : '0' }}
+                >
+                  <div style={{ fontSize: '13px', color: editDragOver ? 'var(--teal)' : 'var(--text-secondary)' }}>Click or drag to add more photos</div>
+                </label>
+                {editPhotoError && <div style={{ fontSize: '12px', color: 'var(--accent-red)', marginTop: '8px' }}>{editPhotoError}</div>}
+                {editPhotos.length > 0 && (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
+                    {editPhotos.map((photo, i) => (
+                      <div key={photo.type === 'existing' ? photo.url : photo.preview} style={{ position: 'relative', width: '60px', height: '84px', borderRadius: '4px', overflow: 'hidden', border: `1.5px solid ${i === 0 ? 'var(--gold)' : 'var(--border)'}`, cursor: i > 0 ? 'pointer' : 'default' }}
+                        onClick={() => { if (i > 0) setEditPhotos(p => [p[i], ...p.filter((_, j) => j !== i)]) }}
+                        title={i === 0 ? 'Primary photo' : 'Click to set as primary'}
+                      >
+                        <img src={photo.type === 'existing' ? photo.url : photo.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {i === 0 && <div style={{ position: 'absolute', bottom: '2px', left: '2px', background: 'var(--gold)', borderRadius: '3px', padding: '1px 4px', fontFamily: 'DM Mono, monospace', fontSize: '8px', color: '#0A0A0B', fontWeight: 700 }}>★</div>}
+                        <button onClick={e => { e.stopPropagation(); if (photo.type === 'new') URL.revokeObjectURL(photo.preview); setEditPhotos(p => p.filter((_, j) => j !== i)) }} style={{ position: 'absolute', top: '2px', right: '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Price */}
+              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Price</div>
+                <Label text="LISTING PRICE (USDC) *" />
+                <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} style={{ ...inputStyle, fontSize: '18px', fontFamily: 'Cormorant Garamond, serif', marginBottom: '4px' }} />
+                {editPrice && parseFloat(editPrice) > 0 && parseFloat(editPrice) <= 50000 && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '6px' }}>
+                    Auth tier: {parseFloat(editPrice) <= 300 ? 'Remote Photo ($10 fee)' : 'Physical Auth ($25 fee)'}
+                    {parseFloat(editPrice) <= 300 !== (editPrice && parseFloat(editPrice) <= 300) && ' — tier changes on save'}
+                  </div>
+                )}
+              </div>
+
+              {editSubmitError && (
+                <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: 'var(--accent-red)' }}>{editSubmitError}</div>
+              )}
+              {editSaved && (
+                <div style={{ background: 'rgba(76,175,124,0.08)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: 'var(--accent-green)' }}>Listing updated ✓ — returning to listings…</div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={handleUpdateListing} disabled={editSubmitting || editSaved} style={{ flex: 1, background: (editSubmitting || editSaved) ? 'var(--bg-4)' : 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '14px', fontSize: '14px', fontWeight: 700, borderRadius: '10px', cursor: (editSubmitting || editSaved) ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: (editSubmitting || editSaved) ? 0.5 : 1 }}>
+                  {editSubmitting ? 'Saving…' : editSaved ? 'Saved ✓' : 'Save Changes'}
+                </button>
+                <button onClick={() => setActiveSection('listings')} style={btn({ padding: '14px 24px', borderRadius: '10px' })}>Cancel</button>
               </div>
             </div>
           )}
