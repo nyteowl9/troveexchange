@@ -547,9 +547,9 @@ function SellerDashboard() {
       for (const { file } of authPhotoFiles) {
         const ext = file.name.split('.').pop()
         const path = `${user.id}/${orderId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-        const { error } = await supabase.storage.from('auth-photos').upload(path, file, { upsert: false, contentType: file.type })
+        const { error } = await supabase.storage.from('listing-photos').upload(path, file, { upsert: false, contentType: file.type })
         if (error) throw new Error(`Upload failed: ${error.message}`)
-        const { data: { publicUrl } } = supabase.storage.from('auth-photos').getPublicUrl(path)
+        const { data: { publicUrl } } = supabase.storage.from('listing-photos').getPublicUrl(path)
         urls.push(publicUrl)
       }
       // Store in auth_inspections so authenticator can review
@@ -698,8 +698,16 @@ function SellerDashboard() {
             }} />
 
             {authPhotoFiles.length < 3 && (
-              <label htmlFor="auth-photo-input" style={{ display: 'block', border: '2px dashed var(--border)', borderRadius: '10px', padding: '24px', textAlign: 'center', cursor: 'pointer', marginBottom: '16px', color: 'var(--text-muted)', fontFamily: 'DM Sans, sans-serif', fontSize: '13px' }}>
-                + Add photos ({authPhotoFiles.length}/3)
+              <label htmlFor="auth-photo-input"
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => {
+                  e.preventDefault()
+                  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+                  const combined = [...authPhotoFiles, ...files.map(f => ({ file: f, preview: URL.createObjectURL(f) }))].slice(0, 3)
+                  setAuthPhotoFiles(combined)
+                }}
+                style={{ display: 'block', border: '2px dashed var(--border)', borderRadius: '10px', padding: '24px', textAlign: 'center', cursor: 'pointer', marginBottom: '16px', color: 'var(--text-muted)', fontFamily: 'DM Sans, sans-serif', fontSize: '13px' }}>
+                + Add photos ({authPhotoFiles.length}/3) · or drag &amp; drop
               </label>
             )}
 
