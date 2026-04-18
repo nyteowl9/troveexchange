@@ -558,7 +558,7 @@ function SellerDashboard() {
         authenticator_id: user.id,
         type:             'remote',
         photos:           urls,
-        decision:         null,
+        decision:         'pending',
         notes:            'Seller-submitted auth photos',
       })
       if (inspErr) throw new Error(inspErr.message)
