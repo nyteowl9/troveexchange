@@ -61,7 +61,7 @@ function Checkout() {
   useEffect(() => {
     if (!listingId) { setListingLoading(false); return }
     Promise.all([
-      supabase.from('listings').select(`*, seller:seller_id (id, username, full_name, tier, rep_score, wallet_address)`).eq('id', listingId).eq('status', 'active').single(),
+      supabase.from('listings').select(`*, seller:seller_id (id, username, full_name, seller_tier, rep_score, wallet_address)`).eq('id', listingId).eq('status', 'active').single(),
       supabase.auth.getUser(),
     ]).then(([{ data }, { data: { user } }]) => {
       if (data && user && data.seller_id === user.id) {

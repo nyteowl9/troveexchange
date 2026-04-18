@@ -48,7 +48,7 @@ export default function ListingPage() {
       .select(`
         id, card_name, game, set, card_number, grade, grader, cert_number,
         condition, description, listing_type, price, auth_tier, photos, created_at, expires_at, status,
-        seller:seller_id (id, username, full_name, tier, strike_count, wallet_address)
+        seller:seller_id (id, username, full_name, seller_tier, strike_count, wallet_address)
       `)
       .eq('id', id)
       .single()

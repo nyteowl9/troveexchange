@@ -57,7 +57,7 @@ export default function Marketplace() {
       .select(`
         id, card_name, game, set, grade, grader, listing_type, condition,
         price, auth_tier, photos, created_at, expires_at,
-        seller:seller_id (id, username, tier)
+        seller:seller_id (id, username, seller_tier)
       `, { count: 'exact' })
       .eq('status', 'active')
 
