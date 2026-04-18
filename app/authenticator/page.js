@@ -97,7 +97,7 @@ export default function AuthenticatorPortal() {
         .select('order_id, photos')
         .in('order_id', remoteIds)
         .eq('type', 'remote')
-        .is('decision', null)
+        .eq('decision', 'pending')
       ;(inspData || []).forEach(i => { sellerPhotoMap[i.order_id] = i.photos || [] })
     }
 
