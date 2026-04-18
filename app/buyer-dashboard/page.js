@@ -111,14 +111,14 @@ export default function BuyerDashboard() {
   }, [urgentOrder])
 
   const fetchData = useCallback(async () => {
-    if (!user) return
+    if (!user) { setDataLoading(false); return }
     try {
       const [activeRes, histRes, dispRes] = await Promise.all([
         supabase
           .from('orders')
           .select(`id, status, escrow_amount, auth_tier, tracking_a, tracking_b, shipped_at, delivered_at, auto_release_at, created_at, onchain_order_id,
                    listing:listing_id (id, card_name, game, set, grade, grader, photos, price),
-                   seller:seller_id (id, username, tier)`)
+                   seller:seller_id (id, username, seller_tier)`)
           .eq('buyer_id', user.id)
           .in('status', ACTIVE_STATUSES)
           .order('created_at', { ascending: false }),
@@ -142,8 +142,9 @@ export default function BuyerDashboard() {
       setDisputes(dispRes.data || [])
     } catch (err) {
       console.error('[fetchData]', err)
+    } finally {
+      setDataLoading(false)
     }
-    setDataLoading(false)
   }, [user])
 
   useEffect(() => { fetchData() }, [fetchData])

@@ -111,7 +111,7 @@ function SellerDashboard() {
   }, [authLoading, user, router])
 
   const fetchData = useCallback(async () => {
-    if (!user) return
+    if (!user) { setDataLoading(false); return }
     try {
       const [ordersRes, listingsRes, salesRes] = await Promise.all([
         supabase
