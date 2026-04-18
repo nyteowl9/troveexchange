@@ -201,7 +201,10 @@ function Checkout() {
   const labelACostVal = labelACost ?? (cardPrice > 300 ? 12 : 0)
   const shippingFeeVal = shippingFee ?? 8
   const sellerPayout  = parseFloat((cardPrice - platformFee - creatorFee - labelACostVal).toFixed(2))
-  const escrowTotal   = parseFloat((sellerPayout + platformFee + creatorFee + authFee + shippingFeeVal + salesTax).toFixed(2))
+  // Tier 2 (physical): both Label A and Label B are funded through escrow so the Safe can pay for both.
+  // Label A is already deducted from sellerPayout; adding it to shippingFee here ensures it reaches the Safe.
+  const shippingFeeForDisplay = authTier === 'physical' ? labelACostVal + shippingFeeVal : shippingFeeVal
+  const escrowTotal   = parseFloat((sellerPayout + platformFee + creatorFee + authFee + shippingFeeForDisplay + salesTax).toFixed(2))
   const total         = escrowTotal.toFixed(2)
 
   // Display total — clean until shipping is known
@@ -272,8 +275,11 @@ function Checkout() {
       const authFeeU      = u(authFee)
       const shippingFeeU  = u(shippingFeeVal)
       const salesTaxU     = u(salesTax)
+      // Tier 2: shippingFee sent to contract = Label A + Label B so the Safe receives both.
+      // Label A is already deducted from sellerPayout; this ensures it reaches the Safe on release.
+      const shippingFeeForContractU = authTier === 'physical' ? labelACostU + shippingFeeU : shippingFeeU
       const sellerPayoutU = cardPriceU - platformFeeU - creatorFeeU - labelACostU
-      const escrowAmountU = sellerPayoutU + platformFeeU + creatorFeeU + authFeeU + shippingFeeU + salesTaxU
+      const escrowAmountU = sellerPayoutU + platformFeeU + creatorFeeU + authFeeU + shippingFeeForContractU + salesTaxU
       const sellerBondUSD = calcSellerBond(cardPrice, sellerTier)
       const sellerBondU   = u(sellerBondUSD)
 
@@ -303,7 +309,7 @@ function Checkout() {
         platformFeeU,
         creatorFeeU,
         authFeeU,
-        shippingFeeU,
+        shippingFeeForContractU,
         salesTaxU,
         sellerPayoutU,
       )

@@ -6,6 +6,10 @@ import Link from 'next/link'
 import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import ChatModal from '@/app/components/ChatModal'
+import { useWalletConnection } from '@/app/components/ConnectWallet'
+import { useWallets } from '@privy-io/react-auth'
+import { ethers } from 'ethers'
+import { ESCROW_ADDRESS, ESCROW_ABI } from '@/lib/escrow'
 
 const ACTIVE_STATUSES = ['awaiting_shipment', 'in_transit', 'auth_review', 'auth_passed', 'delivered', 'inspection_window', 'disputed']
 
@@ -55,6 +59,8 @@ function shortId(id) {
 
 export default function BuyerDashboard() {
   const { user, profile, loading: authLoading } = useAuth()
+  const { wallets } = useWallets()
+  const { walletAddress } = useWalletConnection()
   const router = useRouter()
 
   const [theme, setTheme] = useState('dark')
@@ -66,6 +72,15 @@ export default function BuyerDashboard() {
   const [chatOrder, setChatOrder]         = useState(null) // { id, label }
   const [releasingId, setReleasingId]     = useState(null) // order ID currently being released
   const [releaseError, setReleaseError]   = useState(null)
+  const [releaseStatus, setReleaseStatus] = useState(null) // step message during on-chain release
+
+  // Dispute form state
+  const [disputeOrderId, setDisputeOrderId]           = useState('')
+  const [disputeReason, setDisputeReason]             = useState('Card does not match listing description')
+  const [disputeDescription, setDisputeDescription]   = useState('')
+  const [disputeSubmitting, setDisputeSubmitting]     = useState(false)
+  const [disputeError, setDisputeError]               = useState(null)
+  const [disputeSuccess, setDisputeSuccess]           = useState(false)
 
   // Countdown for the most urgent inspection_window order
   const [countdown, setCountdown] = useState({ h: 0, m: 0, s: 0 })
@@ -101,7 +116,7 @@ export default function BuyerDashboard() {
       const [activeRes, histRes, dispRes] = await Promise.all([
         supabase
           .from('orders')
-          .select(`id, status, escrow_amount, auth_tier, tracking_a, tracking_b, shipped_at, delivered_at, auto_release_at, created_at,
+          .select(`id, status, escrow_amount, auth_tier, tracking_a, tracking_b, shipped_at, delivered_at, auto_release_at, created_at, onchain_order_id,
                    listing:listing_id (id, card_name, game, set, grade, grader, photos, price),
                    seller:seller_id (id, username, tier)`)
           .eq('buyer_id', user.id)
@@ -148,22 +163,120 @@ export default function BuyerDashboard() {
     return () => supabase.removeChannel(channel)
   }, [user, fetchData])
 
-  const handleRelease = async (orderId) => {
-    setReleasingId(orderId)
+  const handleRelease = async (order) => {
+    setReleasingId(order.id)
     setReleaseError(null)
+    setReleaseStatus(null)
     try {
+      // On-chain release: contract requires msg.sender == order.buyer
+      if (order.onchain_order_id) {
+        const wallet = wallets.find(w => w.address?.toLowerCase() === walletAddress?.toLowerCase()) || wallets[0]
+        if (!wallet) throw new Error('No wallet connected. Please connect your wallet to release funds.')
+
+        const isTestnet = process.env.NEXT_PUBLIC_CHAIN_ID === '84532'
+        const targetChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453')
+        const chainHex = '0x' + targetChainId.toString(16)
+        const eip1193 = await wallet.getEthereumProvider()
+        const currentChain = await eip1193.request({ method: 'eth_chainId' })
+        if (currentChain !== chainHex) {
+          try {
+            await eip1193.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainHex }] })
+          } catch {
+            await eip1193.request({
+              method: 'wallet_addEthereumChain',
+              params: [{ chainId: chainHex, chainName: isTestnet ? 'Base Sepolia' : 'Base', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: [isTestnet ? 'https://sepolia.base.org' : 'https://mainnet.base.org'], blockExplorerUrls: [isTestnet ? 'https://sepolia.basescan.org' : 'https://basescan.org'] }],
+            })
+          }
+        }
+        setReleaseStatus('Confirm in wallet — releasing escrow to seller…')
+        const provider = new ethers.BrowserProvider(eip1193)
+        const signer = await provider.getSigner()
+        const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
+        const tx = await escrowContract.releaseEscrow(order.onchain_order_id)
+        setReleaseStatus('Submitted — waiting for block confirmation…')
+        await tx.wait()
+        setReleaseStatus(null)
+      }
+
+      // DB update + emails
       const res = await fetch('/api/orders/release', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId }),
+        body: JSON.stringify({ order_id: order.id }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Release failed')
       await fetchData()
     } catch (err) {
-      setReleaseError(err.message)
+      setReleaseError(err?.reason || err?.message || 'Release failed')
+      setReleaseStatus(null)
     } finally {
       setReleasingId(null)
+    }
+  }
+
+  const handleSubmitDispute = async () => {
+    if (!disputeOrderId) {
+      setDisputeError('Please select an order.')
+      return
+    }
+    const order = inspectionOrders.find(o => o.id === disputeOrderId)
+    if (!order) { setDisputeError('Order not found.'); return }
+
+    setDisputeSubmitting(true)
+    setDisputeError(null)
+    let onchainTxHash = null
+
+    try {
+      // On-chain: call openDispute() — contract requires msg.sender == order.buyer
+      if (order.onchain_order_id) {
+        const wallet = wallets.find(w => w.address?.toLowerCase() === walletAddress?.toLowerCase()) || wallets[0]
+        if (!wallet) throw new Error('No wallet connected. Please connect your wallet.')
+
+        const isTestnet = process.env.NEXT_PUBLIC_CHAIN_ID === '84532'
+        const targetChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453')
+        const chainHex = '0x' + targetChainId.toString(16)
+        const eip1193 = await wallet.getEthereumProvider()
+        const currentChain = await eip1193.request({ method: 'eth_chainId' })
+        if (currentChain !== chainHex) {
+          try {
+            await eip1193.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainHex }] })
+          } catch {
+            await eip1193.request({
+              method: 'wallet_addEthereumChain',
+              params: [{ chainId: chainHex, chainName: isTestnet ? 'Base Sepolia' : 'Base', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: [isTestnet ? 'https://sepolia.base.org' : 'https://mainnet.base.org'], blockExplorerUrls: [isTestnet ? 'https://sepolia.basescan.org' : 'https://basescan.org'] }],
+            })
+          }
+        }
+        const provider = new ethers.BrowserProvider(eip1193)
+        const signer = await provider.getSigner()
+        const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
+        const tx = await escrowContract.openDispute(order.onchain_order_id)
+        await tx.wait()
+        onchainTxHash = tx.hash
+      }
+
+      // API: create dispute record + update order status
+      const res = await fetch('/api/disputes/open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: order.id,
+          reason: disputeReason,
+          description: disputeDescription,
+          onchain_tx_hash: onchainTxHash,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to open dispute')
+
+      setDisputeSuccess(true)
+      setDisputeDescription('')
+      await fetchData()
+    } catch (err) {
+      setDisputeError(err?.reason || err?.message || 'Failed to open dispute')
+    } finally {
+      setDisputeSubmitting(false)
     }
   }
 
@@ -294,14 +407,15 @@ export default function BuyerDashboard() {
               return (
                 <>
                   <button
-                    onClick={() => handleRelease(order.id)}
+                    onClick={() => handleRelease(order)}
                     disabled={releasingId === order.id}
                     style={btn({ background: 'var(--accent-green)', border: 'none', color: '#fff', fontWeight: 600, opacity: releasingId === order.id ? 0.6 : 1, cursor: releasingId === order.id ? 'not-allowed' : 'pointer' })}
                   >
                     {releasingId === order.id ? 'Releasing…' : 'Release Early'}
                   </button>
-                  <button onClick={() => setActiveSection('disputes')} style={btn({ border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)' })}>Raise Dispute</button>
-                  {releaseError && <div style={{ width: '100%', fontSize: '11px', color: 'var(--accent-red)', marginTop: '4px' }}>{releaseError}</div>}
+                  <button onClick={() => { setDisputeOrderId(order.id); setActiveSection('disputes') }} style={btn({ border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)' })}>Raise Dispute</button>
+                  {releasingId === order.id && releaseStatus && <div style={{ width: '100%', fontSize: '11px', color: 'var(--accent-amber)', marginTop: '4px', fontFamily: 'DM Mono, monospace' }}>{releaseStatus}</div>}
+                  {releaseError && releasingId === null && <div style={{ width: '100%', fontSize: '11px', color: 'var(--accent-red)', marginTop: '4px' }}>{releaseError}</div>}
                 </>
               )
             })()}
@@ -724,13 +838,21 @@ export default function BuyerDashboard() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', fontWeight: 500 }}>Order</div>
-                      <select style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', width: '100%', cursor: 'pointer' }}>
+                      <select
+                        value={disputeOrderId || inspectionOrders[0]?.id || ''}
+                        onChange={e => setDisputeOrderId(e.target.value)}
+                        style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', width: '100%', cursor: 'pointer' }}
+                      >
                         {inspectionOrders.map(o => <option key={o.id} value={o.id}>{shortId(o.id)} — {o.listing?.card_name || '—'}</option>)}
                       </select>
                     </div>
                     <div>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', fontWeight: 500 }}>Reason for dispute</div>
-                      <select style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', width: '100%', cursor: 'pointer' }}>
+                      <select
+                        value={disputeReason}
+                        onChange={e => setDisputeReason(e.target.value)}
+                        style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', width: '100%', cursor: 'pointer' }}
+                      >
                         <option>Card does not match listing description</option>
                         <option>Slab is damaged or cracked</option>
                         <option>Wrong card received</option>
@@ -740,11 +862,28 @@ export default function BuyerDashboard() {
                     </div>
                     <div>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', fontWeight: 500 }}>Description</div>
-                      <textarea style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', width: '100%', resize: 'vertical', minHeight: '100px', lineHeight: 1.6, boxSizing: 'border-box' }} placeholder="Describe the issue in detail…" />
+                      <textarea
+                        value={disputeDescription}
+                        onChange={e => setDisputeDescription(e.target.value)}
+                        style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', width: '100%', resize: 'vertical', minHeight: '100px', lineHeight: 1.6, boxSizing: 'border-box' }}
+                        placeholder="Describe the issue in detail…"
+                      />
                     </div>
+                    {disputeError && (
+                      <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--accent-red)', lineHeight: 1.5 }}>{disputeError}</div>
+                    )}
+                    {disputeSuccess && (
+                      <div style={{ background: 'rgba(76,175,124,0.08)', border: '1px solid rgba(76,175,124,0.35)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--accent-green)', lineHeight: 1.5 }}>Dispute opened successfully. Chase Hollow will review within 72hrs.</div>
+                    )}
                     <div style={{ display: 'flex', gap: '10px' }}>
-                      <button style={{ background: 'var(--accent-red)', border: 'none', color: '#fff', padding: '13px 24px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flex: 1 }}>Submit Dispute — $25 Bond Required</button>
-                      <button onClick={() => setActiveSection('inspection')} style={btn({ padding: '13px 24px', borderRadius: '10px' })}>Cancel</button>
+                      <button
+                        onClick={handleSubmitDispute}
+                        disabled={disputeSubmitting || disputeSuccess}
+                        style={{ background: (disputeSubmitting || disputeSuccess) ? 'var(--bg-4)' : 'var(--accent-red)', border: 'none', color: '#fff', padding: '13px 24px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: (disputeSubmitting || disputeSuccess) ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', flex: 1, opacity: (disputeSubmitting || disputeSuccess) ? 0.6 : 1 }}
+                      >
+                        {disputeSubmitting ? 'Confirm in wallet…' : disputeSuccess ? 'Dispute Opened ✓' : 'Submit Dispute'}
+                      </button>
+                      <button onClick={() => { setActiveSection('inspection'); setDisputeError(null); setDisputeSuccess(false) }} style={btn({ padding: '13px 24px', borderRadius: '10px' })}>Cancel</button>
                     </div>
                   </div>
                 </div>
