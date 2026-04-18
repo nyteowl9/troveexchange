@@ -569,7 +569,7 @@ export default function BuyerDashboard() {
                           {pad(countdown.h)}:{pad(countdown.m)}:{pad(countdown.s)} remaining
                         </div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          <button onClick={() => setActiveSection('inspection')} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Release Funds Early</button>
+                          <button onClick={() => handleRelease(urgentOrder)} disabled={releasingId === urgentOrder?.id} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: releasingId === urgentOrder?.id ? 0.6 : 1 }}>{releasingId === urgentOrder?.id ? 'Releasing…' : 'Release Funds Early'}</button>
                           <button onClick={() => setActiveSection('disputes')} style={{ background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Something is Wrong — Dispute</button>
                         </div>
                       </>
@@ -691,7 +691,7 @@ export default function BuyerDashboard() {
                       </div>
 
                       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                        <button onClick={() => handleRelease(order.id)} disabled={releasingId === order.id} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '14px 28px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: releasingId === order.id ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: releasingId === order.id ? 0.6 : 1 }}>
+                        <button onClick={() => handleRelease(order)} disabled={releasingId === order.id} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '14px 28px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: releasingId === order.id ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: releasingId === order.id ? 0.6 : 1 }}>
                           {releasingId === order.id ? 'Releasing…' : '✓ Release Funds Early — Everything is Good'}
                         </button>
                         <button onClick={() => setActiveSection('disputes')} style={{ background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '14px 28px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>⚠ Something is Wrong — Raise Dispute</button>
