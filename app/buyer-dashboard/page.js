@@ -193,7 +193,7 @@ export default function BuyerDashboard() {
         const provider = new ethers.BrowserProvider(eip1193)
         const signer = await provider.getSigner()
         const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
-        const tx = await escrowContract.releaseEscrow(order.onchain_order_id)
+        const tx = await escrowContract.releaseEscrow(order.onchain_order_id, { gasLimit: 300000n })
         setReleaseStatus('Submitted — waiting for block confirmation…')
         await tx.wait()
         setReleaseStatus(null)

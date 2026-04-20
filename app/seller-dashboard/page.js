@@ -471,7 +471,7 @@ function SellerDashboard() {
 
       setBondStatus(prev => ({ ...prev, [order.id]: 'Step 1 of 2 — Approve USDC · confirm in wallet…' }))
       const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
-      const approveTx = await usdcContract.approve(ESCROW_ADDRESS, bondU)
+      const approveTx = await usdcContract.approve(ESCROW_ADDRESS, bondU, { gasLimit: 100000n })
       setBondStatus(prev => ({ ...prev, [order.id]: 'Approval submitted — waiting for confirmation…' }))
       await approveTx.wait()
 
@@ -486,7 +486,7 @@ function SellerDashboard() {
 
       setBondStatus(prev => ({ ...prev, [order.id]: 'Step 2 of 2 — Post bond · confirm in wallet…' }))
       const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
-      const confirmTx = await escrowContract.confirmOrder(order.onchain_order_id)
+      const confirmTx = await escrowContract.confirmOrder(order.onchain_order_id, { gasLimit: 200000n })
       setBondStatus(prev => ({ ...prev, [order.id]: 'Submitted — waiting for block confirmation…' }))
       await confirmTx.wait()
 
