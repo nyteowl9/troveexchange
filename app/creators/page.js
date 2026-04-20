@@ -10,6 +10,7 @@ export default function Creators() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [refCode, setRefCode] = useState('')
+  const [currentUser, setCurrentUser] = useState(null)
   const [form, setForm] = useState({
     name: '', handle: '', platform: '', audience: '',
     contentType: '', channelUrl: '', wallet: '', why: ''
@@ -19,6 +20,7 @@ export default function Creators() {
     const saved = localStorage.getItem('ch-theme') || 'dark'
     setTheme(saved)
     document.documentElement.setAttribute('data-theme', saved)
+    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUser(user ?? null))
   }, [])
 
   const toggleTheme = () => {
@@ -31,6 +33,10 @@ export default function Creators() {
   const updateForm = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
 
   const handleSubmit = async () => {
+    if (!currentUser) {
+      setSubmitError('You must be logged in to apply. Please sign in and try again.')
+      return
+    }
     if (!form.name || !form.handle || !form.platform || !form.audience || !form.contentType || !form.channelUrl || !form.wallet) {
       setSubmitError('Please fill in all required fields.')
       return
@@ -41,10 +47,8 @@ export default function Creators() {
     const raw = form.handle.replace(/^@/, '').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20)
     const code = raw || 'creator' + Date.now().toString(36)
 
-    const { data: { user } } = await supabase.auth.getUser()
-
     const { error } = await supabase.from('creators').insert({
-      user_id: user?.id || null,
+      user_id: currentUser.id,
       handle: form.handle,
       platform: form.platform,
       channel_url: form.channelUrl,
