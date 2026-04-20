@@ -50,7 +50,7 @@ export async function GET(request) {
         //   platformFee + authFee + shippingFee + salesTax → Safe (feeRecipient)
         //   creatorFee → creator wallet (or Safe if no creator)
         //   sellerBond → returned to seller
-        const tx = await escrowContract.releaseEscrow(order.onchain_order_id)
+        const tx = await escrowContract.releaseEscrow(order.onchain_order_id, { gasLimit: 300000n })
         const receipt = await tx.wait()
 
         // Store the release tx hash for the audit trail
