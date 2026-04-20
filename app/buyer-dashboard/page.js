@@ -69,9 +69,17 @@ export default function BuyerDashboard() {
   const [historyOrders, setHistoryOrders] = useState([])
   const [disputes, setDisputes]           = useState([])
   const [dataLoading, setDataLoading]     = useState(true)
-  const [chatOrder, setChatOrder]         = useState(null) // { id, label }
-  const [releasingId, setReleasingId]     = useState(null) // order ID currently being released
+  const [chatOrder, setChatOrder]         = useState(null)
+  const [releasingId, setReleasingId]     = useState(null)
   const [releaseError, setReleaseError]   = useState(null)
+
+  // Review modal state
+  const [reviewModal, setReviewModal]     = useState(null) // { orderId, cardName, sellerId }
+  const [reviewRating, setReviewRating]   = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [reviewSuccess, setReviewSuccess] = useState(false)
+  const [reviewError, setReviewError]     = useState(null)
   const [releaseStatus, setReleaseStatus] = useState(null) // step message during on-chain release
 
   // Dispute gate — 'gate' shows contact-seller step, 'form' shows the actual form
@@ -127,8 +135,9 @@ export default function BuyerDashboard() {
           .order('created_at', { ascending: false }),
         supabase
           .from('orders')
-          .select(`id, status, escrow_amount, released_at, created_at,
-                   listing:listing_id (id, card_name, game, set, grade, grader, photos)`)
+          .select(`id, status, escrow_amount, released_at, created_at, seller_id,
+                   listing:listing_id (id, card_name, game, set, grade, grader, photos),
+                   reviews (id, reviewer_role)`)
           .eq('buyer_id', user.id)
           .eq('status', 'released')
           .order('released_at', { ascending: false })
@@ -281,6 +290,33 @@ export default function BuyerDashboard() {
       setDisputeError(err?.reason || err?.message || 'Failed to open dispute')
     } finally {
       setDisputeSubmitting(false)
+    }
+  }
+
+  const submitReview = async () => {
+    if (!reviewModal || reviewSubmitting) return
+    setReviewSubmitting(true)
+    setReviewError(null)
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: reviewModal.orderId,
+          reviewed_id: reviewModal.sellerId,
+          reviewer_role: 'buyer',
+          rating: reviewRating,
+          comment: reviewComment.trim() || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to submit review')
+      setReviewSuccess(true)
+      await fetchData()
+    } catch (err) {
+      setReviewError(err.message)
+    } finally {
+      setReviewSubmitting(false)
     }
   }
 
@@ -464,6 +500,52 @@ export default function BuyerDashboard() {
           orderLabel={chatOrder.label}
           onClose={() => setChatOrder(null)}
         />
+      )}
+
+      {/* Review modal */}
+      {reviewModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 600, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          onClick={e => { if (e.target === e.currentTarget && !reviewSubmitting) { setReviewModal(null); setReviewSuccess(false); setReviewRating(5); setReviewComment(''); setReviewError(null) } }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '16px', width: '100%', maxWidth: '460px', padding: '28px' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Rate <em style={{ color: 'var(--gold)' }}>Seller</em></div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '20px' }}>{reviewModal.cardName}</div>
+            {reviewSuccess ? (
+              <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>★</div>
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--accent-green)' }}>Review submitted</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px', fontFamily: 'DM Mono, monospace' }}>Thanks for the feedback</div>
+                <button onClick={() => { setReviewModal(null); setReviewSuccess(false); setReviewRating(5); setReviewComment('') }} style={{ marginTop: '16px', background: 'var(--teal)', border: 'none', color: '#fff', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600 }}>Done</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px' }}>Rating</div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} onClick={() => setReviewRating(n)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '28px', padding: '4px', color: n <= reviewRating ? '#C9A84C' : 'var(--border)', transition: 'color 0.1s' }}>★</button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px' }}>Comment <span style={{ color: 'var(--border)' }}>(optional)</span></div>
+                  <textarea value={reviewComment} onChange={e => setReviewComment(e.target.value)} maxLength={500}
+                    placeholder="Describe your experience with this seller…"
+                    style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', minHeight: '90px', lineHeight: 1.6, boxSizing: 'border-box' }} />
+                </div>
+                {reviewError && <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--accent-red)', marginBottom: '16px' }}>{reviewError}</div>}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={submitReview} disabled={reviewSubmitting}
+                    style={{ flex: 1, background: 'var(--teal)', border: 'none', color: '#fff', padding: '12px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: reviewSubmitting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: reviewSubmitting ? 0.6 : 1 }}>
+                    {reviewSubmitting ? 'Submitting…' : 'Submit Review'}
+                  </button>
+                  <button onClick={() => { setReviewModal(null); setReviewRating(5); setReviewComment(''); setReviewError(null) }}
+                    style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-muted)', padding: '12px 20px', fontSize: '13px', borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       <style>{`
@@ -759,7 +841,7 @@ export default function BuyerDashboard() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
                     <thead>
                       <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
-                        {['Card', 'Grade', 'Paid', 'Date'].map((h, i) => (
+                        {['Card', 'Grade', 'Paid', 'Date', ''].map((h, i) => (
                           <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 16px', fontWeight: 500 }}>{h}</th>
                         ))}
                       </tr>
@@ -788,6 +870,16 @@ export default function BuyerDashboard() {
                           </td>
                           <td style={{ padding: '13px 16px', fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', fontWeight: 600, color: 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</td>
                           <td style={{ padding: '13px 16px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(order.released_at)}</td>
+                          <td style={{ padding: '13px 16px' }}>
+                            {order.reviews?.some(r => r.reviewer_role === 'buyer') ? (
+                              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-green)' }}>Reviewed ✓</span>
+                            ) : (
+                              <button onClick={e => { e.stopPropagation(); setReviewModal({ orderId: order.id, cardName: order.listing?.card_name || 'Card', sellerId: order.seller_id }); setReviewRating(5); setReviewComment(''); setReviewSuccess(false); setReviewError(null) }}
+                                style={{ background: 'var(--teal)', border: 'none', color: '#fff', padding: '6px 14px', fontSize: '11px', fontWeight: 600, borderRadius: '6px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
+                                Rate Seller
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -839,7 +931,15 @@ export default function BuyerDashboard() {
               {/* Gate — contact seller first */}
               {disputeGateStep === 'gate' && inspectionOrders.length > 0 && (
                 <div style={{ background: 'rgba(232,168,56,0.05)', border: '1.5px solid rgba(232,168,56,0.25)', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '8px' }}>Have you contacted the <em style={{ color: 'var(--gold)' }}>seller</em> first?</div>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Have you contacted the <em style={{ color: 'var(--gold)' }}>seller</em> first?</div>
+                  {(() => {
+                    const targetOrder = inspectionOrders.find(o => o.id === disputeOrderId) || inspectionOrders[0]
+                    return targetOrder ? (
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                        {targetOrder.listing?.card_name || 'Card'} · #{targetOrder.id.slice(0,8).toUpperCase()}
+                      </div>
+                    ) : null
+                  })()}
                   <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>Most issues can be resolved directly. Message the seller — they have every incentive to make it right. If you've already tried and couldn't reach an agreement, you can proceed with a formal dispute.</div>
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     {(() => {
