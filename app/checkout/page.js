@@ -354,7 +354,11 @@ function Checkout() {
 
       if (orderError) throw new Error('Failed to record order: ' + orderError.message)
 
-      await supabase.from('listings').update({ status: 'sold' }).eq('id', listingId)
+      fetch('/api/listings/mark-sold', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id: listingId, order_id: order.id }),
+      }).catch(() => {})
       fetch('/api/referral/convert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
