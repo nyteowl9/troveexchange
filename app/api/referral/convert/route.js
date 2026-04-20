@@ -53,6 +53,7 @@ export async function POST(request) {
           sale_amount,
           commission,
           paid: false,
+          converted_at: new Date().toISOString(),
         },
         { onConflict: 'order_id' }
       )

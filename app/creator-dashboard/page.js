@@ -39,11 +39,11 @@ export default function CreatorDashboard() {
     const { data: convRows } = await supabase
       .from('referral_conversions')
       .select(`
-        id, sale_amount, commission, paid,
-        orders ( created_at, listings ( card_name, game ) )
+        id, sale_amount, commission, paid, converted_at,
+        orders ( listings ( card_name, game ) )
       `)
       .eq('creator_id', creatorRecord.id)
-      .order('id', { ascending: false })
+      .order('converted_at', { ascending: false })
     setConversions(convRows || [])
 
     const { data: payoutRows } = await supabase
@@ -287,7 +287,7 @@ export default function CreatorDashboard() {
                     <tbody>
                       {conversions.slice(0, 5).map((conv, i) => (
                         <tr key={conv.id} style={{ borderBottom: i < Math.min(4, conversions.length - 1) ? '0.5px solid var(--border)' : 'none' }}>
-                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(conv.orders?.created_at)}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(conv.converted_at)}</td>
                           <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{conv.orders?.listings?.card_name || 'Card'}</td>
                           <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600 }}>${parseFloat(conv.sale_amount || 0).toLocaleString()}</td>
                           <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--accent-green)', fontWeight: 600 }}>${parseFloat(conv.commission || 0).toFixed(2)}</td>
@@ -329,7 +329,7 @@ export default function CreatorDashboard() {
                     <tbody>
                       {conversions.map((conv, i) => (
                         <tr key={conv.id} style={{ borderBottom: i < conversions.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
-                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(conv.orders?.created_at)}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(conv.converted_at)}</td>
                           <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{conv.orders?.listings?.card_name || 'Card'}</td>
                           <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600 }}>${parseFloat(conv.sale_amount || 0).toLocaleString()}</td>
                           <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--accent-green)', fontWeight: 600 }}>${parseFloat(conv.commission || 0).toFixed(2)}</td>
