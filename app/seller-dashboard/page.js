@@ -81,6 +81,14 @@ function SellerDashboard() {
   const [authPhotoError, setAuthPhotoError] = useState('')
   const [authPhotosDone, setAuthPhotosDone] = useState({}) // { [orderId]: true }
 
+  // Review modal state
+  const [reviewModal, setReviewModal]           = useState(null) // { orderId, cardName, buyerId }
+  const [reviewRating, setReviewRating]         = useState(5)
+  const [reviewComment, setReviewComment]       = useState('')
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [reviewSuccess, setReviewSuccess]       = useState(false)
+  const [reviewError, setReviewError]           = useState(null)
+
   // New listing form
   const [listingType, setListingType] = useState('graded')
   const [grader, setGrader]           = useState('PSA')
@@ -135,8 +143,9 @@ function SellerDashboard() {
           .order('created_at', { ascending: false }),
         supabase
           .from('orders')
-          .select(`id, platform_fee, creator_fee, shipping_cost, bond_amount, released_at,
-                   listing:listing_id (card_name, game, set, grade, grader, price)`)
+          .select(`id, platform_fee, creator_fee, shipping_cost, bond_amount, released_at, buyer_id,
+                   listing:listing_id (card_name, game, set, grade, grader, price),
+                   reviews (id, reviewer_role)`)
           .eq('seller_id', user.id)
           .eq('status', 'released')
           .order('released_at', { ascending: false })
@@ -200,6 +209,33 @@ function SellerDashboard() {
   const totalShippingPaid    = completedSales.reduce((sum, s) => sum + Number(s.shipping_cost || 0), 0)
   const totalNetReceived     = Math.max(0, totalCompletedRevenue - totalFeesPaid - totalShippingPaid)
   const bondInFlight = activeOrders.reduce((sum, o) => sum + Number(o.bond_amount || 0), 0)
+
+  const submitReview = async () => {
+    if (!reviewModal || reviewSubmitting) return
+    setReviewSubmitting(true)
+    setReviewError(null)
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: reviewModal.orderId,
+          reviewed_id: reviewModal.buyerId,
+          reviewer_role: 'seller',
+          rating: reviewRating,
+          comment: reviewComment.trim() || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to submit review')
+      setReviewSuccess(true)
+      await fetchData()
+    } catch (err) {
+      setReviewError(err.message)
+    } finally {
+      setReviewSubmitting(false)
+    }
+  }
 
   const btn = (extra = {}) => ({
     background: 'transparent', border: '1.5px solid var(--border)',
@@ -681,6 +717,52 @@ function SellerDashboard() {
           orderLabel={chatOrder.label}
           onClose={() => setChatOrder(null)}
         />
+      )}
+
+      {/* Review modal */}
+      {reviewModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 600, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          onClick={e => { if (e.target === e.currentTarget && !reviewSubmitting) { setReviewModal(null); setReviewSuccess(false); setReviewRating(5); setReviewComment(''); setReviewError(null) } }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '16px', width: '100%', maxWidth: '460px', padding: '28px' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Rate <em style={{ color: 'var(--gold)' }}>Buyer</em></div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '20px' }}>{reviewModal.cardName}</div>
+            {reviewSuccess ? (
+              <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>★</div>
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--accent-green)' }}>Review submitted</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px', fontFamily: 'DM Mono, monospace' }}>Thanks for the feedback</div>
+                <button onClick={() => { setReviewModal(null); setReviewSuccess(false); setReviewRating(5); setReviewComment('') }} style={{ marginTop: '16px', background: 'var(--teal)', border: 'none', color: '#fff', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600 }}>Done</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px' }}>Rating</div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} onClick={() => setReviewRating(n)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '28px', padding: '4px', color: n <= reviewRating ? '#C9A84C' : 'var(--border)', transition: 'color 0.1s' }}>★</button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px' }}>Comment <span style={{ color: 'var(--border)' }}>(optional)</span></div>
+                  <textarea value={reviewComment} onChange={e => setReviewComment(e.target.value)} maxLength={500}
+                    placeholder="Describe your experience with this buyer…"
+                    style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', minHeight: '90px', lineHeight: 1.6, boxSizing: 'border-box' }} />
+                </div>
+                {reviewError && <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--accent-red)', marginBottom: '16px' }}>{reviewError}</div>}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={submitReview} disabled={reviewSubmitting}
+                    style={{ flex: 1, background: 'var(--teal)', border: 'none', color: '#fff', padding: '12px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: reviewSubmitting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: reviewSubmitting ? 0.6 : 1 }}>
+                    {reviewSubmitting ? 'Submitting…' : 'Submit Review'}
+                  </button>
+                  <button onClick={() => { setReviewModal(null); setReviewRating(5); setReviewComment(''); setReviewError(null) }}
+                    style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-muted)', padding: '12px 20px', fontSize: '13px', borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {/* AUTH PHOTO UPLOAD MODAL */}
@@ -1389,7 +1471,7 @@ function SellerDashboard() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
                     <thead>
                       <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
-                        {['Card', 'Date', 'Sale Price', 'Fee (3.5%)', 'Shipping', 'Net Payout', 'Bond'].map((h, i) => (
+                        {['Card', 'Date', 'Sale Price', 'Fee (3.5%)', 'Shipping', 'Net Payout', 'Bond', ''].map((h, i) => (
                           <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 14px', fontWeight: 500 }}>{h}</th>
                         ))}
                       </tr>
@@ -1413,6 +1495,16 @@ function SellerDashboard() {
                             <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>−{fmtUSD(ship)}</td>
                             <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--accent-green)', fontWeight: 600 }}>{fmtUSD(net)}</td>
                             <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: bond > 0 ? 'var(--accent-green)' : 'var(--text-muted)' }}>{bond > 0 ? `${fmtUSD(bond)} ✓` : '—'}</td>
+                            <td style={{ padding: '12px 14px' }}>
+                              {sale.reviews?.some(r => r.reviewer_role === 'seller') ? (
+                                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-green)' }}>Reviewed ✓</span>
+                              ) : (
+                                <button onClick={() => { setReviewModal({ orderId: sale.id, cardName: sale.listing?.card_name || 'Card', buyerId: sale.buyer_id }); setReviewRating(5); setReviewComment(''); setReviewSuccess(false); setReviewError(null) }}
+                                  style={{ background: 'var(--teal)', border: 'none', color: '#fff', padding: '6px 14px', fontSize: '11px', fontWeight: 600, borderRadius: '6px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
+                                  Rate Buyer
+                                </button>
+                              )}
+                            </td>
                           </tr>
                         )
                       })}
