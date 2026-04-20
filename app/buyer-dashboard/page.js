@@ -989,14 +989,14 @@ export default function BuyerDashboard() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                    {['You submit your dispute with photos and description', 'A $25 dispute bond is deducted — returned if you win', 'Seller has 48hrs to respond with their evidence', 'Chase Hollow reviews both sides within 72hrs', 'Win: full refund + bond returned. Lose: funds release to seller, forfeit $25 bond'].map((step, i) => (
+                    {['You submit your dispute with photos and description', 'Seller has 48hrs to respond with their evidence', 'Chase Hollow reviews both sides within 72hrs', 'Win: full refund to you, seller bond forfeited. Lose: escrow releases to seller.'].map((step, i) => (
                       <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                         <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-red)', flexShrink: 0, fontWeight: 500 }}>{i + 1}</div>
                         {step}
                       </div>
                     ))}
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-3)', borderRadius: '8px', padding: '10px 12px', lineHeight: 1.6, marginBottom: '20px' }}>⚠ Only raise a dispute if there is a genuine problem. False disputes result in losing your $25 bond and a negative mark on your buyer reputation.</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-3)', borderRadius: '8px', padding: '10px 12px', lineHeight: 1.6, marginBottom: '20px' }}>⚠ Only raise a dispute if there is a genuine problem. False disputes result in a negative mark on your buyer reputation.</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', fontWeight: 500 }}>Order</div>
