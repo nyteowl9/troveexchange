@@ -322,6 +322,7 @@ function Checkout() {
         shippingFeeForContractU,
         salesTaxU,
         sellerPayoutU,
+        { gasLimit: 400000n },
       )
       setSigningStatus('Transaction submitted — waiting for block confirmation...')
       await fundTx.wait()
