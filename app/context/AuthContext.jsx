@@ -9,14 +9,17 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(true)
 
   async function loadProfile(userId) {
+    setProfileLoading(true)
     const { data } = await supabase
       .from('users')
       .select('*')
       .eq('id', userId)
       .single()
     setProfile(data)
+    setProfileLoading(false)
   }
 
   async function refreshProfile() {
@@ -33,6 +36,7 @@ export function AuthProvider({ children }) {
           loadProfile(session.user.id)
         } else {
           setProfile(null)
+          setProfileLoading(false)
         }
       }
     )
@@ -46,7 +50,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, profileLoading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

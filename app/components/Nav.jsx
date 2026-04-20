@@ -10,17 +10,17 @@ export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const { user, profile, loading, signOut } = useAuth()
+  const { user, profile, loading, profileLoading, signOut } = useAuth()
 
   // If logged in but onboarding never completed (no username), redirect there.
-  // Runs on every page — catches broken OAuth signups.
+  // Wait for both auth AND profile to finish loading to avoid false redirects.
   useEffect(() => {
-    if (!loading && user && !profile?.username &&
+    if (!loading && !profileLoading && user && !profile?.username &&
         !pathname.startsWith('/onboarding') &&
         !pathname.startsWith('/sign-')) {
       router.replace(`/onboarding?next=${encodeURIComponent(pathname)}`)
     }
-  }, [loading, user, profile, pathname, router])
+  }, [loading, profileLoading, user, profile, pathname, router])
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
