@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/app/context/AuthContext'
+import { supabase } from '@/lib/supabase'
 
 export default function Nav() {
   const [theme, setTheme] = useState('dark')
@@ -11,6 +12,13 @@ export default function Nav() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, profile, loading, profileLoading, signOut } = useAuth()
+  const [isCreator, setIsCreator] = useState(false)
+
+  useEffect(() => {
+    if (!user) { setIsCreator(false); return }
+    supabase.from('creators').select('id').eq('user_id', user.id).eq('status', 'approved').maybeSingle()
+      .then(({ data }) => setIsCreator(!!data))
+  }, [user])
 
   // If logged in but onboarding never completed (no username), redirect there.
   // Wait for both auth AND profile to finish loading to avoid false redirects.
@@ -152,9 +160,16 @@ export default function Nav() {
                   {profile?.username ? `@${profile.username}` : user.email}
                 </Link>
                 {(!profile?.role || profile.role === 'buyer') && (
-                  <Link href={pathname === '/buyer-dashboard' ? '/seller-dashboard' : pathname === '/seller-dashboard' ? '/buyer-dashboard' : '/seller-dashboard'} style={{ fontSize: '10px', color: 'var(--teal)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
-                    {pathname === '/buyer-dashboard' ? 'Seller Dashboard →' : pathname === '/seller-dashboard' ? 'Buyer Dashboard →' : 'Seller Dashboard →'}
-                  </Link>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <Link href={pathname === '/buyer-dashboard' ? '/seller-dashboard' : pathname === '/seller-dashboard' ? '/buyer-dashboard' : '/seller-dashboard'} style={{ fontSize: '10px', color: 'var(--teal)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
+                      {pathname === '/buyer-dashboard' ? 'Seller Dashboard →' : pathname === '/seller-dashboard' ? 'Buyer Dashboard →' : 'Seller Dashboard →'}
+                    </Link>
+                    {isCreator && (
+                      <Link href="/creator-dashboard" style={{ fontSize: '10px', color: 'var(--gold)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
+                        Creator Dashboard →
+                      </Link>
+                    )}
+                  </div>
                 )}
                 {profile?.role === 'owner' && (
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
