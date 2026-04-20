@@ -89,6 +89,7 @@ export default function BuyerDashboard() {
   const [disputeOrderId, setDisputeOrderId]           = useState('')
   const [disputeReason, setDisputeReason]             = useState('Card does not match listing description')
   const [disputeDescription, setDisputeDescription]   = useState('')
+  const [disputePhotos, setDisputePhotos]             = useState([]) // [{ file, preview }]
   const [disputeSubmitting, setDisputeSubmitting]     = useState(false)
   const [disputeError, setDisputeError]               = useState(null)
   const [disputeSuccess, setDisputeSuccess]           = useState(false)
@@ -264,9 +265,21 @@ export default function BuyerDashboard() {
         const provider = new ethers.BrowserProvider(eip1193)
         const signer = await provider.getSigner()
         const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
-        const tx = await escrowContract.openDispute(order.onchain_order_id)
+        const tx = await escrowContract.openDispute(order.onchain_order_id, { gasLimit: 200000n })
         await tx.wait()
         onchainTxHash = tx.hash
+      }
+
+      // Upload evidence photos to Supabase Storage
+      const evidenceUrls = []
+      for (const { file } of disputePhotos) {
+        const ext  = file.name.split('.').pop()
+        const path = `disputes/${order.id}/buyer/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error: upErr } = await supabase.storage.from('auth-photos').upload(path, file)
+        if (!upErr) {
+          const { data: { publicUrl } } = supabase.storage.from('auth-photos').getPublicUrl(path)
+          evidenceUrls.push(publicUrl)
+        }
       }
 
       // API: create dispute record + update order status
@@ -278,6 +291,7 @@ export default function BuyerDashboard() {
           reason: disputeReason,
           description: disputeDescription,
           onchain_tx_hash: onchainTxHash,
+          buyer_evidence: evidenceUrls,
         }),
       })
       const data = await res.json()
@@ -285,6 +299,7 @@ export default function BuyerDashboard() {
 
       setDisputeSuccess(true)
       setDisputeDescription('')
+      setDisputePhotos([])
       await fetchData()
     } catch (err) {
       setDisputeError(err?.reason || err?.message || 'Failed to open dispute')
@@ -1015,6 +1030,31 @@ export default function BuyerDashboard() {
                         placeholder="Describe the issue in detail…"
                       />
                     </div>
+                    {/* Evidence photos — optional */}
+                    <div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', fontWeight: 500 }}>Evidence Photos <span style={{ color: 'var(--border)', textTransform: 'none', letterSpacing: 0 }}>(optional · up to 5)</span></div>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {disputePhotos.map((p, i) => (
+                          <div key={p.preview} style={{ position: 'relative', width: '72px', height: '72px', borderRadius: '6px', overflow: 'hidden', border: '1.5px solid var(--border)', flexShrink: 0 }}>
+                            <img src={p.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <button onClick={() => { URL.revokeObjectURL(p.preview); setDisputePhotos(prev => prev.filter((_, j) => j !== i)) }}
+                              style={{ position: 'absolute', top: '2px', right: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: 'none', color: '#fff', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+                          </div>
+                        ))}
+                        {disputePhotos.length < 5 && (
+                          <label style={{ width: '72px', height: '72px', borderRadius: '6px', border: '1.5px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '22px', flexShrink: 0 }}>
+                            +
+                            <input type="file" accept="image/*" multiple style={{ display: 'none' }}
+                              onChange={e => {
+                                const files = Array.from(e.target.files || []).slice(0, 5 - disputePhotos.length)
+                                setDisputePhotos(prev => [...prev, ...files.map(f => ({ file: f, preview: URL.createObjectURL(f) }))])
+                                e.target.value = ''
+                              }} />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
                     {disputeError && (
                       <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--accent-red)', lineHeight: 1.5 }}>{disputeError}</div>
                     )}

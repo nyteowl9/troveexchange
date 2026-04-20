@@ -9,7 +9,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 // Creates dispute record, updates order status → disputed, notifies seller.
 export async function POST(request) {
   try {
-    const { order_id, reason, description, onchain_tx_hash } = await request.json()
+    const { order_id, reason, description, onchain_tx_hash, buyer_evidence } = await request.json()
     if (!order_id || !reason) {
       return NextResponse.json({ error: 'order_id and reason are required' }, { status: 400 })
     }
@@ -60,7 +60,7 @@ export async function POST(request) {
         order_id,
         raised_by:      user.id,
         reason:         fullReason,
-        buyer_evidence: [],
+        buyer_evidence: Array.isArray(buyer_evidence) ? buyer_evidence : [],
         seller_evidence: [],
       })
       .select()
