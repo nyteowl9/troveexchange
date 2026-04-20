@@ -303,8 +303,7 @@ export default function BuyerDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           order_id: reviewModal.orderId,
-          reviewed_id: reviewModal.sellerId,
-          reviewer_role: 'buyer',
+          reviewer_id: user.id,
           rating: reviewRating,
           comment: reviewComment.trim() || null,
         }),

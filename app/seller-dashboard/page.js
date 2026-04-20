@@ -220,8 +220,7 @@ function SellerDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           order_id: reviewModal.orderId,
-          reviewed_id: reviewModal.buyerId,
-          reviewer_role: 'seller',
+          reviewer_id: user.id,
           rating: reviewRating,
           comment: reviewComment.trim() || null,
         }),
