@@ -285,7 +285,7 @@ function Checkout() {
 
       setSigningStatus('Step 1 of 2 — Approve USDC spend · confirm in wallet...')
       const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
-      const approveTx = await usdcContract.approve(ESCROW_ADDRESS, escrowAmountU)
+      const approveTx = await usdcContract.approve(ESCROW_ADDRESS, escrowAmountU, { gasLimit: 100000n })
       setSigningStatus('Approval submitted — waiting for confirmation...')
       await approveTx.wait()
 
