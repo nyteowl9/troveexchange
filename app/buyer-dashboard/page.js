@@ -230,11 +230,12 @@ export default function BuyerDashboard() {
   }
 
   const handleSubmitDispute = async () => {
-    if (!disputeOrderId) {
+    const effectiveOrderId = disputeOrderId || inspectionOrders[0]?.id
+    if (!effectiveOrderId) {
       setDisputeError('Please select an order.')
       return
     }
-    const order = inspectionOrders.find(o => o.id === disputeOrderId)
+    const order = inspectionOrders.find(o => o.id === effectiveOrderId)
     if (!order) { setDisputeError('Order not found.'); return }
 
     setDisputeSubmitting(true)
