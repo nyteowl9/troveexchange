@@ -74,6 +74,9 @@ export default function BuyerDashboard() {
   const [releaseError, setReleaseError]   = useState(null)
   const [releaseStatus, setReleaseStatus] = useState(null) // step message during on-chain release
 
+  // Dispute gate — 'gate' shows contact-seller step, 'form' shows the actual form
+  const [disputeGateStep, setDisputeGateStep]         = useState('gate')
+
   // Dispute form state
   const [disputeOrderId, setDisputeOrderId]           = useState('')
   const [disputeReason, setDisputeReason]             = useState('Card does not match listing description')
@@ -429,7 +432,7 @@ export default function BuyerDashboard() {
                   >
                     {releasingId === order.id ? 'Releasing…' : 'Release Early'}
                   </button>
-                  <button onClick={() => { setDisputeOrderId(order.id); setActiveSection('disputes') }} style={btn({ border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)' })}>Raise Dispute</button>
+                  <button onClick={() => { setDisputeOrderId(order.id); setDisputeGateStep('gate'); setActiveSection('disputes') }} style={btn({ border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)' })}>Raise Dispute</button>
                   {releasingId === order.id && releaseStatus && <div style={{ width: '100%', fontSize: '11px', color: 'var(--accent-amber)', marginTop: '4px', fontFamily: 'DM Mono, monospace' }}>{releaseStatus}</div>}
                   {releaseError && releasingId === null && <div style={{ width: '100%', fontSize: '11px', color: 'var(--accent-red)', marginTop: '4px' }}>{releaseError}</div>}
                 </>
@@ -570,7 +573,7 @@ export default function BuyerDashboard() {
                         </div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button onClick={() => handleRelease(urgentOrder)} disabled={releasingId === urgentOrder?.id} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: releasingId === urgentOrder?.id ? 0.6 : 1 }}>{releasingId === urgentOrder?.id ? 'Releasing…' : 'Release Funds Early'}</button>
-                          <button onClick={() => setActiveSection('disputes')} style={{ background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Something is Wrong — Dispute</button>
+                          <button onClick={() => { setDisputeGateStep('gate'); setActiveSection('disputes') }} style={{ background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Something is Wrong — Dispute</button>
                         </div>
                       </>
                     )}
@@ -694,7 +697,7 @@ export default function BuyerDashboard() {
                         <button onClick={() => handleRelease(order)} disabled={releasingId === order.id} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '14px 28px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: releasingId === order.id ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: releasingId === order.id ? 0.6 : 1 }}>
                           {releasingId === order.id ? 'Releasing…' : '✓ Release Funds Early — Everything is Good'}
                         </button>
-                        <button onClick={() => setActiveSection('disputes')} style={{ background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '14px 28px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>⚠ Something is Wrong — Raise Dispute</button>
+                        <button onClick={() => { setDisputeGateStep('gate'); setActiveSection('disputes') }} style={{ background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '14px 28px', fontSize: '14px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>⚠ Something is Wrong — Raise Dispute</button>
                       </div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.6 }}>Releasing early sends funds to the seller immediately. Funds release automatically on {fmtDate(order.auto_release_at)} with no action needed.</div>
                     </>
@@ -833,8 +836,35 @@ export default function BuyerDashboard() {
                 </div>
               )}
 
+              {/* Gate — contact seller first */}
+              {disputeGateStep === 'gate' && inspectionOrders.length > 0 && (
+                <div style={{ background: 'rgba(232,168,56,0.05)', border: '1.5px solid rgba(232,168,56,0.25)', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '8px' }}>Have you contacted the <em style={{ color: 'var(--gold)' }}>seller</em> first?</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>Most issues can be resolved directly. Message the seller — they have every incentive to make it right. If you've already tried and couldn't reach an agreement, you can proceed with a formal dispute.</div>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {(() => {
+                      const targetOrder = inspectionOrders.find(o => o.id === disputeOrderId) || inspectionOrders[0]
+                      return (
+                        <button
+                          onClick={() => setChatOrder({ id: targetOrder.id, label: targetOrder.listing?.card_name || 'Order' })}
+                          style={{ background: 'var(--teal)', border: 'none', color: '#fff', padding: '11px 22px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                        >
+                          Message Seller
+                        </button>
+                      )
+                    })()}
+                    <button
+                      onClick={() => setDisputeGateStep('form')}
+                      style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-muted)', padding: '11px 22px', fontSize: '13px', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                    >
+                      I've already tried — continue to dispute
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* New dispute form — only if there's an eligible order */}
-              {inspectionOrders.length > 0 ? (
+              {disputeGateStep === 'form' && inspectionOrders.length > 0 ? (
                 <div style={{ background: 'rgba(200,75,60,0.05)', border: '1.5px solid rgba(200,75,60,0.25)', borderRadius: '12px', padding: '20px 24px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>⚠</div>

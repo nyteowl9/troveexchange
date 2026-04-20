@@ -29,7 +29,11 @@ export default function ChatModal({ orderId, orderLabel, onClose }) {
       }, (payload) => {
         setMessages(prev => {
           if (prev.find(m => m.id === payload.new.id)) return prev
-          return [...prev, payload.new]
+          // Replace optimistic message with real one
+          const withoutOptimistic = prev.filter(m =>
+            !(m.id?.startsWith('temp-') && m.sender_id === payload.new.sender_id && m.body === payload.new.body)
+          )
+          return [...withoutOptimistic, payload.new]
         })
       })
       .subscribe()
@@ -65,6 +69,18 @@ export default function ChatModal({ orderId, orderLabel, onClose }) {
     setSending(true)
     const body = input.trim()
     setInput('')
+
+    // Optimistic update — show immediately, Realtime replaces with real record
+    const tempId = `temp-${Date.now()}`
+    setMessages(prev => [...prev, {
+      id: tempId,
+      order_id: orderId,
+      sender_id: myId,
+      body,
+      created_at: new Date().toISOString(),
+      read_at: null,
+    }])
+
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch(`/api/messages/${orderId}`, {
@@ -74,11 +90,13 @@ export default function ChatModal({ orderId, orderLabel, onClose }) {
       })
       if (!res.ok) {
         const d = await res.json()
-        setInput(body) // restore
+        setInput(body)
+        setMessages(prev => prev.filter(m => m.id !== tempId))
         setError(d.error || 'Failed to send')
       }
     } catch {
       setInput(body)
+      setMessages(prev => prev.filter(m => m.id !== tempId))
       setError('Failed to send')
     }
     setSending(false)
