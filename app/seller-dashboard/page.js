@@ -97,6 +97,9 @@ function SellerDashboard() {
   const [reviewSuccess, setReviewSuccess]       = useState(false)
   const [reviewError, setReviewError]           = useState(null)
 
+  // Account standing (live check on mount)
+  const [accountStanding, setAccountStanding] = useState(null) // { banned, suspended_until }
+
   // New listing form
   const [listingType, setListingType] = useState('graded')
   const [grader, setGrader]           = useState('PSA')
@@ -171,6 +174,13 @@ function SellerDashboard() {
   }, [user])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // Live standing check — always fresh from DB, never relies on cached profile
+  useEffect(() => {
+    if (!user) return
+    supabase.from('users').select('banned, suspended_until').eq('id', user.id).single()
+      .then(({ data }) => setAccountStanding(data || {}))
+  }, [user])
 
   // Realtime — re-fetch when any of this seller's orders or listings change
   useEffect(() => {
@@ -328,10 +338,11 @@ function SellerDashboard() {
 
   async function handleSubmitListing() {
     setSubmitError('')
-    // Live check — don't trust cached profile for account standing
+    // Re-fetch standing fresh at submit time (fail-closed — if query fails, block)
     const { data: standing } = await supabase.from('users').select('banned, suspended_until').eq('id', user.id).single()
-    if (standing?.banned) { setSubmitError('Your account has been permanently banned and cannot create listings.'); return }
-    if (standing?.suspended_until && new Date(standing.suspended_until) > new Date()) {
+    if (!standing) { setSubmitError('Unable to verify account standing. Please refresh and try again.'); return }
+    if (standing.banned) { setSubmitError('Your account has been permanently banned and cannot create listings.'); return }
+    if (standing.suspended_until && new Date(standing.suspended_until) > new Date()) {
       const until = new Date(standing.suspended_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       setSubmitError(`Your account is suspended until ${until}. You cannot create new listings during a suspension.`)
       return
@@ -989,6 +1000,28 @@ function SellerDashboard() {
               {navItems.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
           </div>
+
+          {/* SUSPENSION / BAN BANNER — shown on every section */}
+          {accountStanding?.banned && (
+            <div style={{ background: 'rgba(200,75,60,0.12)', border: '1.5px solid rgba(200,75,60,0.5)', borderRadius: '10px', padding: '14px 18px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '18px' }}>🚫</span>
+              <div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 700, color: 'var(--accent-red)', letterSpacing: '0.06em' }}>ACCOUNT PERMANENTLY BANNED</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Your account has been permanently closed. You cannot create listings or sell on Chase Hollow.</div>
+              </div>
+            </div>
+          )}
+          {!accountStanding?.banned && accountStanding?.suspended_until && new Date(accountStanding.suspended_until) > new Date() && (
+            <div style={{ background: 'rgba(232,168,56,0.08)', border: '1.5px solid rgba(232,168,56,0.4)', borderRadius: '10px', padding: '14px 18px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '18px' }}>⏸</span>
+              <div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 700, color: 'var(--accent-amber)', letterSpacing: '0.06em' }}>SELLING SUSPENDED</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  You cannot create new listings until <strong style={{ color: 'var(--text-primary)' }}>{new Date(accountStanding.suspended_until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>. Active listings have been paused. All existing orders are unaffected.
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* OVERVIEW */}
           {activeSection === 'overview' && (
