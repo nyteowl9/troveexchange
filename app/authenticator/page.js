@@ -176,7 +176,7 @@ export default function AuthenticatorPortal() {
       const res = await fetch('/api/auth-inspection/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: card.id, decision: 'pass', checklist }),
+        body: JSON.stringify({ order_id: card.id, decision: 'pass', checklist, photos: Object.values(uploadedPhotos).filter(u => u?.startsWith('http')) }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Submit failed')
@@ -199,7 +199,7 @@ export default function AuthenticatorPortal() {
       const res = await fetch('/api/auth-inspection/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: card.id, decision: 'fail', checklist, notes }),
+        body: JSON.stringify({ order_id: card.id, decision: 'fail', checklist, notes, photos: Object.values(uploadedPhotos).filter(u => u?.startsWith('http')) }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Submit failed')
@@ -610,7 +610,21 @@ export default function AuthenticatorPortal() {
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         {photos.map((photo, i) => (
                           <div key={i}>
-                            <input type="file" id={`photo-${i}`} accept="image/*" onChange={(e) => { const f = e.target.files[0]; if (f) { const url = URL.createObjectURL(f); setUploadedPhotos(prev => ({ ...prev, [i]: url })); setReceivedPhotoIdx(i) } }} style={{ display: 'none' }} />
+                            <input type="file" id={`photo-${i}`} accept="image/*" onChange={async (e) => {
+                              const f = e.target.files[0]
+                              if (!f) return
+                              const preview = URL.createObjectURL(f)
+                              setUploadedPhotos(prev => ({ ...prev, [i]: preview }))
+                              setReceivedPhotoIdx(i)
+                              try {
+                                const fd = new FormData()
+                                fd.append('file', f)
+                                fd.append('order_id', card.id)
+                                const res = await fetch('/api/auth-inspection/submit', { method: 'PUT', body: fd })
+                                const data = await res.json()
+                                if (res.ok && data.url) setUploadedPhotos(prev => ({ ...prev, [i]: data.url }))
+                              } catch {}
+                            }} style={{ display: 'none' }} />
                             <label htmlFor={`photo-${i}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '8px', border: `1.5px solid ${uploadedPhotos[i] ? 'var(--accent-green)' : 'var(--border)'}`, background: uploadedPhotos[i] ? 'rgba(76,175,124,0.1)' : 'var(--bg-4)', cursor: 'pointer', gap: '3px', overflow: 'hidden', position: 'relative' }}>
                               {uploadedPhotos[i]
                                 ? <img src={uploadedPhotos[i]} alt={photo} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
