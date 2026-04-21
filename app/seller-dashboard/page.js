@@ -328,9 +328,11 @@ function SellerDashboard() {
 
   async function handleSubmitListing() {
     setSubmitError('')
-    if (profile?.banned) { setSubmitError('Your account has been permanently banned and cannot create listings.'); return }
-    if (profile?.suspended_until && new Date(profile.suspended_until) > new Date()) {
-      const until = new Date(profile.suspended_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    // Live check — don't trust cached profile for account standing
+    const { data: standing } = await supabase.from('users').select('banned, suspended_until').eq('id', user.id).single()
+    if (standing?.banned) { setSubmitError('Your account has been permanently banned and cannot create listings.'); return }
+    if (standing?.suspended_until && new Date(standing.suspended_until) > new Date()) {
+      const until = new Date(standing.suspended_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       setSubmitError(`Your account is suspended until ${until}. You cannot create new listings during a suspension.`)
       return
     }

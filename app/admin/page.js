@@ -35,6 +35,7 @@ export default function AdminPanel() {
   // Live dispute + strike data
   const [pendingDisputes, setPendingDisputes] = useState([])
   const [adminStrikes, setAdminStrikes]       = useState([])
+  const [strikeRemoving, setStrikeRemoving]   = useState({})
   const [recentOrders, setRecentOrders]       = useState([])
   const [overviewStats, setOverviewStats]     = useState(null)
 
@@ -86,6 +87,23 @@ export default function AdminPanel() {
         .limit(50)
       setAdminStrikes(data || [])
     } catch {}
+  }
+
+  async function removeStrike(strikeId, userId) {
+    setStrikeRemoving(p => ({ ...p, [strikeId]: true }))
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin/users/remove-strike', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ user_id: userId, strike_id: strikeId }),
+      })
+      if (res.ok) {
+        setAdminStrikes(p => p.filter(s => s.id !== strikeId))
+      }
+    } catch {}
+    setStrikeRemoving(p => ({ ...p, [strikeId]: false }))
   }
 
   async function loadOverview() {
@@ -915,7 +933,7 @@ export default function AdminPanel() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
                   <thead>
                     <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
-                      {['User', 'Strike #', 'Reason', 'Date', 'Action Taken', 'Appeal'].map((h, i) => (
+                      {['User', 'Strike #', 'Reason', 'Date', 'Action Taken', 'Appeal', ''].map((h, i) => (
                         <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
                       ))}
                     </tr>
@@ -935,6 +953,14 @@ export default function AdminPanel() {
                         <td style={{ padding: '11px 14px', fontSize: '12px', color: s.strike_number >= 3 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>{s.action_taken}</td>
                         <td style={{ padding: '11px 14px' }}>
                           {s.appealed ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-amber)' }}>Appealed{s.appeal_outcome ? ` · ${s.appeal_outcome}` : ''}</span> : s.strike_number < 3 ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>Eligible</span> : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>No appeal</span>}
+                        </td>
+                        <td style={{ padding: '11px 14px' }}>
+                          <button
+                            onClick={() => { if (window.confirm(`Remove this strike from @${s.user?.username}? This will recalculate their suspension status.`)) removeStrike(s.id, s.user_id) }}
+                            disabled={strikeRemoving[s.id]}
+                            style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(200,75,60,0.4)', background: 'rgba(200,75,60,0.08)', color: 'var(--accent-red)', cursor: 'pointer', opacity: strikeRemoving[s.id] ? 0.5 : 1 }}>
+                            {strikeRemoving[s.id] ? '…' : 'Remove'}
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -1173,6 +1199,21 @@ export default function AdminPanel() {
                       </div>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.6 }}>
                         ⚠ Auth fee changes here are for checkout logic only. Also update the contract via Safe multisig to keep them in sync.
+                      </div>
+                    </div>
+
+                    {/* Strike auto-clear */}
+                    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Strike Auto-Clear</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.6 }}>
+                        After this many clean completed sales since their last strike, the oldest strike is automatically removed. Set to 0 to disable.
+                      </div>
+                      <div style={{ maxWidth: '200px' }}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Clean sales required</div>
+                        <input type="number" min="0" value={tierConfigEdit?.strike_auto_clear_sales ?? ''}
+                          onChange={e => setTierConfigEdit(p => ({ ...p, strike_auto_clear_sales: parseInt(e.target.value) || 0 }))}
+                          style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                        />
                       </div>
                     </div>
 

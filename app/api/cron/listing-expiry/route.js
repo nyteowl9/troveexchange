@@ -17,7 +17,27 @@ export async function GET(request) {
   }
 
   const now = new Date()
-  const results = { warned_75: 0, warned_85: 0, paused: 0, warned_97: 0, expired: 0, errors: [] }
+  const results = { warned_75: 0, warned_85: 0, paused: 0, warned_97: 0, expired: 0, suspension_restored: 0, errors: [] }
+
+  // ── Restore listings when suspension period ends ───────────────────────────
+  const { data: expiredSuspensions } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .not('suspended_until', 'is', null)
+    .lt('suspended_until', now.toISOString())
+    .eq('banned', false)
+
+  for (const u of expiredSuspensions || []) {
+    try {
+      await supabaseAdmin.from('users').update({ suspended_until: null }).eq('id', u.id)
+      const { count } = await supabaseAdmin
+        .from('listings').update({ status: 'active' })
+        .eq('seller_id', u.id).eq('status', 'suspended_pause')
+      results.suspension_restored += count || 0
+    } catch (err) {
+      results.errors.push({ user_id: u.id, phase: 'suspension_restore', error: err.message })
+    }
+  }
 
   // ── Day 75 warnings ───────────────────────────────────────────────────────
   const day75Cutoff = new Date(now.getTime() - 75 * 24 * 60 * 60 * 1000)

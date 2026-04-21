@@ -116,6 +116,13 @@ export async function POST(request) {
         reason: 'Lost dispute',
         action_taken: action,
       })
+      // Pause all active listings for suspended/banned sellers
+      if (newCount >= 1) {
+        await supabaseAdmin.from('listings')
+          .update({ status: 'suspended_pause' })
+          .eq('seller_id', order.seller_id)
+          .eq('status', 'active')
+      }
     }
 
     // Send resolution emails
