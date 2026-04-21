@@ -82,7 +82,7 @@ export default function AdminPanel() {
       // Use supabase directly for strikes — admin-level read
       const { data } = await supabase
         .from('strikes')
-        .select('id, strike_number, reason, action_taken, created_at, user:user_id(username), order:order_id(id)')
+        .select('id, user_id, strike_number, reason, action_taken, created_at, user:user_id(username), order:order_id(id)')
         .order('created_at', { ascending: false })
         .limit(50)
       setAdminStrikes(data || [])
@@ -101,8 +101,15 @@ export default function AdminPanel() {
       })
       if (res.ok) {
         setAdminStrikes(p => p.filter(s => s.id !== strikeId))
+        // Clear cache so re-entering Strikes section reloads fresh data
+        setTimeout(() => setAdminStrikes([]), 100)
+      } else {
+        const body = await res.json()
+        alert(`Failed to remove strike: ${body.error || res.status}`)
       }
-    } catch {}
+    } catch (err) {
+      alert(`Error: ${err.message}`)
+    }
     setStrikeRemoving(p => ({ ...p, [strikeId]: false }))
   }
 
