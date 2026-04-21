@@ -372,17 +372,21 @@ export default function ProfilePage() {
                 ) : (
                   <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', padding: '10px 16px', borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
-                      {['Order', 'Amount', 'Settled'].map(h => (
+                      {['Card', 'Amount', 'Settled'].map(h => (
                         <div key={h} style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{h}</div>
                       ))}
                     </div>
                     {salesHistory.map((order, i) => (
-                      <div key={order.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', padding: '12px 16px', borderBottom: i < salesHistory.length - 1 ? '0.5px solid var(--border)' : 'none', alignItems: 'center' }}>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{order.id.slice(0, 8)}…</div>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--gold)', paddingRight: '32px' }}>
-                          ${(parseFloat(order.escrow_amount) / 1e6).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      <div key={order.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', padding: '12px 16px', borderBottom: i < salesHistory.length - 1 ? '0.5px solid var(--border)' : 'none', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {order.listing?.card_name
+                            ? `${order.listing.card_name}${order.listing.grade ? ` ${order.listing.grader} ${order.listing.grade}` : ''}`
+                            : `Order ${order.id.slice(0, 8)}…`}
                         </div>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>
+                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--gold)', whiteSpace: 'nowrap' }}>
+                          ${parseFloat(order.escrow_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                           {order.released_at ? new Date(order.released_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                         </div>
                       </div>

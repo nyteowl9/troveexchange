@@ -140,7 +140,7 @@ export default function BuyerDashboard() {
                    listing:listing_id (id, card_name, game, set, grade, grader, photos),
                    reviews (id, reviewer_role)`)
           .eq('buyer_id', user.id)
-          .eq('status', 'released')
+          .in('status', ['released', 'refunded'])
           .order('released_at', { ascending: false })
           .limit(50),
         supabase
@@ -271,16 +271,15 @@ export default function BuyerDashboard() {
         onchainTxHash = tx.hash
       }
 
-      // Upload evidence photos to Supabase Storage
+      // Upload evidence photos via API (server-side, bypasses storage RLS)
       const evidenceUrls = []
       for (const { file } of disputePhotos) {
-        const ext  = file.name.split('.').pop()
-        const path = `disputes/${order.id}/buyer/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-        const { error: upErr } = await supabase.storage.from('auth-photos').upload(path, file)
-        if (!upErr) {
-          const { data: { publicUrl } } = supabase.storage.from('auth-photos').getPublicUrl(path)
-          evidenceUrls.push(publicUrl)
-        }
+        const fd = new FormData()
+        fd.append('file', file)
+        fd.append('order_id', order.id)
+        const upRes = await fetch('/api/disputes/open', { method: 'PUT', body: fd })
+        const upData = await upRes.json()
+        if (upRes.ok && upData.url) evidenceUrls.push(upData.url)
       }
 
       // API: create dispute record + update order status
@@ -346,7 +345,7 @@ export default function BuyerDashboard() {
 
   const totalSpent = historyOrders.reduce((sum, o) => sum + Number(o.escrow_amount || 0), 0)
   const initials   = (profile?.username || 'U').slice(0, 2).toUpperCase()
-  const tierLabel  = TIER_LABEL[profile?.tier] || 'New'
+  const tierLabel  = TIER_LABEL[profile?.seller_tier] || 'New'
   const inspectionOrders = activeOrders.filter(o => o.status === 'inspection_window')
   const navBadge   = (key) => {
     if (key === 'active')     return activeOrders.length || null
@@ -615,7 +614,7 @@ export default function BuyerDashboard() {
           {/* Rep card */}
           <div style={{ margin: '16px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', borderRadius: '10px', padding: '14px', marginTop: 'auto' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '4px', fontWeight: 500 }}>Buyer Reputation</div>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1 }}>{profile?.rep_score?.toFixed(2) ?? '—'}</div>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1 }}>{profile?.buyer_rep_score?.toFixed(2) ?? '—'}</div>
             <div style={{ color: 'var(--gold)', fontSize: '12px', letterSpacing: '1px', margin: '3px 0' }}>★★★★★</div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{historyOrders.length} purchases · {disputes.length} disputes</div>
           </div>
@@ -685,7 +684,7 @@ export default function BuyerDashboard() {
                   { label: 'Total Spent',   val: fmtUSD(totalSpent),        sub: `Lifetime · ${historyOrders.length} purchases`,   color: 'var(--gold)' },
                   { label: 'Active Orders', val: String(activeOrders.length), sub: inspectionOrders.length ? `${inspectionOrders.length} releasing soon` : 'All on track', color: 'var(--text-primary)' },
                   { label: 'Completed',     val: String(historyOrders.length),sub: 'Released orders',                               color: 'var(--teal)' },
-                  { label: 'Buyer Rating',  val: profile?.rep_score?.toFixed(2) ?? '—', sub: `${disputes.length} disputes`,         color: 'var(--teal)' },
+                  { label: 'Buyer Rating',  val: profile?.buyer_rep_score?.toFixed(2) ?? '—', sub: `${disputes.length} disputes`,         color: 'var(--teal)' },
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px 18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
@@ -874,7 +873,7 @@ export default function BuyerDashboard() {
                               </div>
                               <div>
                                 <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{order.listing?.card_name || '—'}</div>
-                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '1px' }}>{order.listing?.set || '—'}</div>
+                                <div style={{ fontSize: '10px', color: order.status === 'refunded' ? 'var(--accent-green)' : 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '1px' }}>{order.status === 'refunded' ? 'Dispute Won — Refunded' : (order.listing?.set || '—')}</div>
                               </div>
                             </div>
                           </td>
@@ -883,8 +882,8 @@ export default function BuyerDashboard() {
                               <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 9px', borderRadius: '6px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>{order.listing.grader} {order.listing.grade}</span>
                             ) : <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Raw</span>}
                           </td>
-                          <td style={{ padding: '13px 16px', fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', fontWeight: 600, color: 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</td>
-                          <td style={{ padding: '13px 16px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(order.released_at)}</td>
+                          <td style={{ padding: '13px 16px', fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', fontWeight: 600, color: order.status === 'refunded' ? 'var(--accent-green)' : 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</td>
+                          <td style={{ padding: '13px 16px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(order.released_at || order.created_at)}</td>
                           <td style={{ padding: '13px 16px' }}>
                             {order.reviews?.some(r => r.reviewer_role === 'buyer') ? (
                               <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-green)' }}>Reviewed ✓</span>
@@ -1143,7 +1142,7 @@ function AccountSection({ user, profile, supabase, btn }) {
             { label: 'Username',  val: profile?.username || '—' },
             { label: 'Email',     val: user?.email || '—' },
             { label: 'Member since', val: profile?.joined_at ? new Date(profile.joined_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '—' },
-            { label: 'Buyer tier',  val: profile?.tier ? profile.tier.charAt(0).toUpperCase() + profile.tier.slice(1) : 'New' },
+            { label: 'Buyer tier',  val: profile?.seller_tier ? profile.seller_tier.charAt(0).toUpperCase() + profile.seller_tier.slice(1) : 'New' },
           ].map((row, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingBottom: '10px', borderBottom: i < 3 ? '0.5px solid var(--border)' : 'none' }}>
               <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{row.label}</span>

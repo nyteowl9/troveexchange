@@ -81,6 +81,14 @@ function SellerDashboard() {
   const [authPhotoError, setAuthPhotoError] = useState('')
   const [authPhotosDone, setAuthPhotosDone] = useState({}) // { [orderId]: true }
 
+  // Dispute evidence state
+  const [disputeModal, setDisputeModal]             = useState(null) // { orderId, disputeId, cardName, existingEvidence }
+  const [disputeEvidenceFiles, setDisputeEvidenceFiles] = useState([]) // { file, preview, url }[]
+  const [disputeSellerNotes, setDisputeSellerNotes]     = useState('')
+  const [disputeEvidenceUploading, setDisputeEvidenceUploading] = useState(false)
+  const [disputeEvidenceError, setDisputeEvidenceError] = useState('')
+  const [disputeEvidenceDone, setDisputeEvidenceDone]   = useState({}) // { [orderId]: true }
+
   // Review modal state
   const [reviewModal, setReviewModal]           = useState(null) // { orderId, cardName, buyerId }
   const [reviewRating, setReviewRating]         = useState(5)
@@ -131,7 +139,8 @@ function SellerDashboard() {
           .from('orders')
           .select(`id, status, escrow_amount, auth_tier, bond_amount, bond_tx_hash, onchain_order_id, tracking_a, label_a_url, shipped_at, created_at, auto_release_at,
                    listing:listing_id (id, card_name, game, set, grade, grader, photos, price, auth_tier),
-                   buyer:buyer_id (id, username)`)
+                   buyer:buyer_id (id, username),
+                   disputes (id, reason, seller_evidence, outcome)`)
           .eq('seller_id', user.id)
           .in('status', ACTIVE_ORDER_STATUSES)
           .order('created_at', { ascending: false }),
@@ -143,11 +152,11 @@ function SellerDashboard() {
           .order('created_at', { ascending: false }),
         supabase
           .from('orders')
-          .select(`id, platform_fee, creator_fee, shipping_cost, bond_amount, released_at, buyer_id,
+          .select(`id, status, platform_fee, creator_fee, shipping_cost, bond_amount, released_at, buyer_id,
                    listing:listing_id (card_name, game, set, grade, grader, price),
                    reviews (id, reviewer_role)`)
           .eq('seller_id', user.id)
-          .eq('status', 'released')
+          .in('status', ['released', 'refunded'])
           .order('released_at', { ascending: false })
           .limit(50),
       ])
@@ -199,14 +208,15 @@ function SellerDashboard() {
   }
 
   const fees = calcFees(price)
-  const bondRate   = BOND_RATE[profile?.tier] || BOND_RATE.new
+  const bondRate   = BOND_RATE[profile?.seller_tier] || BOND_RATE.new
   const bondAmount = price ? (BOND_FLOOR + parseFloat(price) * bondRate).toFixed(2) : null
 
   const ordersNeedingShip = activeOrders.filter(o => o.status === 'awaiting_shipment')
   const totalActiveSalesValue = myListings.reduce((sum, l) => sum + Number(l.price || 0), 0)
-  const totalCompletedRevenue = completedSales.reduce((sum, s) => sum + Number(s.listing?.price || 0), 0)
-  const totalFeesPaid        = completedSales.reduce((sum, s) => sum + Number(s.platform_fee || 0) + Number(s.creator_fee || 0), 0)
-  const totalShippingPaid    = completedSales.reduce((sum, s) => sum + Number(s.shipping_cost || 0), 0)
+  const releasedSales        = completedSales.filter(s => s.status === 'released')
+  const totalCompletedRevenue = releasedSales.reduce((sum, s) => sum + Number(s.listing?.price || 0), 0)
+  const totalFeesPaid        = releasedSales.reduce((sum, s) => sum + Number(s.platform_fee || 0) + Number(s.creator_fee || 0), 0)
+  const totalShippingPaid    = releasedSales.reduce((sum, s) => sum + Number(s.shipping_cost || 0), 0)
   const totalNetReceived     = Math.max(0, totalCompletedRevenue - totalFeesPaid - totalShippingPaid)
   const bondInFlight = activeOrders.reduce((sum, o) => sum + Number(o.bond_amount || 0), 0)
 
@@ -233,6 +243,43 @@ function SellerDashboard() {
       setReviewError(err.message)
     } finally {
       setReviewSubmitting(false)
+    }
+  }
+
+  const submitDisputeEvidence = async () => {
+    if (!disputeModal || disputeEvidenceUploading) return
+    setDisputeEvidenceUploading(true)
+    setDisputeEvidenceError('')
+    try {
+      const newFiles = disputeEvidenceFiles.filter(f => f.file)
+      const uploadedUrls = []
+      for (const item of newFiles) {
+        const fd = new FormData()
+        fd.append('file', item.file)
+        fd.append('order_id', disputeModal.orderId)
+        fd.append('dispute_id', disputeModal.disputeId)
+        const upRes = await fetch('/api/disputes/seller-evidence', { method: 'PUT', body: fd })
+        const upData = await upRes.json()
+        if (!upRes.ok) throw new Error(upData.error || 'Upload failed')
+        uploadedUrls.push(upData.url)
+      }
+      const allUrls = [...(disputeModal.existingEvidence || []), ...uploadedUrls]
+      const res = await fetch('/api/disputes/seller-evidence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dispute_id: disputeModal.disputeId, seller_evidence: allUrls, seller_notes: disputeSellerNotes }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to submit')
+      setDisputeEvidenceDone(prev => ({ ...prev, [disputeModal.orderId]: true }))
+      setDisputeModal(null)
+      setDisputeEvidenceFiles([])
+      setDisputeSellerNotes('')
+      await fetchData()
+    } catch (err) {
+      setDisputeEvidenceError(err.message)
+    } finally {
+      setDisputeEvidenceUploading(false)
     }
   }
 
@@ -635,7 +682,7 @@ function SellerDashboard() {
             {order.status === 'auth_passed'       && `Authentication passed · Shipping to buyer`}
             {order.status === 'delivered'         && `Delivered · Buyer inspection window open`}
             {order.status === 'inspection_window' && (order.auto_release_at ? `Delivered · Auto-releases ${fmtDate(order.auto_release_at)}` : 'Delivered · Buyer inspection window open')}
-            {order.status === 'disputed'          && `Buyer opened a dispute · Chase Hollow reviewing`}
+            {order.status === 'disputed'          && `Buyer opened a dispute · Submit your evidence before staff review`}
           </div>
           {(bondError[order.id] || labelError[order.id]) && (
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)', marginBottom: '8px' }}>{bondError[order.id] || labelError[order.id]}</div>
@@ -687,6 +734,28 @@ function SellerDashboard() {
               </div>
             </div>
           )}
+          {order.status === 'disputed' && (() => {
+            const activeDispute = order.disputes?.find(d => d.outcome === 'pending')
+            if (!activeDispute) return null
+            const alreadySubmitted = disputeEvidenceDone[order.id] || (activeDispute.seller_evidence?.length > 0)
+            return (
+              <div style={{ marginTop: '10px', background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.25)', borderRadius: '8px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.5 }}>
+                  <strong style={{ color: 'var(--accent-red)' }}>Dispute filed:</strong> {activeDispute.reason}
+                </div>
+                {alreadySubmitted ? (
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)' }}>
+                    ✓ Evidence submitted ({activeDispute.seller_evidence?.length || 0} photo{(activeDispute.seller_evidence?.length || 0) !== 1 ? 's' : ''}) · Awaiting staff review
+                  </div>
+                ) : (
+                  <button onClick={() => { setDisputeModal({ orderId: order.id, disputeId: activeDispute.id, cardName: order.listing?.card_name, reason: activeDispute.reason, existingEvidence: activeDispute.seller_evidence || [] }); setDisputeEvidenceFiles([]) }}
+                    style={{ background: 'rgba(200,75,60,0.12)', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                    Submit Counter Evidence →
+                  </button>
+                )}
+              </div>
+            )
+          })()}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
             <button onClick={() => setChatOrder({ id: order.id, label: order.listing?.card_name })} style={btn({ border: '1.5px solid var(--teal-border)', color: 'var(--teal)' })}>Message Buyer</button>
             {order.listing?.id && (
@@ -716,6 +785,54 @@ function SellerDashboard() {
           orderLabel={chatOrder.label}
           onClose={() => setChatOrder(null)}
         />
+      )}
+
+      {/* Dispute Evidence Modal */}
+      {disputeModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 600, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          onClick={e => { if (e.target === e.currentTarget && !disputeEvidenceUploading) { setDisputeModal(null); setDisputeEvidenceFiles([]); setDisputeSellerNotes('') } }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.4)', borderRadius: '16px', width: '100%', maxWidth: '500px', padding: '28px' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Submit <em style={{ color: 'var(--accent-red)' }}>Counter Evidence</em></div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>{disputeModal.cardName}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.2)', borderRadius: '8px', padding: '10px 12px', marginBottom: '16px', lineHeight: 1.6 }}>
+              <strong style={{ color: 'var(--accent-red)' }}>Buyer's claim:</strong> {disputeModal.reason}
+            </div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Your rebuttal</div>
+            <textarea
+              value={disputeSellerNotes}
+              onChange={e => setDisputeSellerNotes(e.target.value)}
+              placeholder="Describe your side of the situation — condition when shipped, any relevant details, why the buyer's claim is inaccurate…"
+              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', minHeight: '90px', lineHeight: 1.6, marginBottom: '16px', boxSizing: 'border-box' }}
+            />
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500 }}>Upload photos / evidence (optional, up to 5)</div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {disputeEvidenceFiles.map((item, i) => (
+                <div key={i} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <img src={item.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button onClick={() => setDisputeEvidenceFiles(prev => prev.filter((_, j) => j !== i))}
+                    style={{ position: 'absolute', top: '2px', right: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                </div>
+              ))}
+              {disputeEvidenceFiles.length < 5 && (
+                <label style={{ width: '80px', height: '80px', borderRadius: '8px', border: '1.5px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '22px', color: 'var(--text-muted)' }}>
+                  +
+                  <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => {
+                    const files = Array.from(e.target.files).slice(0, 5 - disputeEvidenceFiles.length)
+                    setDisputeEvidenceFiles(prev => [...prev, ...files.map(f => ({ file: f, preview: URL.createObjectURL(f) }))])
+                  }} />
+                </label>
+              )}
+            </div>
+            {disputeEvidenceError && <div style={{ fontSize: '12px', color: 'var(--accent-red)', marginBottom: '10px' }}>{disputeEvidenceError}</div>}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={submitDisputeEvidence} disabled={disputeEvidenceUploading || (!disputeSellerNotes.trim() && disputeEvidenceFiles.length === 0)}
+                style={{ flex: 1, background: 'var(--accent-red)', border: 'none', color: '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: (disputeEvidenceUploading || (!disputeSellerNotes.trim() && disputeEvidenceFiles.length === 0)) ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: (disputeEvidenceUploading || (!disputeSellerNotes.trim() && disputeEvidenceFiles.length === 0)) ? 0.6 : 1 }}>
+                {disputeEvidenceUploading ? 'Uploading…' : 'Submit Evidence'}
+              </button>
+              <button onClick={() => { setDisputeModal(null); setDisputeEvidenceFiles([]); setDisputeSellerNotes('') }} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Review modal */}
@@ -843,9 +960,9 @@ function SellerDashboard() {
           <div style={{ margin: '16px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', borderRadius: '10px', padding: '14px', marginTop: 'auto' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '10px', fontWeight: 500 }}>Seller Stats</div>
             {[
-              { label: 'Rating',    val: profile?.rep_score ? `${profile.rep_score.toFixed(2)} ★` : '—', gold: true },
+              { label: 'Rating',    val: profile?.seller_rep_score ? `${profile.seller_rep_score.toFixed(2)} ★` : '—', gold: true },
               { label: 'Strikes',   val: String(profile?.strike_count ?? 0), green: profile?.strike_count === 0 },
-              { label: 'Tier',      val: TIER_LABEL[profile?.tier] || 'New' },
+              { label: 'Tier',      val: TIER_LABEL[profile?.seller_tier] || 'New' },
               { label: 'Bond rate', val: `${((bondRate) * 100).toFixed(0)}% per sale` },
             ].map((stat, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '3px 0' }}>
@@ -871,7 +988,7 @@ function SellerDashboard() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
                   <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: 'var(--text-primary)' }}>Welcome back, <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{profile?.username || 'Seller'}</em></div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{TIER_LABEL[profile?.tier] || 'New'} Seller · {completedSales.length} sales · {profile?.strike_count ?? 0} strikes · Ship within 48hrs of sale</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{TIER_LABEL[profile?.seller_tier] || 'New'} Seller · {releasedSales.length} sales · {profile?.strike_count ?? 0} strikes · Ship within 48hrs of sale</div>
                 </div>
                 <button onClick={() => setActiveSection('new-listing')} style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>+ New Listing</button>
               </div>
@@ -904,7 +1021,7 @@ function SellerDashboard() {
                 {[
                   { label: 'Active Orders',    val: String(activeOrders.length),           sub: ordersNeedingShip.length ? `${ordersNeedingShip.length} need shipping` : 'All on track',  color: ordersNeedingShip.length ? 'var(--accent-red)' : 'var(--text-primary)' },
                   { label: 'Active Listings',  val: String(myListings.length),              sub: fmtUSD(totalActiveSalesValue) + ' total value',                                            color: 'var(--text-primary)' },
-                  { label: 'Completed Sales',  val: String(completedSales.length),          sub: fmtUSD(totalCompletedRevenue) + ' gross',                                                  color: 'var(--accent-green)' },
+                  { label: 'Completed Sales',  val: String(releasedSales.length),           sub: fmtUSD(totalCompletedRevenue) + ' gross',                                                  color: 'var(--accent-green)' },
                   { label: 'Bond In-Flight',   val: fmtUSD(bondInFlight),                   sub: 'Returns within 5–7 days',                                                                 color: 'var(--gold)' },
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px 18px' }}>
@@ -1447,7 +1564,7 @@ function SellerDashboard() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div>
                   <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Earnings</em></div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{completedSales.length} completed sales · All USDC on Base</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{releasedSales.length} completed sales · All USDC on Base</div>
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
@@ -1477,23 +1594,27 @@ function SellerDashboard() {
                     </thead>
                     <tbody>
                       {completedSales.map((sale, i) => {
+                        const isRefunded = sale.status === 'refunded'
                         const gross  = Number(sale.listing?.price || 0)
                         const fee    = Number(sale.platform_fee || 0) + Number(sale.creator_fee || 0)
                         const ship   = Number(sale.shipping_cost || 0)
-                        const net    = Math.max(0, gross - fee - ship)
+                        const net    = isRefunded ? 0 : Math.max(0, gross - fee - ship)
                         const bond   = Number(sale.bond_amount || 0)
                         return (
-                          <tr key={sale.id} style={{ borderBottom: i < completedSales.length - 1 ? '0.5px solid var(--border)' : 'none' }}
+                          <tr key={sale.id} style={{ borderBottom: i < completedSales.length - 1 ? '0.5px solid var(--border)' : 'none', opacity: isRefunded ? 0.7 : 1 }}
                             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                           >
-                            <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{sale.listing?.card_name || '—'}</td>
+                            <td style={{ padding: '12px 14px' }}>
+                              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{sale.listing?.card_name || '—'}</div>
+                              {isRefunded && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-red)', marginTop: '2px', letterSpacing: '0.08em' }}>DISPUTE LOST — REFUNDED</div>}
+                            </td>
                             <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(sale.released_at)}</td>
-                            <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--gold)', fontWeight: 600 }}>{fmtUSD(gross)}</td>
-                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>−{fmtUSD(fee)}</td>
-                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>−{fmtUSD(ship)}</td>
-                            <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--accent-green)', fontWeight: 600 }}>{fmtUSD(net)}</td>
-                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: bond > 0 ? 'var(--accent-green)' : 'var(--text-muted)' }}>{bond > 0 ? `${fmtUSD(bond)} ✓` : '—'}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: isRefunded ? 'var(--accent-red)' : 'var(--gold)', fontWeight: 600 }}>{fmtUSD(gross)}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>{isRefunded ? '—' : `−${fmtUSD(fee)}`}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>{isRefunded ? '—' : `−${fmtUSD(ship)}`}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: isRefunded ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 600 }}>{isRefunded ? '—' : fmtUSD(net)}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: bond > 0 ? (isRefunded ? 'var(--accent-red)' : 'var(--accent-green)') : 'var(--text-muted)' }}>{bond > 0 ? (isRefunded ? `${fmtUSD(bond)} Forfeited` : `${fmtUSD(bond)} ✓`) : '—'}</td>
                             <td style={{ padding: '12px 14px' }}>
                               {sale.reviews?.some(r => r.reviewer_role === 'seller') ? (
                                 <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-green)' }}>Reviewed ✓</span>
@@ -1558,7 +1679,7 @@ function SellerDashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
                 {[
                   { label: 'Currently Locked', val: fmtUSD(bondInFlight), sub: `Across ${activeOrders.length} active orders · Returns within 5–7 days each`, color: 'var(--accent-amber)' },
-                  { label: 'Bond Tier',         val: `${(bondRate * 100).toFixed(0)}% + $20`, sub: `${TIER_LABEL[profile?.tier] || 'New'} seller`, color: 'var(--teal)' },
+                  { label: 'Bond Tier',         val: `${(bondRate * 100).toFixed(0)}% + $20`, sub: `${TIER_LABEL[profile?.seller_tier] || 'New'} seller`, color: 'var(--teal)' },
                   { label: 'Strikes',           val: String(profile?.strike_count ?? 0), sub: profile?.strike_count === 0 ? 'None — clean record' : 'Strike 2 → bond jumps to 4%', color: profile?.strike_count === 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
@@ -1616,7 +1737,7 @@ function SellerDashboard() {
                   { tier: 'Elite',       range: '500–2,499 sales',   rate: 1,  key: 'elite'   },
                   { tier: 'Legend',      range: '2,500+ sales',      rate: 1,  key: 'legend'  },
                 ].map((t, i) => {
-                  const isMe = (profile?.tier || 'new') === t.key
+                  const isMe = (profile?.seller_tier || 'new') === t.key
                   return (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '10px 0', borderBottom: i < 4 ? '0.5px solid var(--border)' : 'none' }}>
                       <div style={{ flex: 1 }}>

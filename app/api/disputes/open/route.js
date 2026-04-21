@@ -2,6 +2,43 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
+// PUT /api/disputes/open
+// Multipart: file + order_id — uploads buyer dispute evidence server-side (bypasses storage RLS)
+export async function PUT(request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const formData = await request.formData()
+    const file = formData.get('file')
+    const orderId = formData.get('order_id')
+    if (!file || !orderId) return NextResponse.json({ error: 'file and order_id required' }, { status: 400 })
+
+    // Verify caller is the buyer
+    const { data: order } = await supabaseAdmin
+      .from('orders').select('buyer_id').eq('id', orderId).single()
+    if (!order || order.buyer_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const ext = file.name.split('.').pop() || 'jpg'
+    const path = `disputes/${orderId}/buyer/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const buffer = Buffer.from(await file.arrayBuffer())
+
+    const { error: upErr } = await supabaseAdmin.storage
+      .from('listing-photos')
+      .upload(path, buffer, { contentType: file.type, upsert: false })
+    if (upErr) throw upErr
+
+    const { data: { publicUrl } } = supabaseAdmin.storage.from('listing-photos').getPublicUrl(path)
+    return NextResponse.json({ url: publicUrl })
+  } catch (err) {
+    console.error('[disputes/open PUT]', err)
+    return NextResponse.json({ error: err.message || 'Upload failed' }, { status: 500 })
+  }
+}
+
 // POST /api/disputes/open
 // Body: { order_id, reason, description, onchain_tx_hash }
 // Auth: buyer of this order only.
@@ -44,7 +81,7 @@ export async function POST(request) {
       .from('disputes')
       .select('id')
       .eq('order_id', order_id)
-      .is('outcome', null)
+      .eq('outcome', 'pending')
       .single()
 
     if (existing) {

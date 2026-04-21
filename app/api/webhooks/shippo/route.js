@@ -43,6 +43,13 @@ export async function POST(request) {
           .from('orders')
           .update({ status: 'in_transit', shipped_at: new Date().toISOString() })
           .eq('id', order.id)
+        try {
+          const { emailBuyerSellerShipped } = await import('@/lib/emails')
+          const { data: buyer } = await supabaseAdmin.from('users').select('email, full_name').eq('id', order.buyer_id).single()
+          if (buyer?.email) await emailBuyerSellerShipped({ to: buyer.email, order })
+        } catch (err) {
+          console.error('[webhooks/shippo] emailBuyerSellerShipped failed:', err)
+        }
       }
       // Label C transit — buyer shipped the return, no status change needed
       // (awaiting_return is sufficient until delivered)
@@ -69,8 +76,14 @@ export async function POST(request) {
             auto_release_at: autoReleaseAt,
           })
           .eq('id', order.id)
-        // Tell the contract the card is delivered — starts 72hr window on-chain
         await callMarkDelivered(order.onchain_order_id)
+        try {
+          const { emailBuyerDelivered } = await import('@/lib/emails')
+          const { data: buyer } = await supabaseAdmin.from('users').select('email, full_name').eq('id', order.buyer_id).single()
+          if (buyer?.email) await emailBuyerDelivered({ to: buyer.email, order: { ...order, auto_release_at: autoReleaseAt } })
+        } catch (err) {
+          console.error('[webhooks/shippo] emailBuyerDelivered failed:', err)
+        }
 
       } else if (label === 'B' && order.auth_tier === 'physical') {
         // Tier 2 Label B delivered to buyer — open 72hr inspection window
@@ -83,8 +96,14 @@ export async function POST(request) {
             auto_release_at: autoReleaseAt,
           })
           .eq('id', order.id)
-        // Tell the contract the card is delivered — starts 72hr window on-chain
         await callMarkDelivered(order.onchain_order_id)
+        try {
+          const { emailBuyerDelivered } = await import('@/lib/emails')
+          const { data: buyer } = await supabaseAdmin.from('users').select('email, full_name').eq('id', order.buyer_id).single()
+          if (buyer?.email) await emailBuyerDelivered({ to: buyer.email, order: { ...order, auto_release_at: autoReleaseAt } })
+        } catch (err) {
+          console.error('[webhooks/shippo] emailBuyerDelivered failed:', err)
+        }
 
       } else if (label === 'C') {
         if (order.auth_tier === 'remote') {

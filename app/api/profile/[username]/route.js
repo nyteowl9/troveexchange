@@ -66,14 +66,30 @@ export async function GET(req, { params }) {
   // Completed sales (public — card name, price, date only)
   const { data: salesHistory } = await supabase
     .from('orders')
-    .select('id, escrow_amount, status, released_at')
+    .select('id, escrow_amount, released_at, listing:listing_id(card_name, grade, grader)')
     .eq('seller_id', user.id)
     .eq('status', 'released')
     .order('released_at', { ascending: false })
     .limit(50)
 
+  // Fallback: compute rep scores directly from reviews if stored value is null
+  const computedSellerScore = (sellerReviews?.length || 0) > 0
+    ? Math.round((sellerReviews.reduce((s, r) => s + r.rating, 0) / sellerReviews.length) * 100) / 100
+    : null
+  const computedBuyerScore = (buyerReviews?.length || 0) > 0
+    ? Math.round((buyerReviews.reduce((s, r) => s + r.rating, 0) / buyerReviews.length) * 100) / 100
+    : null
+
+  const enrichedUser = {
+    ...user,
+    seller_rep_score:    user.seller_rep_score    ?? computedSellerScore,
+    seller_review_count: user.seller_review_count || sellerReviews?.length || 0,
+    buyer_rep_score:     user.buyer_rep_score     ?? computedBuyerScore,
+    buyer_review_count:  user.buyer_review_count  || buyerReviews?.length  || 0,
+  }
+
   return NextResponse.json({
-    user,
+    user: enrichedUser,
     sellerReviews: enrichReviews(sellerReviews),
     buyerReviews:  enrichReviews(buyerReviews),
     salesHistory:  salesHistory || [],

@@ -348,7 +348,9 @@ export default function Marketplace() {
                         <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', lineHeight: 1.2, marginBottom: '6px', color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{card.card_name}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                           <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color, fontWeight: 500 }}>{tc.label}</span>
-                          <span style={{ fontSize: '11px', color: 'var(--teal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{card.seller?.username || '—'}</span>
+                          {card.seller?.username
+                            ? <Link href={`/profile/${card.seller.username}`} onClick={e => e.stopPropagation()} style={{ fontSize: '11px', color: 'var(--teal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>@{card.seller.username}</Link>
+                            : <span style={{ fontSize: '11px', color: 'var(--teal)' }}>—</span>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '16px', fontWeight: 700, color: 'var(--gold)' }}>${parseFloat(card.price).toLocaleString()}</div>
@@ -386,7 +388,9 @@ export default function Marketplace() {
                       </div>
                       <div style={{ minWidth: '80px', textAlign: 'right' }}>
                         <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color, fontWeight: 500 }}>{tc.label}</span>
-                        <div style={{ fontSize: '11px', color: 'var(--teal)', marginTop: '3px' }}>@{card.seller?.username || '—'}</div>
+                        {card.seller?.username
+                          ? <Link href={`/profile/${card.seller.username}`} onClick={e => e.stopPropagation()} style={{ fontSize: '11px', color: 'var(--teal)', marginTop: '3px', textDecoration: 'none', display: 'block' }}>@{card.seller.username}</Link>
+                          : <div style={{ fontSize: '11px', color: 'var(--teal)', marginTop: '3px' }}>—</div>}
                       </div>
                       <div style={{ textAlign: 'right', minWidth: '100px' }}>
                         <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '18px', fontWeight: 700, color: 'var(--gold)' }}>${parseFloat(card.price).toLocaleString()}</div>

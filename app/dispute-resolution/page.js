@@ -1,6 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
+
+async function apiFetch(path, opts = {}) {
+  const { data: { session } } = await supabase.auth.getSession()
+  return fetch(path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}`, ...(opts.headers || {}) },
+  })
+}
 
 export default function DisputeResolution() {
   const [theme, setTheme] = useState('dark')
@@ -8,7 +17,21 @@ export default function DisputeResolution() {
   const [activeDispute, setActiveDispute] = useState(null)
   const [activeTab, setActiveTab] = useState('timeline')
   const [recommendation, setRecommendation] = useState(null)
+  const [recNotes, setRecNotes] = useState('')
+  const [recSubmitting, setRecSubmitting] = useState(false)
+  const [recError, setRecError] = useState(null)
+  const [recSuccess, setRecSuccess] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(null)
+  const [executing, setExecuting] = useState(false)
+  const [execError, setExecError] = useState(null)
+  const [overrideReason, setOverrideReason] = useState('')
+
+  const [currentUser, setCurrentUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [disputes, setDisputes] = useState([])
+  const [resolvedDisputes, setResolvedDisputes] = useState([])
+  const [monthStats, setMonthStats] = useState({ opened: 0, buyer_wins: 0, seller_wins: 0, pending: 0 })
+  const [authInspections, setAuthInspections] = useState([])
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
@@ -23,82 +46,129 @@ export default function DisputeResolution() {
     localStorage.setItem('ch-theme', next)
   }
 
-  const disputes = [
-    {
-      id: 'DSP-4821', order: '#4821', value: '$487', status: 'open', priority: 'normal',
-      opened: '2h ago', deadline: '70hrs remaining',
-      buyer: 'RareVault_99', seller: 'CardKing_88',
-      card: 'Charizard Holo PSA 9', set: 'Pokémon · Base Set Shadowless',
-      reason: 'Card does not match listing photos',
-      summary: 'Buyer claims the received card has a visible crease on the bottom-left corner that was not visible in the listing photos. Buyer has provided photos of the received card. Seller disputes the claim.',
-      bg: 'linear-gradient(145deg,#1a3a5c,#0d2035)', icon: '⚡',
-      bondBuyer: '$2.44', bondSeller: '$14.61',
-      timeline: [
-        { time: 'Apr 7 · 2:14pm', event: 'Buyer opened dispute', detail: 'Reason: Card does not match listing photos', type: 'buyer' },
-        { time: 'Apr 7 · 2:15pm', event: 'Dispute bond deducted', detail: '$2.44 USDC held from buyer wallet pending resolution', type: 'system' },
-        { time: 'Apr 7 · 2:20pm', event: 'Seller notified', detail: 'Seller has 48hrs to respond with evidence', type: 'system' },
-        { time: 'Apr 7 · 4:45pm', event: 'Seller responded', detail: 'Seller disputes claim — states card was as described and photographed', type: 'seller' },
-        { time: 'Apr 7 · 5:00pm', event: 'Assigned to staff review', detail: 'Dispute assigned to Sarah K. for review', type: 'system' },
-      ],
-      buyerEvidence: [
-        { label: 'Photo 1', desc: 'Received card — front view showing corner crease' },
-        { label: 'Photo 2', desc: 'Close-up of bottom-left corner — crease visible' },
-        { label: 'Photo 3', desc: 'Side-by-side comparison with listing photo' },
-      ],
-      sellerEvidence: [
-        { label: 'Photo 1', desc: 'Original listing photo — bottom-left corner detail' },
-        { label: 'Statement', desc: 'Seller states card was photographed under proper lighting and the crease was not present at time of shipping' },
-      ],
-      authPhotos: [
-        { label: 'Auth Front', desc: 'Authentication photo — front (taken at Chase Hollow HQ)' },
-        { label: 'Auth Back', desc: 'Authentication photo — back' },
-        { label: 'Auth Corner', desc: 'Authentication photo — bottom-left corner at time of auth' },
-      ]
-    },
-    {
-      id: 'DSP-4810', order: '#4810', value: '$9,200', status: 'open', priority: 'high',
-      opened: '8h ago', deadline: '64hrs remaining',
-      buyer: 'CardVault_NYC', seller: 'PowerNine_Pro',
-      card: 'Ancestral Recall BGS 9', set: 'MTG · Alpha Edition',
-      reason: 'Grade label does not match listing',
-      summary: 'Buyer claims the received card shows BGS 8.5 on the label, not BGS 9 as listed. Buyer has provided photos of the grade label. Seller states the card was listed correctly and disputes the claim.',
-      bg: 'linear-gradient(145deg,#1a2a3c,#0d1a24)', icon: '📜',
-      bondBuyer: '$46.00', bondSeller: '$276.00',
-      timeline: [
-        { time: 'Apr 7 · 8:12am', event: 'Buyer opened dispute', detail: 'Reason: Grade label does not match listing', type: 'buyer' },
-        { time: 'Apr 7 · 8:13am', event: 'Dispute bond deducted', detail: '$46.00 USDC held from buyer wallet', type: 'system' },
-        { time: 'Apr 7 · 10:30am', event: 'Seller responded', detail: 'Seller claims listing was accurate — has original purchase receipt', type: 'seller' },
-        { time: 'Apr 7 · 11:00am', event: 'Escalated to senior review', detail: 'High value dispute — requires senior staff decision', type: 'system' },
-      ],
-      buyerEvidence: [
-        { label: 'Photo 1', desc: 'Grade label close-up — shows BGS 8.5 not BGS 9' },
-        { label: 'Photo 2', desc: 'Full slab front showing discrepancy' },
-      ],
-      sellerEvidence: [
-        { label: 'Document', desc: 'Original BGS receipt showing grade of 9' },
-        { label: 'Photo 1', desc: 'Seller original photo of grade label before shipping' },
-      ],
-      authPhotos: [
-        { label: 'Auth Label', desc: 'Auth photo of grade label — taken at Chase Hollow HQ during inspection' },
-      ]
-    },
-    {
-      id: 'DSP-4799', order: '#4799', value: '$3,800', status: 'pending_owner', priority: 'normal',
-      opened: '2d ago', deadline: 'Awaiting owner decision',
-      buyer: 'SlabHunter_X', seller: 'RareVault_99',
-      card: 'Blastoise Holo PSA 10', set: 'Pokémon · Base Set',
-      reason: 'Wrong card received',
-      summary: 'Buyer received a Venusaur Holo PSA 9 instead of the listed Blastoise Holo PSA 10. Clear case of wrong card shipped. Staff recommendation: Full refund to buyer, strike to seller.',
-      bg: 'linear-gradient(145deg,#1a2a3a,#0d1a2a)', icon: '💧',
-      bondBuyer: '$19.00', bondSeller: '$114.00',
-      staffRec: 'buyer',
-      staffNote: 'Clear case — wrong card shipped. Auth photos confirm Venusaur was received, not Blastoise. Recommend full refund to buyer, return bond to buyer, strike to seller.',
-      timeline: [],
-      buyerEvidence: [], sellerEvidence: [], authPhotos: []
-    },
-  ]
+  const fetchCurrentUser = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase.from('users').select('id, full_name, role').eq('id', user.id).single()
+    setCurrentUser(profile)
+  }, [])
 
-  const dispute = activeDispute ? disputes.find(d => d.id === activeDispute) : null
+  const fetchDisputes = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await apiFetch('/api/disputes/list?status=open')
+      const json = await res.json()
+      if (res.ok) {
+        setDisputes(json.disputes || [])
+        setMonthStats(json.stats || { opened: 0, buyer_wins: 0, seller_wins: 0, pending: 0 })
+        if (json.role && json.full_name !== undefined) {
+          setCurrentUser(prev => prev ? { ...prev, role: json.role, full_name: json.full_name } : { role: json.role, full_name: json.full_name })
+        }
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const fetchResolved = useCallback(async () => {
+    const res = await apiFetch('/api/disputes/list?status=resolved')
+    const json = await res.json()
+    if (res.ok) setResolvedDisputes(json.disputes || [])
+  }, [])
+
+  const fetchStats = useCallback(async () => {}, [])
+
+  useEffect(() => {
+    fetchCurrentUser()
+    fetchDisputes()
+    fetchResolved()
+  }, [fetchCurrentUser, fetchDisputes, fetchResolved])
+
+  const fetchAuthInspections = useCallback(async (orderId) => {
+    if (!orderId) return
+    const { data } = await supabase
+      .from('auth_inspections')
+      .select('id, photos, decision, notes, timestamp')
+      .eq('order_id', orderId)
+      .order('timestamp', { ascending: true })
+    setAuthInspections(data || [])
+  }, [])
+
+  const openDetail = useCallback((d) => {
+    setActiveDispute(d)
+    setActiveSection('detail')
+    setActiveTab('timeline')
+    setRecommendation(d.staff_recommendation || null)
+    setRecNotes(d.notes || '')
+    setRecSuccess(false)
+    setRecError(null)
+    fetchAuthInspections(d.order_id)
+  }, [fetchAuthInspections])
+
+  const disputeStatus = (d) => {
+    if (d.outcome === 'buyer_wins') return 'resolved_buyer'
+    if (d.outcome === 'seller_wins') return 'resolved_seller'
+    if (d.outcome === 'pending' && d.staff_recommendation) return 'pending_owner'
+    return 'open'
+  }
+
+  const fmtDate = (iso) => {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+
+  const fmtUSD = (n) => {
+    if (!n) return '—'
+    return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  const handleSubmitRecommendation = async () => {
+    if (!recommendation || !activeDispute) return
+    setRecSubmitting(true)
+    setRecError(null)
+    try {
+      const res = await apiFetch('/api/disputes/recommend', {
+        method: 'POST',
+        body: JSON.stringify({ dispute_id: activeDispute.id, recommendation, notes: recNotes }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed')
+      setRecSuccess(true)
+      await fetchDisputes()
+    } catch (err) {
+      setRecError(err.message)
+    } finally {
+      setRecSubmitting(false)
+    }
+  }
+
+  const handleExecute = async (decision) => {
+    if (!showConfirmModal) return
+    if (showConfirmModal.isOverride && !overrideReason.trim()) return
+    setExecuting(true)
+    setExecError(null)
+    try {
+      const res = await apiFetch('/api/disputes/resolve', {
+        method: 'POST',
+        body: JSON.stringify({
+          dispute_id: showConfirmModal.disputeId,
+          decision,
+          override_reason: showConfirmModal.isOverride ? overrideReason.trim() : null,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed')
+      setShowConfirmModal(null)
+      setOverrideReason('')
+      setActiveDispute(null)
+      setActiveSection('queue')
+      await fetchDisputes()
+      await fetchResolved()
+    } catch (err) {
+      setExecError(err.message)
+      setExecuting(false)
+    }
+  }
 
   const statusColors = {
     open: { bg: 'rgba(232,168,56,0.1)', border: 'rgba(232,168,56,0.3)', color: 'var(--accent-amber)', label: 'Open' },
@@ -114,26 +184,33 @@ export default function DisputeResolution() {
     cursor: 'pointer', borderRadius: '8px', ...extra
   })
 
-  const EvidenceCard = ({ items, label, color }) => (
-    <div style={{ marginBottom: '14px' }}>
-      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color, marginBottom: '8px', fontWeight: 500 }}>{label}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {items.map((item, i) => (
-          <div key={i} style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--teal-border)'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
-          >
-            <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: 'var(--bg-4)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>📎</div>
-            <div>
-              <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>{item.label}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4 }}>{item.desc}</div>
-            </div>
-            <div style={{ marginLeft: 'auto', fontSize: '11px', color, fontWeight: 500 }}>View →</div>
-          </div>
-        ))}
+  const openQueue = disputes.filter(d => !d.staff_recommendation)
+  const pendingQueue = disputes.filter(d => d.staff_recommendation && d.outcome === 'pending')
+
+  const EvidenceCard = ({ urls, label, color }) => {
+    if (!urls || urls.length === 0) return (
+      <div style={{ marginBottom: '14px' }}>
+        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color, marginBottom: '8px', fontWeight: 500 }}>{label}</div>
+        <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No evidence submitted.</div>
       </div>
-    </div>
-  )
+    )
+    return (
+      <div style={{ marginBottom: '14px' }}>
+        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color, marginBottom: '8px', fontWeight: 500 }}>{label}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {urls.map((url, i) => (
+            <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'block', width: '80px', height: '80px', borderRadius: '8px', background: 'var(--bg-3)', border: '1px solid var(--border)', overflow: 'hidden', flexShrink: 0, textDecoration: 'none' }}>
+              <img src={url} alt={`Evidence ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;">📎</div>` }} />
+            </a>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const dispute = activeDispute
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', width: '100%' }}>
@@ -141,33 +218,57 @@ export default function DisputeResolution() {
       {/* CONFIRM MODAL */}
       {showConfirmModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: 'var(--bg-2)', border: `1.5px solid ${showConfirmModal === 'buyer' ? 'rgba(76,175,124,0.4)' : 'rgba(201,168,76,0.4)'}`, borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '100%' }}>
+          <div style={{ background: 'var(--bg-2)', border: `1.5px solid ${showConfirmModal.isOverride ? 'rgba(200,75,60,0.5)' : showConfirmModal.decision === 'buyer_wins' ? 'rgba(76,175,124,0.4)' : 'rgba(201,168,76,0.4)'}`, borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '100%' }}>
+            {showConfirmModal.isOverride && (
+              <div style={{ background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '12px', color: 'var(--accent-red)', lineHeight: 1.5 }}>
+                ⚠ <strong>Override — going against staff recommendation.</strong> This will be logged and auditable.
+              </div>
+            )}
             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>
-              {showConfirmModal === 'buyer' ? 'Refund Buyer' : 'Release to Seller'}
+              {showConfirmModal.decision === 'buyer_wins' ? 'Refund Buyer' : 'Release to Seller'}
             </div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
-              {showConfirmModal === 'buyer'
-                ? `Full escrow refund to ${dispute?.buyer}. Buyer bond returned. Seller receives Strike 1. This cannot be undone.`
-                : `Escrow releases to ${dispute?.seller}. Seller bond returned. Buyer bond forfeited. This cannot be undone.`}
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
+              {showConfirmModal.decision === 'buyer_wins'
+                ? `Full escrow refund to buyer. Seller receives Strike 1. This cannot be undone.`
+                : `Escrow releases to seller. Seller bond returned. This cannot be undone.`}
             </div>
+            {execError && (
+              <div style={{ background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: 'var(--accent-red)' }}>
+                {execError}
+              </div>
+            )}
             <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', lineHeight: 2 }}>
               {[
-                { label: 'Dispute', val: dispute?.id },
-                { label: 'Card', val: dispute?.card },
-                { label: 'Value', val: dispute?.value },
-                { label: 'Decision', val: showConfirmModal === 'buyer' ? 'Full refund to buyer' : 'Release to seller' },
+                { label: 'Dispute', val: showConfirmModal.disputeId?.slice(0, 8).toUpperCase() },
+                { label: 'Staff rec', val: showConfirmModal.staffRec === 'buyer_wins' ? 'Refund buyer' : 'Release to seller' },
+                { label: 'Your decision', val: showConfirmModal.decision === 'buyer_wins' ? 'Full refund to buyer' : 'Release to seller' },
               ].map((r, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--text-muted)' }}>{r.label}</span>
-                  <span style={{ color: 'var(--text-primary)' }}>{r.val}</span>
+                  <span style={{ color: r.label === 'Your decision' && showConfirmModal.isOverride ? 'var(--accent-red)' : 'var(--text-primary)' }}>{r.val}</span>
                 </div>
               ))}
             </div>
+            {showConfirmModal.isOverride && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-red)', marginBottom: '6px', fontWeight: 500 }}>Override Reason (required)</div>
+                <textarea
+                  value={overrideReason}
+                  onChange={e => setOverrideReason(e.target.value)}
+                  placeholder="Explain why you are overriding the staff recommendation…"
+                  rows={3}
+                  style={{ width: '100%', background: 'var(--bg-3)', border: `1.5px solid ${overrideReason.trim() ? 'rgba(200,75,60,0.4)' : 'rgba(200,75,60,0.2)'}`, borderRadius: '8px', padding: '10px 12px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button style={{ flex: 1, background: showConfirmModal === 'buyer' ? 'var(--accent-green)' : 'var(--gold)', border: 'none', color: '#0A0A0B', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                Confirm — Execute Decision
+              <button
+                onClick={() => handleExecute(showConfirmModal.decision)}
+                disabled={executing || (showConfirmModal.isOverride && !overrideReason.trim())}
+                style={{ flex: 1, background: showConfirmModal.isOverride ? 'var(--accent-red)' : showConfirmModal.decision === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)', border: 'none', color: '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: (executing || (showConfirmModal.isOverride && !overrideReason.trim())) ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: (executing || (showConfirmModal.isOverride && !overrideReason.trim())) ? 0.5 : 1 }}>
+                {executing ? 'Executing…' : showConfirmModal.isOverride ? 'Override & Execute' : 'Confirm — Execute Decision'}
               </button>
-              <button onClick={() => setShowConfirmModal(null)} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Cancel</button>
+              <button onClick={() => { setShowConfirmModal(null); setExecError(null); setOverrideReason('') }} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Cancel</button>
             </div>
           </div>
         </div>
@@ -183,43 +284,48 @@ export default function DisputeResolution() {
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(232,168,56,0.1)', border: '1px solid rgba(232,168,56,0.3)', color: 'var(--accent-amber)', fontWeight: 500 }}>Dispute Resolution</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>Staff: <span style={{ color: 'var(--teal)' }}>Sarah K.</span></div>
+          {currentUser && (
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>
+              {currentUser.role === 'owner' ? 'Owner' : 'Staff'}: <span style={{ color: 'var(--teal)' }}>{currentUser.full_name || currentUser.email || 'You'}</span>
+            </div>
+          )}
           <button onClick={toggleTheme} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}>{theme === 'dark' ? '🌙' : '☀️'}</button>
         </div>
       </nav>
 
-            <style>{`
+      <style>{`
         @media (max-width: 768px) {
           .dash-aside { display: none !important; }
           .dash-main { margin-left: 0 !important; width: 100% !important; max-width: 100% !important; padding: 16px 1rem 40px !important; }
           .mobile-section-nav { display: block !important; }
         }
-              @media (min-width: 769px) { .mobile-section-nav { display: none !important; } }
+        @media (min-width: 769px) { .mobile-section-nav { display: none !important; } }
       `}</style>
-<div style={{ display: 'flex', flexWrap: 'wrap', paddingTop: '56px', minHeight: '100vh' }}>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', paddingTop: '56px', minHeight: '100vh' }}>
 
         {/* SIDEBAR */}
         <aside className="dash-aside" style={{ width: '200px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '56px', left: 0, height: 'calc(100vh - 56px)', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
           {[
-            { id: 'queue', icon: '⊡', label: 'Dispute Queue', badge: 2 },
+            { id: 'queue', icon: '⊡', label: 'Dispute Queue', badge: openQueue.length || null },
             { id: 'detail', icon: '◈', label: 'Case Detail', disabled: !activeDispute },
-            { id: 'pending', icon: '⏱', label: 'Pending Owner', badge: 1, badgeColor: 'var(--accent-blue)' },
-            { id: 'resolved', icon: '✓', label: 'Resolved', badge: 12 },
+            { id: 'pending', icon: '⏱', label: 'Pending Owner', badge: pendingQueue.length || null, badgeColor: 'var(--accent-blue)' },
+            { id: 'resolved', icon: '✓', label: 'Resolved', badge: resolvedDisputes.length || null },
           ].map(item => (
             <button key={item.id} onClick={() => !item.disabled && setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', cursor: item.disabled ? 'not-allowed' : 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: item.disabled ? 'var(--text-muted)' : activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%', opacity: item.disabled ? 0.4 : 1 }}>
               <span style={{ fontSize: '13px' }}>{item.icon}</span>
               {item.label}
-              {item.badge && <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor || 'var(--accent-amber)', color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
+              {item.badge > 0 && <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor || 'var(--accent-amber)', color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
             </button>
           ))}
 
           <div style={{ margin: '12px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', marginTop: 'auto' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500 }}>This Month</div>
             {[
-              { label: 'Opened', val: '14' },
-              { label: 'Buyer wins', val: '9', green: true },
-              { label: 'Seller wins', val: '4', gold: true },
-              { label: 'Pending', val: '1', amber: true },
+              { label: 'Opened', val: monthStats.opened },
+              { label: 'Buyer wins', val: monthStats.buyer_wins, green: true },
+              { label: 'Seller wins', val: monthStats.seller_wins, gold: true },
+              { label: 'Pending', val: monthStats.pending, amber: true },
             ].map((s, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
                 <span style={{ color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '9px' }}>{s.label}</span>
@@ -231,13 +337,10 @@ export default function DisputeResolution() {
 
         {/* MAIN */}
         <main className="dash-main" style={{ marginLeft: '200px', flex: 1, padding: '24px 24px 60px', minWidth: 0 }}>
-          {/* MOBILE NAV DROPDOWN */}
+          {/* MOBILE NAV */}
           <div className="mobile-section-nav" style={{ marginBottom: '20px', display: 'none' }}>
-            <select
-              value={activeSection}
-              onChange={e => setActiveSection(e.target.value)}
-              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
-            >
+            <select value={activeSection} onChange={e => setActiveSection(e.target.value)}
+              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}>
               <option value="queue">Dispute Queue</option>
               <option value="detail">Case Detail</option>
               <option value="pending">Pending Owner Decision</option>
@@ -250,51 +353,85 @@ export default function DisputeResolution() {
             <div>
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)' }}>Dispute <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Queue</em></div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>2 open · 1 pending owner decision · Staff recommends, owner executes</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  {openQueue.length} open · {pendingQueue.length} pending owner decision · Staff recommends, owner executes
+                </div>
               </div>
 
               <div style={{ background: 'rgba(60,125,200,0.06)', border: '1px solid rgba(60,125,200,0.25)', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                ⊡ <strong style={{ color: 'var(--accent-blue)' }}>How disputes work:</strong> Staff reviews evidence from both sides and makes a recommendation. The owner (you) executes the final decision. Staff never moves money directly — only recommends. Owner approves and the smart contract executes.
+                ⊡ <strong style={{ color: 'var(--accent-blue)' }}>How disputes work:</strong> Staff reviews evidence from both sides and makes a recommendation. The owner executes the final decision. Staff never moves money directly — only recommends.
               </div>
 
+              {loading && (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '11px' }}>Loading disputes…</div>
+              )}
+
+              {!loading && disputes.length === 0 && (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>
+                  No open disputes
+                </div>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {disputes.filter(d => d.status === 'open' || d.status === 'pending_owner').map((d, i) => {
-                  const sc = statusColors[d.status]
+                {disputes.map((d, i) => {
+                  const status = disputeStatus(d)
+                  const sc = statusColors[status]
+                  const escrowAmt = d.orders?.escrow_amount
+                  const isHighValue = escrowAmt >= 1000
+                  const buyer = d.orders?.buyer
+                  const seller = d.orders?.seller
+                  const card = d.orders?.listing?.card_name || 'Unknown card'
                   return (
-                    <div key={i} style={{ background: 'var(--bg-2)', border: `1.5px solid ${d.priority === 'high' ? 'rgba(201,168,76,0.3)' : 'var(--border)'}`, borderRadius: '12px', padding: '16px 20px', cursor: 'pointer', transition: 'all 0.15s' }}
+                    <div key={d.id} style={{ background: 'var(--bg-2)', border: `1.5px solid ${isHighValue ? 'rgba(201,168,76,0.3)' : 'var(--border)'}`, borderRadius: '12px', padding: '16px 20px', cursor: 'pointer', transition: 'all 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--teal-border)'}
-                      onMouseLeave={e => e.currentTarget.style.borderColor = d.priority === 'high' ? 'rgba(201,168,76,0.3)' : 'var(--border)'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = isHighValue ? 'rgba(201,168,76,0.3)' : 'var(--border)'}
                     >
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                        <div style={{ width: '36px', height: '50px', borderRadius: '4px', background: d.bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>{d.icon}</div>
                         <div style={{ flex: 1, minWidth: '140px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
-                            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: 'var(--text-primary)' }}>{d.card}</div>
-                            {d.priority === 'high' && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '10px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>High Value</span>}
+                            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: 'var(--text-primary)' }}>{card}</div>
+                            {isHighValue && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '10px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>High Value</span>}
                           </div>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '6px' }}>{d.set} · {d.id} · {d.order}</div>
-                          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}><strong style={{ color: 'var(--accent-red)' }}>Reason:</strong> {d.reason}</div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>Buyer: <span style={{ color: 'var(--accent-blue)' }}>{d.buyer}</span> · Seller: <span style={{ color: 'var(--gold)' }}>{d.seller}</span></div>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                            {d.orders?.listing?.set || ''} · #{d.id.slice(0, 8).toUpperCase()}
+                          </div>
+                          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                            <strong style={{ color: 'var(--accent-red)' }}>Reason:</strong> {d.reason}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                            Buyer: <span style={{ color: 'var(--accent-blue)' }}>{buyer?.username || buyer?.full_name || buyer?.email || '—'}</span>
+                            {' · '}
+                            Seller: <span style={{ color: 'var(--gold)' }}>{seller?.username || seller?.full_name || seller?.email || '—'}</span>
+                          </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', marginBottom: '4px' }}>{d.value}</div>
+                          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', marginBottom: '4px' }}>{fmtUSD(escrowAmt)}</div>
                           <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, fontWeight: 500 }}>{sc.label}</span>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>{d.deadline}</div>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>{fmtDate(d.created_at)}</div>
                         </div>
                       </div>
-                      {d.status === 'pending_owner' && d.staffRec && (
+                      {status === 'pending_owner' && d.staff_recommendation && (
                         <div style={{ background: 'rgba(60,125,200,0.08)', border: '1px solid rgba(60,125,200,0.25)', borderRadius: '8px', padding: '10px 14px', marginBottom: '10px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                          <strong style={{ color: 'var(--accent-blue)' }}>Staff recommendation:</strong> {d.staffNote}
+                          <strong style={{ color: 'var(--accent-blue)' }}>Staff recommendation:</strong>{' '}
+                          {d.staff_recommendation === 'buyer_wins' ? 'Refund buyer' : 'Release to seller'}
+                          {d.notes && ` — ${d.notes}`}
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button onClick={() => { setActiveDispute(d.id); setActiveSection('detail'); setActiveTab('timeline'); setRecommendation(null) }} style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Review Case →</button>
-                        {d.status === 'pending_owner' && (
-                          <>
-                            <button onClick={() => setShowConfirmModal('buyer')} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Execute — Refund Buyer</button>
-                            <button onClick={() => setShowConfirmModal('seller')} style={{ background: 'transparent', border: '1.5px solid rgba(201,168,76,0.4)', color: 'var(--gold)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Execute — Release to Seller</button>
-                          </>
-                        )}
+                        <button onClick={() => openDetail(d)} style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Review Case →</button>
+                        {status === 'pending_owner' && ['owner','dispute_resolver'].includes(currentUser?.role) && (() => {
+                          const rec = d.staff_recommendation
+                          const primaryDecision = rec
+                          const overrideDecision = rec === 'buyer_wins' ? 'seller_wins' : 'buyer_wins'
+                          const primaryLabel = rec === 'buyer_wins' ? 'Execute — Refund Buyer' : 'Execute — Release to Seller'
+                          const overrideLabel = rec === 'buyer_wins' ? 'Override — Release to Seller' : 'Override — Refund Buyer'
+                          return (
+                            <>
+                              <button onClick={() => setShowConfirmModal({ decision: primaryDecision, disputeId: d.id, staffRec: rec, isOverride: false })} style={{ background: rec === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)', border: 'none', color: '#0A0A0B', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>{primaryLabel}</button>
+                              <button onClick={() => { setOverrideReason(''); setShowConfirmModal({ decision: overrideDecision, disputeId: d.id, staffRec: rec, isOverride: true }) }} style={{ background: 'transparent', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)', padding: '8px 14px', fontSize: '11px', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: 0.7 }}>Override ↗</button>
+                            </>
+                          )
+                        })()}
                       </div>
                     </div>
                   )
@@ -309,9 +446,9 @@ export default function DisputeResolution() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
                 <button onClick={() => setActiveSection('queue')} style={btn({ fontSize: '11px', padding: '5px 12px' })}>← Queue</button>
                 <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)' }}>
-                  Case <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{dispute.id}</em>
+                  Case <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>#{dispute.id.slice(0, 8).toUpperCase()}</em>
                 </div>
-                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: statusColors[dispute.status]?.bg, border: `1px solid ${statusColors[dispute.status]?.border}`, color: statusColors[dispute.status]?.color, fontWeight: 500 }}>{statusColors[dispute.status]?.label}</span>
+                {(() => { const sc = statusColors[disputeStatus(dispute)]; return <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, fontWeight: 500 }}>{sc.label}</span> })()}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '20px', alignItems: 'flex-start' }}>
@@ -320,35 +457,40 @@ export default function DisputeResolution() {
                 <div>
                   {/* Case summary */}
                   <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                      <div style={{ width: '40px', height: '56px', borderRadius: '5px', background: dispute.bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>{dispute.icon}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--text-primary)', marginBottom: '2px' }}>{dispute.card}</div>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{dispute.set} · Order {dispute.order} · Value {dispute.value}</div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '4px' }}>
+                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--text-primary)' }}>
+                        {dispute.orders?.listing?.card_name || 'Unknown Card'}
                       </div>
+                      {dispute.orders?.listing_id && (
+                        <a href={`/listing/${dispute.orders.listing_id}`} target="_blank" rel="noopener noreferrer"
+                          style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 9px', borderRadius: '6px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', color: 'var(--teal)', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          View Listing ↗
+                        </a>
+                      )}
+                    </div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                      {dispute.orders?.listing?.set || ''} · Order #{dispute.order_id?.slice(0, 8).toUpperCase()} · {fmtUSD(dispute.orders?.escrow_amount)}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
                       {[
-                        { label: 'Buyer', val: dispute.buyer, color: 'var(--accent-blue)', bond: `Bond: ${dispute.bondBuyer}` },
-                        { label: 'Seller', val: dispute.seller, color: 'var(--gold)', bond: `Bond: ${dispute.bondSeller}` },
+                        { label: 'Buyer', val: dispute.orders?.buyer?.username || dispute.orders?.buyer?.full_name || '—', color: 'var(--accent-blue)' },
+                        { label: 'Seller', val: dispute.orders?.seller?.username || dispute.orders?.seller?.full_name || '—', color: 'var(--gold)' },
                       ].map((p, i) => (
                         <div key={i} style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '10px 12px' }}>
                           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 500 }}>{p.label}</div>
                           <div style={{ fontSize: '14px', fontWeight: 600, color: p.color }}>{p.val}</div>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>{p.bond} held in escrow</div>
                         </div>
                       ))}
                     </div>
-                    <div style={{ background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.2)', borderRadius: '8px', padding: '10px 12px', marginBottom: '8px' }}>
+                    <div style={{ background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.2)', borderRadius: '8px', padding: '10px 12px' }}>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-red)', marginBottom: '4px', fontWeight: 500 }}>BUYER CLAIM</div>
                       <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{dispute.reason}</div>
                     </div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.65 }}>{dispute.summary}</div>
                   </div>
 
                   {/* Tabs */}
                   <div style={{ display: 'flex', gap: '4px', marginBottom: '14px', borderBottom: '0.5px solid var(--border)', paddingBottom: '0' }}>
-                    {['timeline', 'evidence', 'auth-photos', 'comms'].map(tab => (
+                    {['timeline', 'evidence', 'auth-photos'].map(tab => (
                       <button key={tab} onClick={() => setActiveTab(tab)} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '8px 14px', border: 'none', background: 'transparent', color: activeTab === tab ? 'var(--teal)' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize', letterSpacing: '0.06em', borderBottom: `2px solid ${activeTab === tab ? 'var(--teal)' : 'transparent'}`, marginBottom: '-0.5px' }}>
                         {tab === 'auth-photos' ? 'Auth Photos' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                       </button>
@@ -358,29 +500,53 @@ export default function DisputeResolution() {
                   {/* Timeline */}
                   {activeTab === 'timeline' && (
                     <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                        {dispute.timeline.map((event, i) => (
-                          <div key={i} style={{ display: 'flex', gap: '12px', paddingBottom: i < dispute.timeline.length - 1 ? '16px' : '0', position: 'relative' }}>
-                            {i < dispute.timeline.length - 1 && <div style={{ position: 'absolute', left: '10px', top: '22px', bottom: '0', width: '1px', background: 'var(--border)' }} />}
-                            <div style={{ width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', background: event.type === 'buyer' ? 'rgba(60,125,200,0.2)' : event.type === 'seller' ? 'rgba(201,168,76,0.2)' : 'var(--bg-4)', border: `1.5px solid ${event.type === 'buyer' ? 'rgba(60,125,200,0.4)' : event.type === 'seller' ? 'rgba(201,168,76,0.4)' : 'var(--border)'}` }}>
-                              {event.type === 'buyer' ? '👤' : event.type === 'seller' ? '🏪' : '⚙'}
-                            </div>
-                            <div style={{ flex: 1, paddingTop: '2px' }}>
-                              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{event.event}</div>
-                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '3px' }}>{event.detail}</div>
-                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{event.time}</div>
-                            </div>
+                      {(() => {
+                        const events = [
+                          { time: fmtDate(dispute.created_at), event: 'Buyer opened dispute', detail: dispute.reason, type: 'buyer' },
+                        ]
+                        if (dispute.staff_recommendation) {
+                          events.push({ time: '—', event: 'Staff submitted recommendation', detail: `${dispute.staff_recommendation === 'buyer_wins' ? 'Refund buyer' : 'Release to seller'}${dispute.notes ? ` — ${dispute.notes}` : ''}`, type: 'system' })
+                        }
+                        if (dispute.outcome && dispute.outcome !== 'pending') {
+                          const resolverName = dispute.resolver?.username || dispute.resolver?.full_name || 'Staff'
+                          events.push({ time: fmtDate(dispute.resolved_at), event: `Decision executed by @${resolverName}`, detail: dispute.outcome === 'buyer_wins' ? 'Buyer refunded — seller bond forfeited' : 'Escrow released to seller — bond returned', type: 'system' })
+                        }
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                            {events.map((event, i) => (
+                              <div key={i} style={{ display: 'flex', gap: '12px', paddingBottom: i < events.length - 1 ? '16px' : '0', position: 'relative' }}>
+                                {i < events.length - 1 && <div style={{ position: 'absolute', left: '10px', top: '22px', bottom: '0', width: '1px', background: 'var(--border)' }} />}
+                                <div style={{ width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', background: event.type === 'buyer' ? 'rgba(60,125,200,0.2)' : event.type === 'seller' ? 'rgba(201,168,76,0.2)' : 'var(--bg-4)', border: `1.5px solid ${event.type === 'buyer' ? 'rgba(60,125,200,0.4)' : event.type === 'seller' ? 'rgba(201,168,76,0.4)' : 'var(--border)'}` }}>
+                                  {event.type === 'buyer' ? '👤' : event.type === 'seller' ? '🏪' : '⚙'}
+                                </div>
+                                <div style={{ flex: 1, paddingTop: '2px' }}>
+                                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{event.event}</div>
+                                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '3px' }}>{event.detail}</div>
+                                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{event.time}</div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        )
+                      })()}
                     </div>
                   )}
 
                   {/* Evidence */}
                   {activeTab === 'evidence' && (
                     <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
-                      <EvidenceCard items={dispute.buyerEvidence} label={`Buyer Evidence — ${dispute.buyer}`} color="var(--accent-blue)" />
-                      <EvidenceCard items={dispute.sellerEvidence} label={`Seller Evidence — ${dispute.seller}`} color="var(--gold)" />
+                      <EvidenceCard urls={dispute.buyer_evidence} label={`Buyer Evidence — ${dispute.orders?.buyer?.username || dispute.orders?.buyer?.full_name || 'Buyer'}`} color="var(--accent-blue)" />
+                      {dispute.seller_notes && (
+                        <div style={{ marginBottom: '14px' }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '8px', fontWeight: 500 }}>
+                            Seller Rebuttal — {dispute.orders?.seller?.username || dispute.orders?.seller?.full_name || 'Seller'}
+                          </div>
+                          <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                            {dispute.seller_notes}
+                          </div>
+                        </div>
+                      )}
+                      <EvidenceCard urls={dispute.seller_evidence} label={`Seller Photos — ${dispute.orders?.seller?.username || dispute.orders?.seller?.full_name || 'Seller'}`} color="var(--gold)" />
                     </div>
                   )}
 
@@ -390,19 +556,17 @@ export default function DisputeResolution() {
                       <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '14px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', borderRadius: '8px', padding: '10px 12px' }}>
                         These photos were taken by our authenticator at Chase Hollow HQ at time of inspection — before the card was shipped to the buyer. They are the most reliable evidence in the dispute.
                       </div>
-                      <EvidenceCard items={dispute.authPhotos} label="Chase Hollow Auth Photos (Official)" color="var(--teal)" />
-                    </div>
-                  )}
-
-                  {/* Comms */}
-                  {activeTab === 'comms' && (
-                    <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Staff Communication</div>
-                      <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', marginBottom: '12px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, fontStyle: 'italic' }}>
-                        No staff communications yet on this case.
-                      </div>
-                      <textarea style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', minHeight: '80px', lineHeight: 1.6, marginBottom: '8px' }} placeholder="Add a note to the case file..." />
-                      <button style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>Add Note</button>
+                      {authInspections.length === 0 ? (
+                        <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No authentication inspection on record for this order.</div>
+                      ) : authInspections.map((insp, idx) => (
+                        <div key={insp.id} style={{ marginBottom: '16px' }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '8px', fontWeight: 500 }}>
+                            Inspection {idx + 1} · {insp.decision?.toUpperCase() || '—'} · {fmtDate(insp.timestamp)}
+                          </div>
+                          {insp.notes && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{insp.notes}</div>}
+                          <EvidenceCard urls={insp.photos} label="Auth Photos (Official)" color="var(--teal)" />
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -415,53 +579,115 @@ export default function DisputeResolution() {
                       Staff reviews evidence and recommends a decision. The platform owner executes the final call. Neither party can appeal after execution.
                     </div>
 
-                    {!recommendation ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <button onClick={() => setRecommendation('buyer')} style={{ width: '100%', background: 'rgba(76,175,124,0.1)', border: '1.5px solid rgba(76,175,124,0.3)', color: 'var(--accent-green)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                          ✓ Recommend — Refund Buyer
-                        </button>
-                        <button onClick={() => setRecommendation('seller')} style={{ width: '100%', background: 'rgba(201,168,76,0.1)', border: '1.5px solid rgba(201,168,76,0.3)', color: 'var(--gold)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                          ✓ Recommend — Release to Seller
-                        </button>
-                        <button style={{ width: '100%', background: 'transparent', border: '1.5px solid rgba(232,168,56,0.4)', color: 'var(--accent-amber)', padding: '10px', fontSize: '12px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                          ⚑ Escalate — Need More Info
-                        </button>
+                    {recSuccess && (
+                      <div style={{ background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px', fontSize: '12px', color: 'var(--accent-green)' }}>
+                        Recommendation submitted to owner.
                       </div>
-                    ) : (
-                      <div>
-                        <div style={{ textAlign: 'center', marginBottom: '14px' }}>
-                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: recommendation === 'buyer' ? 'rgba(76,175,124,0.12)' : 'rgba(201,168,76,0.12)', border: `2px solid ${recommendation === 'buyer' ? 'rgba(76,175,124,0.4)' : 'rgba(201,168,76,0.4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', margin: '0 auto 10px' }}>✓</div>
-                          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 300, color: recommendation === 'buyer' ? 'var(--accent-green)' : 'var(--gold)' }}>
-                            Recommended: {recommendation === 'buyer' ? 'Refund Buyer' : 'Release to Seller'}
+                    )}
+
+                    {disputeStatus(dispute) === 'pending_owner' && ['owner','dispute_resolver'].includes(currentUser?.role) ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                          Staff recommends: <strong style={{ color: dispute.staff_recommendation === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)' }}>
+                            {dispute.staff_recommendation === 'buyer_wins' ? 'Refund buyer' : 'Release to seller'}
+                          </strong>
+                        </div>
+                        {dispute.notes && <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '8px' }}>{dispute.notes}</div>}
+                        {(() => {
+                          const rec = dispute.staff_recommendation
+                          const overrideDecision = rec === 'buyer_wins' ? 'seller_wins' : 'buyer_wins'
+                          const primaryLabel = rec === 'buyer_wins' ? 'Execute — Refund Buyer' : 'Execute — Release to Seller'
+                          const overrideLabel = rec === 'buyer_wins' ? 'Override — Release to Seller' : 'Override — Refund Buyer'
+                          const primaryBg = rec === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)'
+                          return (
+                            <>
+                              <button onClick={() => setShowConfirmModal({ decision: rec, disputeId: dispute.id, staffRec: rec, isOverride: false })}
+                                style={{ width: '100%', background: primaryBg, border: 'none', color: '#0A0A0B', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                                {primaryLabel}
+                              </button>
+                              <button onClick={() => { setOverrideReason(''); setShowConfirmModal({ decision: overrideDecision, disputeId: dispute.id, staffRec: rec, isOverride: true }) }}
+                                style={{ width: '100%', background: 'transparent', border: '1px solid rgba(200,75,60,0.25)', color: 'var(--accent-red)', padding: '9px', fontSize: '11px', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: 0.65 }}>
+                                {overrideLabel} — requires written reason
+                              </button>
+                            </>
+                          )
+                        })()}
+                      </div>
+                    ) : disputeStatus(dispute) === 'open' ? (
+                      !recommendation ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <button onClick={() => setRecommendation('buyer_wins')} style={{ width: '100%', background: 'rgba(76,175,124,0.1)', border: '1.5px solid rgba(76,175,124,0.3)', color: 'var(--accent-green)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                            ✓ Recommend — Refund Buyer
+                          </button>
+                          <button onClick={() => setRecommendation('seller_wins')} style={{ width: '100%', background: 'rgba(201,168,76,0.1)', border: '1.5px solid rgba(201,168,76,0.3)', color: 'var(--gold)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                            ✓ Recommend — Release to Seller
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: recommendation === 'buyer_wins' ? 'rgba(76,175,124,0.12)' : 'rgba(201,168,76,0.12)', border: `2px solid ${recommendation === 'buyer_wins' ? 'rgba(76,175,124,0.4)' : 'rgba(201,168,76,0.4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', margin: '0 auto 10px' }}>✓</div>
+                            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 300, color: recommendation === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)' }}>
+                              {recommendation === 'buyer_wins' ? 'Refund Buyer' : 'Release to Seller'}
+                            </div>
                           </div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Awaiting owner execution</div>
+                          <div style={{ marginBottom: '12px' }}>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px', fontWeight: 500 }}>Recommendation Notes</div>
+                            <textarea value={recNotes} onChange={e => setRecNotes(e.target.value)}
+                              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', minHeight: '80px', lineHeight: 1.6, boxSizing: 'border-box' }}
+                              placeholder="Explain your recommendation for the owner…" />
+                          </div>
+                          {recError && <div style={{ fontSize: '12px', color: 'var(--accent-red)', marginBottom: '8px' }}>{recError}</div>}
+                          <button onClick={handleSubmitRecommendation} disabled={recSubmitting}
+                            style={{ width: '100%', background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: recSubmitting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '8px', opacity: recSubmitting ? 0.7 : 1 }}>
+                            {recSubmitting ? 'Submitting…' : 'Submit to Owner for Decision'}
+                          </button>
+                          <button onClick={() => setRecommendation(null)} style={btn({ width: '100%', padding: '10px', borderRadius: '10px', textAlign: 'center', fontSize: '11px' })}>Change Recommendation</button>
                         </div>
-                        <div style={{ marginBottom: '12px' }}>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px', fontWeight: 500 }}>Recommendation Notes</div>
-                          <textarea style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', minHeight: '80px', lineHeight: 1.6 }} placeholder="Explain your recommendation for the owner..." />
-                        </div>
-                        <button style={{ width: '100%', background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '8px' }}>
-                          Submit to Owner for Decision
-                        </button>
-                        <button onClick={() => setRecommendation(null)} style={btn({ width: '100%', padding: '10px', borderRadius: '10px', textAlign: 'center', fontSize: '11px' })}>Change Recommendation</button>
+                      )
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                        {disputeStatus(dispute) === 'pending_owner' ? 'Awaiting owner execution' : 'Dispute resolved'}
                       </div>
                     )}
                   </div>
 
-                  {/* What happens next */}
+                  {/* What happens */}
                   <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500 }}>If Buyer Wins</div>
-                    {[`${dispute.value} USDC → Buyer wallet`, `${dispute.bondBuyer} buyer bond → Returned`, `${dispute.bondSeller} seller bond → Forfeited`, 'Seller receives Strike 1'].map((item, i) => (
-                      <div key={i} style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '3px 0', display: 'flex', gap: '6px' }}>
-                        <span style={{ color: 'var(--accent-green)' }}>→</span>{item}
-                      </div>
-                    ))}
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '10px 0 10px', fontWeight: 500 }}>If Seller Wins</div>
-                    {[`${dispute.value} USDC → Seller wallet`, `${dispute.bondSeller} seller bond → Returned`, `${dispute.bondBuyer} buyer bond → Forfeited`, 'No strikes issued'].map((item, i) => (
-                      <div key={i} style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '3px 0', display: 'flex', gap: '6px' }}>
-                        <span style={{ color: 'var(--gold)' }}>→</span>{item}
-                      </div>
-                    ))}
+                    {(() => {
+                      const o = dispute.orders || {}
+                      const escrow   = parseFloat(o.escrow_amount  || 0)
+                      const platFee  = parseFloat(o.platform_fee   || 0)
+                      const shipCost = parseFloat(o.shipping_cost  || 0)
+                      const authFee  = parseFloat(o.auth_fee       || 0)
+                      // Seller net = escrow minus what Chase Hollow keeps (platform fee + shipping + auth fee)
+                      const sellerNet = escrow - platFee - shipCost - authFee
+                      return (
+                        <>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500 }}>If Buyer Wins</div>
+                          {[
+                            `${fmtUSD(escrow)} USDC → Buyer wallet (full refund)`,
+                            `Label A shipping cost absorbed by seller (not recovered)`,
+                            `Seller bond forfeited`,
+                            `Seller receives Strike 1`,
+                          ].map((item, i) => (
+                            <div key={i} style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '3px 0', display: 'flex', gap: '6px' }}>
+                              <span style={{ color: 'var(--accent-green)' }}>→</span>{item}
+                            </div>
+                          ))}
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '10px 0 10px', fontWeight: 500 }}>If Seller Wins</div>
+                          {[
+                            `${fmtUSD(sellerNet > 0 ? sellerNet : escrow)} USDC → Seller wallet${platFee || shipCost ? ` (after ${fmtUSD(platFee)} fee + ${fmtUSD(shipCost)} shipping)` : ''}`,
+                            `Seller bond returned`,
+                            `No strikes issued`,
+                          ].map((item, i) => (
+                            <div key={i} style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '3px 0', display: 'flex', gap: '6px' }}>
+                              <span style={{ color: 'var(--gold)' }}>→</span>{item}
+                            </div>
+                          ))}
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
 
@@ -473,69 +699,86 @@ export default function DisputeResolution() {
           {activeSection === 'pending' && (
             <div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Pending <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Owner Decision</em></div>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Staff has reviewed these cases and submitted recommendations. Only you can execute the final decision.</div>
-              {disputes.filter(d => d.status === 'pending_owner').map((d, i) => {
-                const sc = statusColors[d.status]
-                return (
-                  <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(60,125,200,0.3)', borderRadius: '12px', padding: '18px 20px', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                      <div style={{ width: '36px', height: '50px', borderRadius: '4px', background: d.bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>{d.icon}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--text-primary)', marginBottom: '4px' }}>{d.card} — {d.id}</div>
-                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{d.reason}</div>
-                        <div style={{ background: 'rgba(60,125,200,0.08)', border: '1px solid rgba(60,125,200,0.25)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                          <strong style={{ color: 'var(--accent-blue)' }}>Staff recommendation:</strong> {d.staffNote}
-                        </div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Staff has reviewed these cases and submitted recommendations. Only the owner can execute the final decision.</div>
+              {pendingQueue.length === 0 && (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>No cases pending owner decision</div>
+              )}
+              {pendingQueue.map((d, i) => (
+                <div key={d.id} style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(60,125,200,0.3)', borderRadius: '12px', padding: '18px 20px', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        {d.orders?.listing?.card_name || 'Unknown Card'} — #{d.id.slice(0, 8).toUpperCase()}
                       </div>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{d.value}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{d.reason}</div>
+                      <div style={{ background: 'rgba(60,125,200,0.08)', border: '1px solid rgba(60,125,200,0.25)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                        <strong style={{ color: 'var(--accent-blue)' }}>Staff recommendation:</strong>{' '}
+                        {d.staff_recommendation === 'buyer_wins' ? 'Refund buyer' : 'Release to seller'}
+                        {d.notes && ` — ${d.notes}`}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <button onClick={() => setShowConfirmModal('buyer')} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Execute — Refund Buyer</button>
-                      <button onClick={() => setShowConfirmModal('seller')} style={{ background: 'transparent', border: '1.5px solid rgba(201,168,76,0.4)', color: 'var(--gold)', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Execute — Release to Seller</button>
-                      <button onClick={() => { setActiveDispute(d.id); setActiveSection('detail') }} style={btn({ padding: '10px 16px' })}>Review Full Case</button>
-                    </div>
+                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{fmtUSD(d.orders?.escrow_amount)}</div>
                   </div>
-                )
-              })}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {['owner','dispute_resolver'].includes(currentUser?.role) && (() => {
+                      const rec = d.staff_recommendation
+                      const overrideDecision = rec === 'buyer_wins' ? 'seller_wins' : 'buyer_wins'
+                      return (
+                        <>
+                          <button onClick={() => setShowConfirmModal({ decision: rec, disputeId: d.id, staffRec: rec, isOverride: false })} style={{ background: rec === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)', border: 'none', color: '#0A0A0B', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                            {rec === 'buyer_wins' ? 'Execute — Refund Buyer' : 'Execute — Release to Seller'}
+                          </button>
+                          <button onClick={() => { setOverrideReason(''); setShowConfirmModal({ decision: overrideDecision, disputeId: d.id, staffRec: rec, isOverride: true }) }} style={{ background: 'transparent', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)', padding: '10px 16px', fontSize: '11px', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: 0.65 }}>Override ↗</button>
+                        </>
+                      )
+                    })()}
+                    <button onClick={() => openDetail(d)} style={btn({ padding: '10px 16px' })}>Review Full Case</button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
           {/* RESOLVED */}
           {activeSection === 'resolved' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Resolved</em> Disputes</div>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>12 resolved this month · 9 buyer · 3 seller</div>
-              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
-                      {['Case', 'Card', 'Value', 'Outcome', 'Resolved'].map((h, i) => (
-                        <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { id: 'DSP-4790', card: 'Charizard PSA 10', val: '$36,000', outcome: 'buyer', date: 'Apr 4' },
-                      { id: 'DSP-4782', card: 'Mox Pearl BGS 9', val: '$4,200', outcome: 'seller', date: 'Apr 2' },
-                      { id: 'DSP-4771', card: 'Pikachu Illus PSA 8', val: '$6,100', outcome: 'buyer', date: 'Mar 30' },
-                      { id: 'DSP-4760', card: 'Black Lotus BGS 8', val: '$18,000', outcome: 'buyer', date: 'Mar 28' },
-                    ].map((row, i) => (
-                      <tr key={i} style={{ borderBottom: i < 3 ? '0.5px solid var(--border)' : 'none' }}>
-                        <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{row.id}</td>
-                        <td style={{ padding: '10px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{row.card}</td>
-                        <td style={{ padding: '10px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600 }}>{row.val}</td>
-                        <td style={{ padding: '10px 14px' }}>
-                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '5px', background: row.outcome === 'buyer' ? 'rgba(76,175,124,0.1)' : 'rgba(201,168,76,0.1)', border: `1px solid ${row.outcome === 'buyer' ? 'rgba(76,175,124,0.3)' : 'rgba(201,168,76,0.3)'}`, color: row.outcome === 'buyer' ? 'var(--accent-green)' : 'var(--gold)', fontWeight: 500 }}>
-                            {row.outcome === 'buyer' ? '✓ Buyer Refunded' : '✓ Seller Paid'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{row.date}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Resolved</em> Disputes
               </div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+                {resolvedDisputes.length} resolved total · {monthStats.buyer_wins} buyer wins · {monthStats.seller_wins} seller wins this month
+              </div>
+              {resolvedDisputes.length === 0 ? (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>No resolved disputes yet</div>
+              ) : (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '480px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
+                        {['Case', 'Card', 'Value', 'Outcome', 'Executed By', 'Date'].map((h, i) => (
+                          <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resolvedDisputes.map((row, i) => (
+                        <tr key={row.id} style={{ borderBottom: i < resolvedDisputes.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+                          <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>#{row.id.slice(0, 8).toUpperCase()}</td>
+                          <td style={{ padding: '10px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{row.orders?.listing?.card_name || '—'}</td>
+                          <td style={{ padding: '10px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600 }}>{fmtUSD(row.orders?.escrow_amount)}</td>
+                          <td style={{ padding: '10px 14px' }}>
+                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '5px', background: row.outcome === 'buyer_wins' ? 'rgba(76,175,124,0.1)' : 'rgba(201,168,76,0.1)', border: `1px solid ${row.outcome === 'buyer_wins' ? 'rgba(76,175,124,0.3)' : 'rgba(201,168,76,0.3)'}`, color: row.outcome === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)', fontWeight: 500 }}>
+                              {row.outcome === 'buyer_wins' ? '✓ Buyer Refunded' : '✓ Seller Paid'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>@{row.resolver?.username || row.resolver?.full_name || '—'}</td>
+                          <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(row.resolved_at || row.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 

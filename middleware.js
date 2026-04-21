@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 const PROTECTED_ROUTES = [
   { path: '/admin',              roles: ['owner'] },
   { path: '/authenticator',     roles: ['authenticator', 'staff', 'owner'] },
-  { path: '/dispute-resolution',roles: ['staff', 'owner'] },
+  { path: '/dispute-resolution',roles: ['staff', 'owner', 'dispute_resolver'] },
   { path: '/customer-support',  roles: ['staff', 'owner'] },
 ]
 

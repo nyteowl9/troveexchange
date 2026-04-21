@@ -32,11 +32,74 @@ export default function AdminPanel() {
   const [detailOrder, setDetailOrder] = useState(null)      // { order, inspection }
   const [detailLoading, setDetailLoading] = useState(false)
 
+  // Live dispute + strike data
+  const [pendingDisputes, setPendingDisputes] = useState([])
+  const [adminStrikes, setAdminStrikes]       = useState([])
+  const [recentOrders, setRecentOrders]       = useState([])
+  const [overviewStats, setOverviewStats]     = useState(null)
+
   useEffect(() => {
     if (activeSection === 'settings' && !tierConfig) loadTierConfig()
     if (activeSection === 'users') searchUsers('')
     if (activeSection === 'orders') fetchAdminOrders()
+    if (activeSection === 'strikes') loadStrikes()
   }, [activeSection])
+
+  useEffect(() => {
+    // Load on mount: pending decisions + overview data
+    loadPendingDisputes()
+    loadOverview()
+  }, [])
+
+  async function getSession() {
+    const { supabase } = await import('@/lib/supabase')
+    const { data: { session } } = await supabase.auth.getSession()
+    return session
+  }
+
+  async function loadPendingDisputes() {
+    try {
+      const session = await getSession()
+      const res = await fetch('/api/disputes/list?status=open', {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPendingDisputes(data.disputes || [])
+      }
+    } catch {}
+  }
+
+  async function loadStrikes() {
+    if (adminStrikes.length > 0) return
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin/users/search?q=&limit=1', {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      // Use supabase directly for strikes — admin-level read
+      const { data } = await supabase
+        .from('strikes')
+        .select('id, strike_number, reason, action_taken, created_at, user:user_id(username), order:order_id(id)')
+        .order('created_at', { ascending: false })
+        .limit(50)
+      setAdminStrikes(data || [])
+    } catch {}
+  }
+
+  async function loadOverview() {
+    try {
+      const session = await getSession()
+      const headers = { Authorization: `Bearer ${session?.access_token}` }
+      const res = await fetch(`/api/admin/orders?limit=6&offset=0`, { headers })
+      if (res.ok) {
+        const data = await res.json()
+        setRecentOrders((data.orders || []).slice(0, 6))
+        setOverviewStats({ totalOrders: data.total || 0 })
+      }
+    } catch {}
+  }
 
   async function fetchAdminOrders(q = adminOrdersSearch, status = adminOrdersStatus) {
     setAdminOrdersLoading(true)
@@ -175,25 +238,6 @@ export default function AdminPanel() {
     localStorage.setItem('ch-theme', next)
   }
 
-  const metrics = [
-    { label: 'Total Volume', val: '$2.84M', sub: 'All-time · On-chain', color: 'var(--gold)' },
-    { label: 'Monthly Revenue', val: '$8,520', sub: '3% of $284k Apr volume', color: 'var(--accent-green)' },
-    { label: 'Active Orders', val: '47', sub: '$312k in escrow right now', color: 'var(--text-primary)' },
-    { label: 'Registered Users', val: '1,284', sub: '312 sellers · 972 buyers', color: 'var(--text-primary)' },
-    { label: 'Open Disputes', val: '2', sub: '1 pending owner decision', color: 'var(--accent-amber)' },
-    { label: 'Auth Queue', val: '5', sub: 'Avg 2.3hrs to clear', color: 'var(--text-primary)' },
-    { label: 'Strike Rate', val: '0.8%', sub: '11 strikes this month', color: 'var(--accent-green)' },
-    { label: 'Dispute Rate', val: '1.2%', sub: 'Industry avg: 3.5%', color: 'var(--accent-green)' },
-  ]
-
-  const recentOrders = [
-    { id: '#4821', card: 'Charizard Holo PSA 9', buyer: 'RareVault_99', seller: 'CardKing_88', value: '$487', status: 'auto-release', statusColor: 'var(--accent-amber)' },
-    { id: '#4819', card: 'Mox Sapphire BGS 9', buyer: 'MTGLegacy', seller: 'PowerNine_Pro', value: '$6,800', status: 'authenticating', statusColor: 'var(--gold)' },
-    { id: '#4815', card: 'Pikachu Illus PSA 7', buyer: 'SlabHunter_X', seller: 'CardKing_88', value: '$4,200', status: 'in transit', statusColor: 'var(--accent-blue)' },
-    { id: '#4810', card: 'Ancestral Recall BGS 9', buyer: 'CardVault_NYC', seller: 'PowerNine_Pro', value: '$9,200', status: 'dispute open', statusColor: 'var(--accent-red)' },
-    { id: '#4808', card: 'Mox Ruby BGS 8.5', buyer: 'PowerNine_Fan', seller: 'MTGLegacy', value: '$4,100', status: 'shipped', statusColor: 'var(--accent-blue)' },
-  ]
-
   const users = [
     { name: 'CardKing_88', type: 'seller', tier: 'Elite', sales: 847, rating: 4.98, strikes: 0, joined: 'Jan 2024', status: 'active' },
     { name: 'PowerNine_Pro', type: 'seller', tier: 'Pro', sales: 312, rating: 4.95, strikes: 0, joined: 'Mar 2024', status: 'active' },
@@ -208,9 +252,27 @@ export default function AdminPanel() {
     { user: 'FakeSlab_99', type: 'seller', strike: 3, reason: 'Repeated failure to ship + misrepresentation', date: 'Apr 1', action: 'Permanent ban — account closed' },
   ]
 
-  const pendingDecisions = [
-    { id: 'DSP-4799', type: 'dispute', description: 'Wrong card received — Blastoise Holo PSA 10', value: '$3,800', rec: 'buyer', staffNote: 'Clear case — wrong card shipped. Auth photos confirm Venusaur received.', urgency: 'normal' },
-    { id: 'STK-4802', type: 'strike_appeal', description: 'CardKing_88 appealing Strike 1 — claims shipping was on time', value: 'N/A', rec: 'deny', staffNote: 'EasyPost logs show no carrier scan until T+52hrs. Strike stands.', urgency: 'normal' },
+  // Pending decisions = disputes awaiting owner execution (staff_recommendation set, not yet resolved)
+  const pendingDecisions = pendingDisputes
+    .filter(d => d.outcome === 'pending' && d.staff_recommendation)
+    .map(d => ({
+      id: d.id,
+      type: 'dispute',
+      description: `${d.orders?.listing?.card_name || 'Unknown card'} — ${d.reason}`,
+      value: d.orders?.escrow_amount ? `$${parseFloat(d.orders.escrow_amount).toLocaleString()}` : '—',
+      rec: d.staff_recommendation === 'buyer_wins' ? 'buyer' : 'seller',
+      staffNote: d.notes || `Recommendation: ${d.staff_recommendation === 'buyer_wins' ? 'Refund buyer' : 'Release to seller'}`,
+      urgency: 'normal',
+      disputeId: d.id,
+    }))
+
+  const openDisputeCount = pendingDisputes.filter(d => d.outcome === 'pending').length
+  const pendingOwnerCount = pendingDecisions.length
+  const metrics = [
+    { label: 'Total Orders', val: overviewStats ? overviewStats.totalOrders.toLocaleString() : '—', sub: 'All-time · On-chain', color: 'var(--gold)' },
+    { label: 'Open Disputes', val: openDisputeCount.toString(), sub: pendingOwnerCount > 0 ? `${pendingOwnerCount} pending owner decision` : 'None pending decision', color: openDisputeCount > 0 ? 'var(--accent-amber)' : 'var(--accent-green)' },
+    { label: 'Pending Decisions', val: pendingOwnerCount.toString(), sub: 'Require owner action', color: pendingOwnerCount > 0 ? 'var(--accent-red)' : 'var(--accent-green)' },
+    { label: 'Platform Fee', val: '3.5%', sub: '3% Chase Hollow + 0.5% creator', color: 'var(--text-muted)' },
   ]
 
   const navItems = [
@@ -381,7 +443,21 @@ export default function AdminPanel() {
               </div>
             )}
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button style={{ flex: 1, background: showActionModal.actionColor || 'var(--teal)', border: 'none', color: '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }} onClick={() => setShowActionModal(null)}>
+              <button style={{ flex: 1, background: showActionModal.actionColor || 'var(--teal)', border: 'none', color: '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                onClick={async () => {
+                  if (showActionModal.disputeId && showActionModal.decision) {
+                    try {
+                      const session = await getSession()
+                      const res = await fetch('/api/disputes/resolve', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+                        body: JSON.stringify({ dispute_id: showActionModal.disputeId, decision: showActionModal.decision }),
+                      })
+                      if (res.ok) { await loadPendingDisputes() }
+                    } catch {}
+                  }
+                  setShowActionModal(null)
+                }}>
                 {showActionModal.action}
               </button>
               <button onClick={() => setShowActionModal(null)} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Cancel</button>
@@ -509,21 +585,31 @@ export default function AdminPanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentOrders.map((order, i) => (
-                      <tr key={i} style={{ borderBottom: i < recentOrders.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{order.id}</td>
-                        <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '14px', color: 'var(--text-primary)' }}>{order.card}</td>
-                        <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--accent-blue)' }}>{order.buyer}</td>
-                        <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--gold)' }}>{order.seller}</td>
-                        <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', fontWeight: 600, color: 'var(--gold)' }}>{order.value}</td>
-                        <td style={{ padding: '11px 14px' }}>
-                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${order.statusColor}`, color: order.statusColor, background: `${order.statusColor}18`, fontWeight: 500 }}>{order.status}</span>
-                        </td>
-                      </tr>
-                    ))}
+                    {recentOrders.length === 0 && (
+                      <tr><td colSpan={6} style={{ padding: '24px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>No orders yet</td></tr>
+                    )}
+                    {recentOrders.map((order, i) => {
+                      const statusColorMap = { awaiting_shipment: 'var(--accent-amber)', in_transit: 'var(--accent-blue)', auth_review: 'var(--gold)', auth_passed: 'var(--accent-green)', inspection_window: 'var(--accent-amber)', disputed: 'var(--accent-red)', released: 'var(--text-muted)', refunded: 'var(--accent-red)', cancelled: 'var(--text-muted)' }
+                      const sc = statusColorMap[order.status] || 'var(--text-muted)'
+                      const cardName = order.listing?.card_name || '—'
+                      const buyerName = order.buyer?.username || order.buyer?.full_name || '—'
+                      const sellerName = order.seller?.username || order.seller?.full_name || '—'
+                      return (
+                        <tr key={order.id || i} onClick={() => fetchOrderDetail(order.id)} style={{ borderBottom: i < recentOrders.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{'#' + (order.id || '').slice(0, 8).toUpperCase()}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '14px', color: 'var(--text-primary)' }}>{cardName}</td>
+                          <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--accent-blue)' }}>{buyerName}</td>
+                          <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--gold)' }}>{sellerName}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', fontWeight: 600, color: 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</td>
+                          <td style={{ padding: '11px 14px' }}>
+                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18`, fontWeight: 500 }}>{(order.status || '').replace(/_/g, ' ')}</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -593,9 +679,9 @@ export default function AdminPanel() {
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {d.type === 'dispute' && (
                       <>
-                        <button onClick={() => setShowActionModal({ title: 'Execute — Refund Buyer', description: `Full escrow refund will be sent to the buyer. Seller receives Strike 1. This is irreversible.`, note: d.staffNote, action: 'Confirm — Refund Buyer', actionColor: 'var(--accent-green)', color: 'rgba(76,175,124,0.4)' })} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Execute — Refund Buyer</button>
-                        <button onClick={() => setShowActionModal({ title: 'Execute — Release to Seller', description: `Escrow will be released to the seller. Buyer bond forfeited. This is irreversible.`, note: d.staffNote, action: 'Confirm — Release to Seller', actionColor: 'var(--gold)', color: 'rgba(201,168,76,0.4)' })} style={{ background: 'transparent', border: '1.5px solid rgba(201,168,76,0.4)', color: 'var(--gold)', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Execute — Release to Seller</button>
-                        <button onClick={() => setShowActionModal({ title: 'Void Dispute for Tier', description: `This dispute will NOT count against the seller's tier eligibility or dispute rate. The record stays visible — this only removes it from tier calculations. Use for frivolous or unusual disputes that don't reflect seller behavior.`, note: d.staffNote, action: 'Void for Tier', actionColor: 'var(--accent-blue)', color: 'rgba(60,125,200,0.4)' })} style={btn({ padding: '10px 16px', border: '1.5px solid rgba(60,125,200,0.4)', color: 'var(--accent-blue)' })}>Void for Tier</button>
+                        <button onClick={() => setShowActionModal({ title: 'Execute — Refund Buyer', description: `Full escrow refund will be sent to the buyer. Seller receives Strike 1. This is irreversible.`, note: d.staffNote, action: 'Confirm — Refund Buyer', actionColor: 'var(--accent-green)', color: 'rgba(76,175,124,0.4)', disputeId: d.disputeId, decision: 'buyer_wins' })} style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Execute — Refund Buyer</button>
+                        <button onClick={() => setShowActionModal({ title: 'Execute — Release to Seller', description: `Escrow will be released to the seller. This is irreversible.`, note: d.staffNote, action: 'Confirm — Release to Seller', actionColor: 'var(--gold)', color: 'rgba(201,168,76,0.4)', disputeId: d.disputeId, decision: 'seller_wins' })} style={{ background: 'transparent', border: '1.5px solid rgba(201,168,76,0.4)', color: 'var(--gold)', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Execute — Release to Seller</button>
+                        <a href="/dispute-resolution" style={{ textDecoration: 'none' }}><button style={btn({ padding: '10px 16px' })}>View Full Case</button></a>
                       </>
                     )}
                     {d.type === 'strike_appeal' && (
@@ -773,6 +859,7 @@ export default function AdminPanel() {
                                 <option value="">— user —</option>
                                 <option value="authenticator">authenticator</option>
                                 <option value="staff">staff</option>
+                                <option value="dispute_resolver">dispute_resolver</option>
                                 <option value="owner">owner</option>
                               </select>
                             </td>
@@ -807,7 +894,7 @@ export default function AdminPanel() {
           {activeSection === 'strikes' && (
             <div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Strike <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Log</em></div>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>11 strikes this month · 1 permanent ban · All auto-applied by smart contract</div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>{adminStrikes.length} strikes on record</div>
 
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '20px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Strike System Reference</div>
@@ -834,17 +921,20 @@ export default function AdminPanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {strikes.map((s, i) => (
-                      <tr key={i} style={{ borderBottom: i < strikes.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
-                        <td style={{ padding: '11px 14px', fontSize: '13px', fontWeight: 600, color: 'var(--gold)' }}>{s.user}</td>
+                    {adminStrikes.length === 0 && (
+                      <tr><td colSpan={6} style={{ padding: '24px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>No strikes on record</td></tr>
+                    )}
+                    {adminStrikes.map((s, i) => (
+                      <tr key={s.id} style={{ borderBottom: i < adminStrikes.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+                        <td style={{ padding: '11px 14px', fontSize: '13px', fontWeight: 600, color: 'var(--gold)' }}>@{s.user?.username || '—'}</td>
                         <td style={{ padding: '11px 14px' }}>
-                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 700, color: s.strike === 3 ? 'var(--accent-red)' : s.strike === 2 ? 'var(--accent-red)' : 'var(--accent-amber)' }}>Strike {s.strike}</span>
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 700, color: s.strike_number >= 3 ? 'var(--accent-red)' : s.strike_number === 2 ? 'var(--accent-red)' : 'var(--accent-amber)' }}>Strike {s.strike_number}</span>
                         </td>
                         <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '200px' }}>{s.reason}</td>
-                        <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{s.date}</td>
-                        <td style={{ padding: '11px 14px', fontSize: '12px', color: s.strike === 3 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>{s.action}</td>
+                        <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{s.created_at ? new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
+                        <td style={{ padding: '11px 14px', fontSize: '12px', color: s.strike_number >= 3 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>{s.action_taken}</td>
                         <td style={{ padding: '11px 14px' }}>
-                          {s.strike < 3 ? <button style={btn({ fontSize: '10px', padding: '4px 8px' })}>Review</button> : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>No appeal</span>}
+                          {s.appealed ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-amber)' }}>Appealed{s.appeal_outcome ? ` · ${s.appeal_outcome}` : ''}</span> : s.strike_number < 3 ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>Eligible</span> : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>No appeal</span>}
                         </td>
                       </tr>
                     ))}
