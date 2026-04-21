@@ -228,7 +228,7 @@ function SellerDashboard() {
   const totalFeesPaid        = releasedSales.reduce((sum, s) => sum + Number(s.platform_fee || 0) + Number(s.creator_fee || 0), 0)
   const totalShippingPaid    = releasedSales.reduce((sum, s) => sum + Number(s.shipping_cost || 0), 0)
   const totalNetReceived     = Math.max(0, totalCompletedRevenue - totalFeesPaid - totalShippingPaid)
-  const bondInFlight = activeOrders.reduce((sum, o) => sum + Number(o.bond_amount || 0), 0)
+  const bondInFlight = activeOrders.filter(o => o.bond_tx_hash).reduce((sum, o) => sum + Number(o.bond_amount || 0), 0)
 
   const submitReview = async () => {
     if (!reviewModal || reviewSubmitting) return
