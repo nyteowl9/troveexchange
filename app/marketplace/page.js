@@ -349,7 +349,7 @@ export default function Marketplace() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                           <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color, fontWeight: 500 }}>{tc.label}</span>
                           {card.seller?.username
-                            ? <Link href={`/profile/${card.seller.username}`} onClick={e => e.stopPropagation()} style={{ fontSize: '11px', color: 'var(--teal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>@{card.seller.username}</Link>
+                            ? <span onClick={e => { e.preventDefault(); e.stopPropagation(); router.push(`/profile/${card.seller.username}`) }} style={{ fontSize: '11px', color: 'var(--teal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}>@{card.seller.username}</span>
                             : <span style={{ fontSize: '11px', color: 'var(--teal)' }}>—</span>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

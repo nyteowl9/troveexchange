@@ -328,6 +328,12 @@ function SellerDashboard() {
 
   async function handleSubmitListing() {
     setSubmitError('')
+    if (profile?.banned) { setSubmitError('Your account has been permanently banned and cannot create listings.'); return }
+    if (profile?.suspended_until && new Date(profile.suspended_until) > new Date()) {
+      const until = new Date(profile.suspended_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      setSubmitError(`Your account is suspended until ${until}. You cannot create new listings during a suspension.`)
+      return
+    }
     if (!profile?.wallet_address) { setSubmitError('You must connect a wallet before publishing — go to Bond Wallet to connect MetaMask.'); return }
     if (!formData.card_name.trim()) { setSubmitError('Listing title is required'); return }
     if (!formData.description.trim()) { setSubmitError('Description is required'); return }
