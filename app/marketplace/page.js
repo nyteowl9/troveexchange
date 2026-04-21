@@ -57,7 +57,7 @@ export default function Marketplace() {
       .select(`
         id, card_name, game, set, grade, grader, listing_type, condition,
         price, auth_tier, photos, created_at, expires_at,
-        seller:seller_id (id, username, seller_tier)
+        seller:seller_id (id, username, seller_tier, suspended_until, banned)
       `, { count: 'exact' })
       .eq('status', 'active')
 
@@ -114,6 +114,11 @@ export default function Marketplace() {
     if (tierFilters.length > 0) {
       filtered = filtered.filter(c => tierFilters.includes(c.seller?.tier || 'new'))
     }
+    const now = new Date()
+    filtered = filtered.filter(c =>
+      !c.seller?.banned &&
+      (!c.seller?.suspended_until || new Date(c.seller.suspended_until) <= now)
+    )
     setListings(filtered)
     setTotal(count || 0)
     setLoading(false)
