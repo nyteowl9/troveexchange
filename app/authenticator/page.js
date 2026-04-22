@@ -38,6 +38,11 @@ function orderToQueueItem(order) {
     photos:   listing.photos || [],
     sellerAuthPhotos: order.sellerAuthPhotos || [],
     status:   order.status,
+    tracking_c:         order.tracking_c || null,
+    label_c_url:        order.label_c_url || null,
+    return_deadline_at: order.return_deadline_at || null,
+    authInspection:     order.authInspection || null,
+    dispute:            order.dispute || null,
   }
 }
 
@@ -50,9 +55,13 @@ export default function AuthenticatorPortal() {
   const [decidedCard, setDecidedCard] = useState(null) // snapshot of card at decision time
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [showLabelModal, setShowLabelModal] = useState(false)
+  const [labelType, setLabelType] = useState('B')
   const [showWrongCardModal, setShowWrongCardModal] = useState(false)
   const [wrongCardNotes, setWrongCardNotes] = useState('')
   const [wrongCardSubmitting, setWrongCardSubmitting] = useState(false)
+  const [wrongCardError, setWrongCardError] = useState(null)
+  const [labelDSubmitting, setLabelDSubmitting] = useState(false)
+  const [labelDError, setLabelDError] = useState(null)
   const [activeReturn, setActiveReturn] = useState(null)
   const [uploadedPhotos, setUploadedPhotos] = useState({})
   const [queue, setQueue] = useState([])
@@ -75,35 +84,17 @@ export default function AuthenticatorPortal() {
 
   const fetchQueue = useCallback(async () => {
     setQueueLoading(true)
-    // Fetch both pending inspection AND passed-but-no-label-yet orders
-    const { data } = await supabase
-      .from('orders')
-      .select(`
-        id, status, escrow_amount, auth_tier, shipped_at, label_b_url,
-        listing:listing_id (card_name, game, set, grade, grader, cert_number, photos, price),
-        seller:seller_id (username, full_name),
-        buyer:buyer_id  (username, full_name)
-      `)
-      .in('status', ['auth_review', 'auth_passed'])
-      .order('shipped_at', { ascending: true })
-    // auth_passed: only include rows still missing label_b_url
-    const rows = (data || []).filter(o => o.status === 'auth_review' || !o.label_b_url)
-
-    // Fetch seller-submitted auth photos for remote orders
-    const remoteIds = rows.filter(o => o.auth_tier === 'remote').map(o => o.id)
-    let sellerPhotoMap = {}
-    if (remoteIds.length) {
-      const { data: inspData } = await supabase
-        .from('auth_inspections')
-        .select('order_id, photos')
-        .in('order_id', remoteIds)
-        .eq('type', 'remote')
-        .eq('decision', 'pending')
-      ;(inspData || []).forEach(i => { sellerPhotoMap[i.order_id] = i.photos || [] })
+    try {
+      const res = await fetch('/api/auth-inspection/queue')
+      const json = await res.json()
+      if (!res.ok) { console.error('[fetchQueue]', json.error); setQueue([]); return }
+      setQueue((json.orders || []).map(o => orderToQueueItem(o)))
+    } catch (err) {
+      console.error('[fetchQueue]', err)
+      setQueue([])
+    } finally {
+      setQueueLoading(false)
     }
-
-    setQueue(rows.map(o => orderToQueueItem({ ...o, sellerAuthPhotos: sellerPhotoMap[o.id] || [] })))
-    setQueueLoading(false)
   }, [])
 
   const fetchCompleted = useCallback(async () => {
@@ -116,6 +107,7 @@ export default function AuthenticatorPortal() {
         .from('auth_inspections')
         .select('id, decision, notes, created_at, authenticator_id, order_id')
         .gte('created_at', todayStart.toISOString())
+        .in('decision', ['pass', 'fail'])
         .order('created_at', { ascending: false })
       if (inspErr) { console.error('[fetchCompleted] inspections:', inspErr); setCompleted([]); setCompletedLoading(false); return }
       if (!inspections?.length) { setCompleted([]); setCompletedLoading(false); return }
@@ -231,6 +223,7 @@ export default function AuthenticatorPortal() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Label generation failed')
       setLabelUrl(data.label_url || data.labelUrl)
+      setLabelType('B')
       setShowLabelModal(true)
     } catch (err) {
       setSubmitError(err.message)
@@ -322,31 +315,43 @@ export default function AuthenticatorPortal() {
       )}
 
       {/* LABEL MODAL */}
-      {showLabelModal && card && (
+      {showLabelModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--teal-border)', borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '100%' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Print <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Shipping Label</em></div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>Label ships the authenticated card to the buyer. Print, attach, and drop with FedEx.</div>
-            <div style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '16px', marginBottom: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', lineHeight: 2 }}>
-              {[
-                { label: 'FROM', val: 'Chase Hollow Auth Center · San Francisco CA 94105' },
-                { label: 'TO', val: `${card.buyer} · [Address on file]` },
-                { label: 'CONTENTS', val: `${card.name} ${card.grade} · 1 card` },
-                { label: 'CARRIER', val: 'FedEx Priority · Signature required' },
-                { label: 'ORDER', val: `${card.order} · ${card.id}` },
-              ].map((r, i) => (
-                <div key={i} style={{ display: 'flex', gap: '12px' }}>
-                  <span style={{ color: 'var(--text-muted)', minWidth: '80px' }}>{r.label}</span>
-                  <span style={{ color: 'var(--text-primary)' }}>{r.val}</span>
-                </div>
-              ))}
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Print <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Shipping Label {labelType}</em></div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
+              {labelType === 'D'
+                ? 'Label D ships the verified return card to the seller. Print, attach, and drop with FedEx. On-chain refund executes automatically on delivery.'
+                : 'Label B ships the authenticated card to the buyer. Print, attach, and drop with FedEx.'}
             </div>
+            {(() => {
+              const labelCard = labelType === 'D'
+                ? queue.find(q => q.id === activeReturn)
+                : card
+              if (!labelCard) return null
+              return (
+                <div style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '16px', marginBottom: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', lineHeight: 2 }}>
+                  {[
+                    { label: 'FROM', val: 'Chase Hollow Auth Center · San Francisco CA 94105' },
+                    { label: 'TO',   val: labelType === 'D' ? `${labelCard.seller} · [Address on file]` : `${labelCard.buyer} · [Address on file]` },
+                    { label: 'CONTENTS', val: `${labelCard.name} ${labelCard.grade} · 1 card` },
+                    { label: 'CARRIER',  val: 'FedEx Priority · Signature required' },
+                    { label: 'ORDER',    val: `${labelCard.order} · ${labelCard.id}` },
+                  ].map((r, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '12px' }}>
+                      <span style={{ color: 'var(--text-muted)', minWidth: '80px' }}>{r.label}</span>
+                      <span style={{ color: 'var(--text-primary)' }}>{r.val}</span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
             <div style={{ display: 'flex', gap: '10px' }}>
               {labelUrl
                 ? <a href={labelUrl} target="_blank" rel="noreferrer" style={{ flex: 1, background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🖨 Open PDF Label</a>
                 : <button disabled style={{ flex: 1, background: 'var(--bg-4)', border: 'none', color: 'var(--text-muted)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'not-allowed', fontFamily: 'DM Sans, sans-serif' }}>Loading…</button>
               }
-              <button onClick={() => setShowLabelModal(false)} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Close</button>
+              <button onClick={() => { setShowLabelModal(false); setLabelType('B') }} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Close</button>
             </div>
           </div>
         </div>
@@ -382,7 +387,7 @@ export default function AuthenticatorPortal() {
           {[
             { id: 'queue',     icon: '⊡', label: 'Inspection Queue', badge: queue.filter(q => q.status === 'auth_review').length || undefined },
             { id: 'inspect',   icon: '🔍', label: 'Current Card',     disabled: !activeCard },
-            { id: 'returns',   icon: '↩', label: 'Dispute Returns',   badge: 1 },
+            { id: 'returns',   icon: '↩', label: 'Dispute Returns',   badge: queue.filter(q => q.status === 'return_received').length || undefined },
             { id: 'completed', icon: '✓', label: 'Completed Today',   badge: completed.length || undefined },
             { id: 'flagged',   icon: '⚠', label: 'Flagged',           badge: 1 },
           ].map(item => (
@@ -425,34 +430,42 @@ export default function AuthenticatorPortal() {
             <div>
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)' }}>Inspection <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Queue</em></div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{queueLoading ? 'Loading…' : `${queue.length} physical${queue.length === 0 ? ' — no cards in queue' : ''}`}</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{queueLoading ? 'Loading…' : (() => { const r = queue.filter(i => i.auth_tier === 'remote' && i.status === 'in_transit').length; const p = queue.filter(i => i.status === 'auth_review').length; return [r ? `${r} remote` : '', p ? `${p} physical` : ''].filter(Boolean).join(' · ') || 'No cards in queue' })()}</div>
               </div>
 
-              {/* Remote Photo Review — NEW */}
-              <div style={{ background: 'rgba(60,125,200,0.06)', border: '1.5px solid rgba(60,125,200,0.3)', borderRadius: '12px', padding: '16px 18px', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                  <div>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-blue)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px' }}>Remote Photo Review Queue</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Cards under $300 · Seller shipped direct to buyer · Review photos in transit</div>
-                  </div>
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(60,125,200,0.1)', border: '1px solid rgba(60,125,200,0.3)', color: 'var(--accent-blue)', fontWeight: 600 }}>3 Pending</span>
-                </div>
-                {[
-                  { id: 'RPH-1021', name: 'Pikachu Base Set Common', value: '$18', seller: 'NewSeller_42', submitted: '14min ago', transit: 'In transit · Est. delivery Apr 10' },
-                  { id: 'RPH-1020', name: 'Squirtle 1st Ed Raw', value: '$85', seller: 'CardKing_88', submitted: '2hr ago', transit: 'In transit · Est. delivery Apr 9' },
-                  { id: 'RPH-1019', name: 'Mewtwo Holo Base Set Raw', value: '$220', seller: 'RareVault_99', submitted: '4hr ago', transit: 'In transit · Est. delivery Apr 9' },
-                ].map((item, i) => (
-                  <div key={i} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: i < 2 ? '8px' : '0', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: '120px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{item.name}</div>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{item.id} · {item.seller} · {item.transit}</div>
+              {/* Remote Photo Review Queue — live data */}
+              {(() => {
+                const remoteItems = queue.filter(i => i.auth_tier === 'remote' && i.status === 'in_transit')
+                return (
+                  <div style={{ background: 'rgba(60,125,200,0.06)', border: '1.5px solid rgba(60,125,200,0.3)', borderRadius: '12px', padding: '16px 18px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: remoteItems.length ? '12px' : '0', flexWrap: 'wrap', gap: '8px' }}>
+                      <div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-blue)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px' }}>Remote Photo Review Queue</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Cards under $300 · Seller shipped direct to buyer · Review photos in transit</div>
+                      </div>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(60,125,200,0.1)', border: '1px solid rgba(60,125,200,0.3)', color: 'var(--accent-blue)', fontWeight: 600 }}>{remoteItems.length} Pending</span>
                     </div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{item.value}</div>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', flexShrink: 0 }}>{item.submitted}</div>
-                    <button style={{ background: 'var(--accent-blue)', border: 'none', color: '#fff', padding: '7px 14px', fontSize: '11px', fontWeight: 600, borderRadius: '7px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>Review Photos →</button>
+                    {remoteItems.length === 0 ? (
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', paddingTop: '10px' }}>No remote photo reviews pending</div>
+                    ) : remoteItems.map((item, i) => (
+                      <div key={item.id} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: i < remoteItems.length - 1 ? '8px' : '0', flexWrap: 'wrap' }}>
+                        <div style={{ width: '32px', height: '44px', borderRadius: '4px', background: item.bg, flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>
+                          {item.photos[0] ? <img src={item.photos[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : item.icon}
+                        </div>
+                        <div style={{ flex: 1, minWidth: '120px' }}>
+                          <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{item.name}</div>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{item.order} · {item.seller} · In transit · {item.arrived}</div>
+                        </div>
+                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{item.value}</div>
+                        <button
+                          onClick={() => { setActiveCard(item.id); setActiveSection('inspect'); setChecklist({}); setDecision(null); setUploadedPhotos({}); setListingPhotoIndex(0); setReceivedPhotoIdx(null) }}
+                          style={{ background: 'var(--accent-blue)', border: 'none', color: '#fff', padding: '7px 14px', fontSize: '11px', fontWeight: 600, borderRadius: '7px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}
+                        >Review Photos →</button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )
+              })()}
 
               {/* Passed — Awaiting Label B */}
               {queue.filter(i => i.status === 'auth_passed').length > 0 && (
@@ -848,65 +861,224 @@ export default function AuthenticatorPortal() {
                 Cards returned by buyers after a buyer-wins dispute. Inspect the return, then generate Label D to send back to seller — or flag a wrong card.
               </div>
 
-              {/* Return card list — mock data, wired to real orders at backend integration */}
-              {activeReturn === null ? (
-                <div>
-                  {[
-                    { id: 'RET-4821', order: '#4821', name: 'Charizard Holo', set: 'Pokémon · Base Set Shadowless · #4/102', grade: 'PSA 9', seller: 'CardKing_88', buyer: 'RareVault_99', value: '$487', arrived: '1h ago', deadline: '4 days left' },
-                  ].map(ret => (
-                    <div key={ret.id} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px 20px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}
-                      onClick={() => setActiveReturn(ret.id)}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{ret.name} — {ret.grade}</div>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>{ret.set}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Buyer: {ret.buyer} · Seller: {ret.seller} · {ret.value}</div>
+              {(() => {
+                const returnOrders = queue.filter(q => q.status === 'return_received')
+                const returnCard = activeReturn ? returnOrders.find(r => r.id === activeReturn) : null
+                const returnChecklistItems = [
+                  { id: 'identity',  label: 'This is the correct card from this order', sub: 'Same cert number, same slab, same card — not a substitute or placeholder' },
+                  { id: 'condition', label: 'Card condition unchanged since original auth', sub: 'No new damage, tampering, or switching of cards inside slab' },
+                  { id: 'slab',      label: 'Slab integrity intact', sub: 'No cracks, chips, or signs of tampering since original inspection' },
+                  { id: 'complete',  label: 'Return package complete', sub: 'All items present — nothing missing from original shipment' },
+                ]
+                const returnAllChecked = returnChecklistItems.every(i => checklist[i.id])
+
+                if (activeReturn === null) {
+                  return (
+                    <div>
+                      {returnOrders.length === 0 && (
+                        <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '28px', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '11px' }}>
+                          No dispute returns awaiting inspection
+                        </div>
+                      )}
+                      {returnOrders.map(ret => {
+                        const daysLeft = ret.return_deadline_at
+                          ? Math.ceil((new Date(ret.return_deadline_at) - Date.now()) / (1000 * 60 * 60 * 24))
+                          : null
+                        return (
+                          <div key={ret.id} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px 20px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}
+                            onClick={() => { setActiveReturn(ret.id); setChecklist({}) }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{ret.name} — {ret.grade}</div>
+                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>{ret.set} · {ret.order}</div>
+                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Buyer: {ret.buyer} · Seller: {ret.seller} · {ret.value}</div>
+                            </div>
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(232,168,56,0.1)', border: '1px solid rgba(232,168,56,0.3)', color: 'var(--accent-amber)', marginBottom: '4px' }}>Return Received</div>
+                              {daysLeft !== null && (
+                                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: daysLeft <= 1 ? 'var(--accent-red)' : 'var(--text-muted)' }}>
+                                  {daysLeft > 0 ? `${daysLeft}d deadline` : 'Deadline passed'}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                }
+
+                return (
+                  <div>
+                    <button onClick={() => { setActiveReturn(null); setChecklist({}) }} style={{ ...btn({ fontSize: '11px', padding: '6px 14px', marginBottom: '16px' }) }}>← Back to Returns</button>
+                    {returnCard && (
+                      <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', fontFamily: 'DM Mono, monospace', fontSize: '10px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Card</span><div style={{ color: 'var(--text-primary)', marginTop: '2px' }}>{returnCard.name}</div></div>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Grade</span><div style={{ color: 'var(--gold)', marginTop: '2px' }}>{returnCard.grade}</div></div>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Buyer</span><div style={{ color: 'var(--text-primary)', marginTop: '2px' }}>{returnCard.buyer}</div></div>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Seller</span><div style={{ color: 'var(--text-primary)', marginTop: '2px' }}>{returnCard.seller}</div></div>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Value</span><div style={{ color: 'var(--text-primary)', marginTop: '2px' }}>{returnCard.value}</div></div>
                       </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(232,168,56,0.1)', border: '1px solid rgba(232,168,56,0.3)', color: 'var(--accent-amber)', marginBottom: '4px' }}>Arrived {ret.arrived}</div>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-red)' }}>{ret.deadline} to process</div>
+                    )}
+                    {/* Original listing photos */}
+                    {returnCard?.photos?.length > 0 && (
+                      <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '12px' }}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Original Listing Photos</div>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {returnCard.photos.map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noreferrer">
+                              <img src={url} alt={`Listing photo ${i+1}`} style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)' }} />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Original auth inspection */}
+                    {returnCard?.authInspection && (
+                      <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(76,175,124,0.3)', borderRadius: '12px', padding: '18px', marginBottom: '12px' }}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent-green)', marginBottom: '10px', fontWeight: 500 }}>Original Auth Inspection — Passed</div>
+                        {returnCard.authInspection.notes && (
+                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '10px', fontStyle: 'italic' }}>{returnCard.authInspection.notes}</div>
+                        )}
+                        {returnCard.authInspection.photos?.length > 0 && (
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {returnCard.authInspection.photos.map((url, i) => (
+                              <a key={i} href={url} target="_blank" rel="noreferrer">
+                                <img src={url} alt={`Auth photo ${i+1}`} style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '6px', border: '1px solid rgba(76,175,124,0.3)' }} />
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        {!returnCard.authInspection.photos?.length && (
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No inspection photos on file.</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Buyer dispute evidence */}
+                    {returnCard?.dispute && (
+                      <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.3)', borderRadius: '12px', padding: '18px', marginBottom: '12px' }}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent-red)', marginBottom: '10px', fontWeight: 500 }}>Buyer Dispute Evidence</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                          <span style={{ color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '9px' }}>REASON: </span>{returnCard.dispute.reason}
+                        </div>
+                        {returnCard.dispute.notes && (
+                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '10px', fontStyle: 'italic' }}>{returnCard.dispute.notes}</div>
+                        )}
+                        {returnCard.dispute.buyer_evidence?.length > 0 && (
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {returnCard.dispute.buyer_evidence.map((url, i) => (
+                              <a key={i} href={url} target="_blank" rel="noreferrer">
+                                <img src={url} alt={`Buyer evidence ${i+1}`} style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '6px', border: '1px solid rgba(200,75,60,0.3)' }} />
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        {!returnCard.dispute.buyer_evidence?.length && (
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No buyer photos submitted.</div>
+                        )}
+                      </div>
+                    )}
+
+                    <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '22px', marginBottom: '16px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Return Inspection Checklist</div>
+                      {returnChecklistItems.map(item => (
+                        <div key={item.id} onClick={() => setChecklist(p => ({ ...p, [item.id]: !p[item.id] }))}
+                          style={{ display: 'flex', gap: '12px', padding: '12px 0', borderBottom: '0.5px solid var(--border)', cursor: 'pointer', alignItems: 'flex-start' }}>
+                          <div style={{ width: '18px', height: '18px', borderRadius: '4px', border: `2px solid ${checklist[item.id] ? 'var(--accent-green)' : 'var(--border)'}`, background: checklist[item.id] ? 'var(--accent-green)' : 'transparent', flexShrink: 0, marginTop: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {checklist[item.id] && <span style={{ color: '#fff', fontSize: '10px', fontWeight: 700 }}>✓</span>}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '2px' }}>{item.label}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{item.sub}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Outcome determination */}
+                    <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '12px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Dispute Determination</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '14px' }}>
+                        Based on physical inspection, does the returned card match the original listing?
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ background: 'rgba(200,75,60,0.06)', border: '1.5px solid rgba(200,75,60,0.25)', borderRadius: '10px', padding: '12px 14px' }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-red)', fontWeight: 600, marginBottom: '2px' }}>Dispute Valid — Card Does Not Match Listing</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px' }}>Buyer was right. Label D → seller. Refund fires on delivery.</div>
+                          <button
+                            disabled={!returnAllChecked || labelDSubmitting}
+                            style={{ width: '100%', background: returnAllChecked ? 'rgba(200,75,60,0.15)' : 'var(--bg-3)', border: `1.5px solid ${returnAllChecked ? 'rgba(200,75,60,0.5)' : 'var(--border)'}`, color: returnAllChecked ? 'var(--accent-red)' : 'var(--text-muted)', padding: '11px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: returnAllChecked && !labelDSubmitting ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif' }}
+                            onClick={async () => {
+                              if (!activeReturn || !returnAllChecked || labelDSubmitting) return
+                              setLabelDSubmitting(true)
+                              setLabelDError(null)
+                              try {
+                                const res = await fetch('/api/shipping/label', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ order_id: activeReturn, label: 'D', outcome: 'buyer_wins' }),
+                                })
+                                const data = await res.json()
+                                if (!res.ok) throw new Error(data.error || 'Label generation failed')
+                                setLabelUrl(data.label_url || data.labelUrl)
+                                setLabelType('D')
+                                setShowLabelModal(true)
+                                fetchQueue()
+                              } catch (err) {
+                                setLabelDError(err.message)
+                              } finally {
+                                setLabelDSubmitting(false)
+                              }
+                            }}>
+                            {labelDSubmitting ? 'Generating…' : '✗ Dispute Valid — Generate Label D → Seller'}
+                          </button>
+                        </div>
+
+                        <div style={{ background: 'rgba(76,175,124,0.06)', border: '1.5px solid rgba(76,175,124,0.25)', borderRadius: '10px', padding: '12px 14px' }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-green)', fontWeight: 600, marginBottom: '2px' }}>Dispute Invalid — Card Matches Listing</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px' }}>Buyer was wrong. Label D → buyer. Seller paid immediately.</div>
+                          <button
+                            disabled={!returnAllChecked || labelDSubmitting}
+                            style={{ width: '100%', background: returnAllChecked ? 'rgba(76,175,124,0.15)' : 'var(--bg-3)', border: `1.5px solid ${returnAllChecked ? 'rgba(76,175,124,0.5)' : 'var(--border)'}`, color: returnAllChecked ? 'var(--accent-green)' : 'var(--text-muted)', padding: '11px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: returnAllChecked && !labelDSubmitting ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif' }}
+                            onClick={async () => {
+                              if (!activeReturn || !returnAllChecked || labelDSubmitting) return
+                              setLabelDSubmitting(true)
+                              setLabelDError(null)
+                              try {
+                                const res = await fetch('/api/shipping/label', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ order_id: activeReturn, label: 'D', outcome: 'seller_wins' }),
+                                })
+                                const data = await res.json()
+                                if (!res.ok) throw new Error(data.error || 'Label generation failed')
+                                setLabelUrl(data.label_url || data.labelUrl)
+                                setLabelType('D')
+                                setShowLabelModal(true)
+                                fetchQueue()
+                              } catch (err) {
+                                setLabelDError(err.message)
+                              } finally {
+                                setLabelDSubmitting(false)
+                              }
+                            }}>
+                            {labelDSubmitting ? 'Generating…' : '✓ Dispute Invalid — Generate Label D → Buyer'}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                /* Return inspection view */
-                <div>
-                  <button onClick={() => setActiveReturn(null)} style={{ ...btn({ fontSize: '11px', padding: '6px 14px', marginBottom: '16px' }) }}>← Back to Returns</button>
-                  <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '22px', marginBottom: '16px' }}>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Return Inspection Checklist</div>
-                    {[
-                      { id: 'identity',  label: 'Card matches the original listing', sub: 'Confirm this is the exact card that was sold — same cert number, same slab, same card' },
-                      { id: 'condition', label: 'Card returned in same condition as sent', sub: 'No new damage, tampering, or switching of cards inside slab' },
-                      { id: 'slab',      label: 'Slab integrity intact', sub: 'No cracks, chips, or signs of tampering since original inspection' },
-                      { id: 'complete',  label: 'Return package complete', sub: 'All items present — nothing missing from original shipment' },
-                    ].map(item => (
-                      <div key={item.id} onClick={() => setChecklist(p => ({ ...p, [item.id]: !p[item.id] }))}
-                        style={{ display: 'flex', gap: '12px', padding: '12px 0', borderBottom: '0.5px solid var(--border)', cursor: 'pointer', alignItems: 'flex-start' }}>
-                        <div style={{ width: '18px', height: '18px', borderRadius: '4px', border: `2px solid ${checklist[item.id] ? 'var(--accent-green)' : 'var(--border)'}`, background: checklist[item.id] ? 'var(--accent-green)' : 'transparent', flexShrink: 0, marginTop: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {checklist[item.id] && <span style={{ color: '#fff', fontSize: '10px', fontWeight: 700 }}>✓</span>}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '2px' }}>{item.label}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{item.sub}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
 
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {labelDError && <div style={{ color: 'var(--accent-red)', fontFamily: 'DM Mono, monospace', fontSize: '11px', marginBottom: '10px' }}>{labelDError}</div>}
+
                     <button
-                      style={{ flex: 1, minWidth: '180px', background: 'var(--teal)', border: 'none', color: '#fff', padding: '13px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
-                      onClick={() => alert('Label D generation — wire to POST /api/shipping/label { order_id, label: "D" }')}>
-                      ✓ Return Verified — Generate Label D
-                    </button>
-                    <button
-                      style={{ flex: 1, minWidth: '180px', background: 'rgba(200,75,60,0.1)', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '13px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
-                      onClick={() => setShowWrongCardModal(true)}>
-                      ✗ Wrong Card Received
+                      style={{ width: '100%', background: 'rgba(200,75,60,0.1)', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '13px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                      onClick={() => { setShowWrongCardModal(true); setWrongCardError(null) }}>
+                      ✗ Wrong Card Received — Flag for Staff Review
                     </button>
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
           )}
 
@@ -946,18 +1118,29 @@ export default function AuthenticatorPortal() {
               />
             </div>
 
+            {wrongCardError && <div style={{ color: 'var(--accent-red)', fontFamily: 'DM Mono, monospace', fontSize: '11px', marginBottom: '10px' }}>{wrongCardError}</div>}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 disabled={wrongCardSubmitting || !wrongCardNotes.trim()}
                 onClick={async () => {
-                  if (!wrongCardNotes.trim()) return
+                  if (!wrongCardNotes.trim() || !activeReturn) return
                   setWrongCardSubmitting(true)
+                  setWrongCardError(null)
                   try {
-                    // Wire to POST /api/admin/orders/[orderId]/wrong-card
-                    alert(`Wrong card flagged. Notes: ${wrongCardNotes}\n\nWire to: POST /api/admin/orders/{orderId}/wrong-card`)
+                    const res = await fetch('/api/orders/wrong-card', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ order_id: activeReturn, notes: wrongCardNotes }),
+                    })
+                    const data = await res.json()
+                    if (!res.ok) throw new Error(data.error || 'Failed to flag wrong card')
                     setShowWrongCardModal(false)
                     setWrongCardNotes('')
                     setActiveReturn(null)
+                    setChecklist({})
+                    fetchQueue()
+                  } catch (err) {
+                    setWrongCardError(err.message)
                   } finally {
                     setWrongCardSubmitting(false)
                   }
@@ -965,7 +1148,7 @@ export default function AuthenticatorPortal() {
                 style={{ flex: 1, background: wrongCardNotes.trim() ? 'var(--accent-red)' : 'var(--bg-3)', border: 'none', color: wrongCardNotes.trim() ? '#fff' : 'var(--text-muted)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: wrongCardNotes.trim() ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: wrongCardSubmitting ? 0.6 : 1 }}>
                 {wrongCardSubmitting ? 'Flagging…' : 'Flag — Notify Buyer & Seller'}
               </button>
-              <button onClick={() => { setShowWrongCardModal(false); setWrongCardNotes('') }} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Cancel</button>
+              <button onClick={() => { setShowWrongCardModal(false); setWrongCardNotes(''); setWrongCardError(null) }} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Cancel</button>
             </div>
           </div>
         </div>

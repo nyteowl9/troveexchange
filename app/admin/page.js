@@ -39,6 +39,12 @@ export default function AdminPanel() {
   const [recentOrders, setRecentOrders]       = useState([])
   const [overviewStats, setOverviewStats]     = useState(null)
 
+  // Escrow action modal
+  const [escrowModal, setEscrowModal]         = useState(null)  // order object
+  const [escrowAction, setEscrowAction]       = useState(null)  // 'release_to_seller' | 'refund_buyer' | 'resolve_seller_wins'
+  const [escrowLoading, setEscrowLoading]     = useState(false)
+  const [escrowResult, setEscrowResult]       = useState(null)  // { ok, txHash, chainError, warning }
+
   useEffect(() => {
     if (activeSection === 'settings' && !tierConfig) loadTierConfig()
     if (activeSection === 'users') searchUsers('')
@@ -250,6 +256,26 @@ export default function AdminPanel() {
     setTimeout(() => setTierConfigMsg(null), 3000)
   }
 
+  async function handleEscrowAction() {
+    if (!escrowModal || !escrowAction) return
+    setEscrowLoading(true)
+    setEscrowResult(null)
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin/escrow-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ order_id: escrowModal.id, action: escrowAction }),
+      })
+      const data = await res.json()
+      setEscrowResult(res.ok ? data : { error: data.error })
+    } catch (err) {
+      setEscrowResult({ error: err.message })
+    }
+    setEscrowLoading(false)
+  }
+
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
     setTheme(saved)
@@ -278,8 +304,9 @@ export default function AdminPanel() {
   ]
 
   // Pending decisions = disputes awaiting owner execution (staff_recommendation set, not yet resolved)
+  // Exclude return_received_seller — seller is actively reviewing, owner acts only if seller disputes
   const pendingDecisions = pendingDisputes
-    .filter(d => d.outcome === 'pending' && d.staff_recommendation)
+    .filter(d => d.outcome === 'pending' && d.staff_recommendation && d.orders?.status !== 'return_received_seller')
     .map(d => ({
       id: d.id,
       type: 'dispute',
@@ -351,6 +378,7 @@ export default function AdminPanel() {
               const buyer = order.buyer || {}
               const seller = order.seller || {}
               const passed = inspection?.decision === 'pass'
+              const inspPending = inspection?.decision === 'pending'
               const statusColors = { awaiting_shipment: 'var(--accent-amber)', in_transit: 'var(--accent-blue)', auth_review: 'var(--gold)', auth_passed: 'var(--accent-green)', inspection_window: 'var(--accent-amber)', disputed: 'var(--accent-red)', released: 'var(--text-muted)', auth_failed: 'var(--accent-red)' }
               const sc = statusColors[order.status] || 'var(--text-muted)'
               return (
@@ -406,7 +434,7 @@ export default function AdminPanel() {
                       <div>
                         {/* Decision + meta */}
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap' }}>
-                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', padding: '4px 14px', borderRadius: '20px', fontWeight: 600, background: passed ? 'rgba(76,175,124,0.12)' : 'rgba(200,75,60,0.12)', border: `1px solid ${passed ? 'rgba(76,175,124,0.4)' : 'rgba(200,75,60,0.4)'}`, color: passed ? 'var(--accent-green)' : 'var(--accent-red)' }}>{passed ? '✓ Passed' : '✕ Rejected'}</span>
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', padding: '4px 14px', borderRadius: '20px', fontWeight: 600, background: passed ? 'rgba(76,175,124,0.12)' : inspPending ? 'rgba(232,168,56,0.12)' : 'rgba(200,75,60,0.12)', border: `1px solid ${passed ? 'rgba(76,175,124,0.4)' : inspPending ? 'rgba(232,168,56,0.4)' : 'rgba(200,75,60,0.4)'}`, color: passed ? 'var(--accent-green)' : inspPending ? 'var(--accent-amber)' : 'var(--accent-red)' }}>{passed ? '✓ Passed' : inspPending ? '⏳ Pending Review' : '✕ Failed'}</span>
                           {inspection.authenticator_name && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)' }}>by {inspection.authenticator_name}</span>}
                           <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(inspection.created_at)}</span>
                         </div>
@@ -487,6 +515,71 @@ export default function AdminPanel() {
               </button>
               <button onClick={() => setShowActionModal(null)} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Cancel</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ESCROW ACTION MODAL */}
+      {escrowModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          onClick={() => { if (!escrowLoading) { setEscrowModal(null); setEscrowAction(null); setEscrowResult(null) } }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(201,168,76,0.3)', borderRadius: '16px', padding: '28px', maxWidth: '500px', width: '100%' }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>Manual Escrow Action</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)', marginBottom: '18px' }}>#{escrowModal.id?.slice(0,8).toUpperCase()} · {escrowModal.listing?.card_name || 'Unknown card'} · <span style={{ color: 'var(--text-muted)' }}>{escrowModal.status?.replace(/_/g,' ')}</span></div>
+
+            {!escrowResult ? (
+              <>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '18px', background: 'rgba(232,168,56,0.06)', border: '1px solid rgba(232,168,56,0.2)', borderRadius: '8px', padding: '10px 14px' }}>
+                  Use when automated on-chain calls failed silently. DB will be updated to match regardless of chain result. This is irreversible.
+                </div>
+
+                {[
+                  { action: 'release_to_seller', label: 'Release to Seller', desc: 'Normal completion — calls releaseEscrow(). Use when auto-release cron failed.', color: 'var(--gold)', bg: 'rgba(201,168,76,0.1)', border: 'rgba(201,168,76,0.3)' },
+                  { action: 'refund_buyer',       label: 'Refund Buyer',       desc: 'Buyer wins dispute — calls resolveDispute(true). Use when buyer-wins on-chain call failed.', color: 'var(--accent-green)', bg: 'rgba(76,175,124,0.1)', border: 'rgba(76,175,124,0.3)' },
+                  { action: 'resolve_seller_wins',label: 'Release to Seller (Dispute)', desc: 'Seller wins dispute — calls resolveDispute(false). Use when seller-wins on-chain call failed.', color: 'var(--accent-amber)', bg: 'rgba(232,168,56,0.08)', border: 'rgba(232,168,56,0.25)' },
+                ].map(opt => (
+                  <div key={opt.action} onClick={() => setEscrowAction(opt.action)}
+                    style={{ background: escrowAction === opt.action ? opt.bg : 'var(--bg-3)', border: `1.5px solid ${escrowAction === opt.action ? opt.border : 'var(--border)'}`, borderRadius: '10px', padding: '12px 14px', marginBottom: '8px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 600, color: escrowAction === opt.action ? opt.color : 'var(--text-primary)', marginBottom: '3px' }}>{opt.label}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{opt.desc}</div>
+                  </div>
+                ))}
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+                  <button onClick={handleEscrowAction} disabled={!escrowAction || escrowLoading}
+                    style={{ flex: 1, background: escrowAction ? 'var(--gold)' : 'var(--bg-3)', border: 'none', color: escrowAction ? '#0A0A0B' : 'var(--text-muted)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: escrowAction ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: escrowLoading ? 0.7 : 1 }}>
+                    {escrowLoading ? 'Executing…' : 'Execute Action'}
+                  </button>
+                  <button onClick={() => { setEscrowModal(null); setEscrowAction(null); setEscrowResult(null) }}
+                    style={{ padding: '12px 20px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontFamily: 'DM Sans, sans-serif' }}>
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {escrowResult.error ? (
+                  <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-red)', marginBottom: '6px', fontWeight: 600 }}>ERROR</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{escrowResult.error}</div>
+                  </div>
+                ) : (
+                  <div style={{ background: 'rgba(76,175,124,0.08)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-green)', marginBottom: '8px', fontWeight: 600 }}>DB UPDATED</div>
+                    {escrowResult.txHash && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>On-chain tx: <span style={{ fontFamily: 'DM Mono, monospace', color: 'var(--teal)' }}>{escrowResult.txHash.slice(0,20)}…</span></div>}
+                    {escrowResult.warning && (
+                      <div style={{ background: 'rgba(232,168,56,0.08)', border: '1px solid rgba(232,168,56,0.25)', borderRadius: '8px', padding: '8px 12px', marginTop: '8px', fontSize: '11px', color: 'var(--accent-amber)' }}>
+                        ⚠ {escrowResult.warning}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button onClick={() => { setEscrowModal(null); setEscrowAction(null); setEscrowResult(null); fetchAdminOrders() }}
+                  style={{ width: '100%', background: 'var(--teal)', border: 'none', color: '#0A0A0B', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                  Done
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -762,16 +855,16 @@ export default function AdminPanel() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '580px' }}>
                   <thead>
                     <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
-                      {['Order ID', 'Card', 'Buyer', 'Seller', 'Value', 'Tier', 'Status', 'Date'].map((h, i) => (
+                      {['Order ID', 'Card', 'Buyer', 'Seller', 'Value', 'Tier', 'Status', 'Date', ''].map((h, i) => (
                         <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {adminOrdersLoading ? (
-                      <tr><td colSpan={8} style={{ padding: '40px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Loading…</td></tr>
+                      <tr><td colSpan={9} style={{ padding: '40px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Loading…</td></tr>
                     ) : adminOrders.length === 0 ? (
-                      <tr><td colSpan={8} style={{ padding: '40px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>No orders found</td></tr>
+                      <tr><td colSpan={9} style={{ padding: '40px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>No orders found</td></tr>
                     ) : adminOrders.map((order, i) => {
                       const statusColors = {
                         awaiting_shipment: 'var(--accent-amber)',
@@ -801,6 +894,12 @@ export default function AdminPanel() {
                             <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18`, fontWeight: 500, whiteSpace: 'nowrap' }}>{order.status?.replace(/_/g, ' ')}</span>
                           </td>
                           <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{dateStr}</td>
+                          <td style={{ padding: '8px 10px' }} onClick={e => e.stopPropagation()}>
+                            <button onClick={() => { setEscrowModal(order); setEscrowAction(null); setEscrowResult(null) }}
+                              style={{ background: 'transparent', border: '1px solid rgba(201,168,76,0.3)', color: 'var(--gold)', padding: '4px 10px', fontSize: '10px', fontWeight: 600, borderRadius: '6px', cursor: 'pointer', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
+                              ⚡ Escrow
+                            </button>
+                          </td>
                         </tr>
                       )
                     })}

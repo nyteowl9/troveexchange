@@ -75,25 +75,48 @@ export async function POST(request) {
       .single()
 
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
-    if (order.status !== 'auth_review') {
+
+    const isTier1 = order.auth_tier === 'remote'
+    const isTier2 = order.auth_tier === 'physical'
+
+    if (isTier2 && order.status !== 'auth_review') {
       return NextResponse.json({ error: `Order is not in auth_review status (got: ${order.status})` }, { status: 400 })
     }
+    if (isTier1 && order.status !== 'in_transit') {
+      return NextResponse.json({ error: `Tier 1 order is not in_transit (got: ${order.status})` }, { status: 400 })
+    }
 
-    // Insert inspection record
-    await supabaseAdmin.from('auth_inspections').insert({
-      order_id,
-      authenticator_id: user.id,
-      type: order.auth_tier,
-      checklist: checklist || {},
-      photos: photos || [],
-      decision,
-      notes: notes || '',
-      // created_at is auto-populated by the DB default
-    })
+    // For Tier 1: update the existing seller-submitted pending inspection record
+    // For Tier 2: insert a new inspection record with staff photos
+    if (isTier1) {
+      await supabaseAdmin.from('auth_inspections')
+        .update({ decision, notes: notes || '', checklist: checklist || {}, authenticator_id: user.id })
+        .eq('order_id', order_id)
+        .eq('decision', 'pending')
+    } else {
+      await supabaseAdmin.from('auth_inspections').insert({
+        order_id,
+        authenticator_id: user.id,
+        type: order.auth_tier,
+        checklist: checklist || {},
+        photos: photos || [],
+        decision,
+        notes: notes || '',
+      })
+    }
 
-    // Update order status
-    const newStatus = decision === 'pass' ? 'auth_passed' : 'auth_failed'
-    await supabaseAdmin.from('orders').update({ status: newStatus }).eq('id', order_id)
+    // Tier 1 pass: card is already in transit to buyer — no status change needed
+    // Tier 1 fail: buyer needs to know — set auth_failed so they can dispute on delivery
+    // Tier 2 pass/fail: normal flow
+    let newStatus
+    if (isTier1) {
+      newStatus = decision === 'pass' ? null : 'auth_failed'
+    } else {
+      newStatus = decision === 'pass' ? 'auth_passed' : 'auth_failed'
+    }
+    if (newStatus) {
+      await supabaseAdmin.from('orders').update({ status: newStatus }).eq('id', order_id)
+    }
 
     // Send emails (non-blocking)
     try {
@@ -105,7 +128,7 @@ export async function POST(request) {
       console.error('[auth-inspection] email failed:', err)
     }
 
-    return NextResponse.json({ ok: true, status: newStatus })
+    return NextResponse.json({ ok: true, status: newStatus ?? order.status })
   } catch (err) {
     console.error('[auth-inspection/submit]', err)
     return NextResponse.json({ error: err.message || 'Inspection submit failed' }, { status: 500 })

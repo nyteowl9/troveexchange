@@ -11,26 +11,32 @@ import { useWallets } from '@privy-io/react-auth'
 import { ethers } from 'ethers'
 import { ESCROW_ADDRESS, ESCROW_ABI } from '@/lib/escrow'
 
-const ACTIVE_STATUSES = ['awaiting_shipment', 'in_transit', 'auth_review', 'auth_passed', 'delivered', 'inspection_window', 'disputed']
+const ACTIVE_STATUSES = ['awaiting_shipment', 'in_transit', 'auth_review', 'auth_passed', 'delivered', 'inspection_window', 'disputed', 'awaiting_return', 'return_received', 'return_verified', 'return_received_seller', 'return_disputed_seller']
 
 const STATUS_MAP = {
-  awaiting_shipment:{ key: 'awaiting',     label: 'Awaiting Shipment',   steps: [true,  false, false, false, false], activeStep: 0 },
-  in_transit:       { key: 'shipped',      label: 'In Transit',          steps: [true,  true,  false, false, false], activeStep: 1 },
-  auth_review:      { key: 'auth',         label: 'Authenticating',      steps: [true,  true,  true,  false, false], activeStep: 2 },
-  auth_passed:      { key: 'auth',         label: 'Auth Passed',         steps: [true,  true,  true,  false, false], activeStep: 2 },
-  delivered:        { key: 'auto-release', label: 'Delivered',           steps: [true,  true,  true,  true,  false], activeStep: 3 },
-  inspection_window:{ key: 'auto-release', label: 'Auto-Release Window', steps: [true,  true,  true,  true,  false], activeStep: 3 },
-  disputed:         { key: 'disputed',     label: 'Disputed',            steps: [true,  true,  true,  true,  false], activeStep: 3 },
-  released:         { key: 'complete',     label: 'Complete',            steps: [true,  true,  true,  true,  true],  activeStep: 4 },
+  awaiting_shipment: { key: 'awaiting',        label: 'Awaiting Shipment',   steps: [true,  false, false, false, false], activeStep: 0 },
+  in_transit:        { key: 'shipped',         label: 'In Transit',          steps: [true,  true,  false, false, false], activeStep: 1 },
+  auth_review:       { key: 'auth',            label: 'Authenticating',      steps: [true,  true,  true,  false, false], activeStep: 2 },
+  auth_passed:       { key: 'auth',            label: 'Auth Passed',         steps: [true,  true,  true,  false, false], activeStep: 2 },
+  delivered:         { key: 'auto-release',    label: 'Delivered',           steps: [true,  true,  true,  true,  false], activeStep: 3 },
+  inspection_window: { key: 'auto-release',    label: 'Auto-Release Window', steps: [true,  true,  true,  true,  false], activeStep: 3 },
+  disputed:          { key: 'disputed',        label: 'Disputed',            steps: [true,  true,  true,  true,  false], activeStep: 3 },
+  awaiting_return:   { key: 'return-required', label: 'Return Required',     steps: [true,  true,  true,  true,  false], activeStep: 3 },
+  return_received:   { key: 'return-required', label: 'Return Received',     steps: [true,  true,  true,  true,  false], activeStep: 3 },
+  return_verified:            { key: 'return-required', label: 'Return Verified',          steps: [true,  true,  true,  true,  false], activeStep: 3 },
+  return_received_seller:     { key: 'return-required', label: 'Return Under Review',      steps: [true,  true,  true,  true,  false], activeStep: 3 },
+  return_disputed_seller:     { key: 'disputed',        label: 'Return Dispute — Staff Review', steps: [true,  true,  true,  true,  false], activeStep: 3 },
+  released:          { key: 'complete',        label: 'Complete',            steps: [true,  true,  true,  true,  true],  activeStep: 4 },
 }
 
 const STATUS_COLORS = {
-  awaiting:     { bg: 'rgba(232,168,56,0.1)',  border: 'rgba(232,168,56,0.3)',  color: 'var(--accent-amber)' },
-  'auto-release':{ bg: 'rgba(232,168,56,0.1)', border: 'rgba(232,168,56,0.3)', color: 'var(--accent-amber)' },
-  auth:         { bg: 'rgba(201,168,76,0.1)',  border: 'rgba(201,168,76,0.28)', color: 'var(--gold)' },
-  shipped:      { bg: 'rgba(60,125,200,0.1)',  border: 'rgba(60,125,200,0.3)',  color: 'var(--accent-blue)' },
-  disputed:     { bg: 'rgba(200,75,60,0.1)',   border: 'rgba(200,75,60,0.3)',   color: 'var(--accent-red)' },
-  complete:     { bg: 'rgba(76,175,124,0.1)',  border: 'rgba(76,175,124,0.3)',  color: 'var(--accent-green)' },
+  awaiting:          { bg: 'rgba(232,168,56,0.1)',  border: 'rgba(232,168,56,0.3)',  color: 'var(--accent-amber)' },
+  'auto-release':    { bg: 'rgba(232,168,56,0.1)',  border: 'rgba(232,168,56,0.3)',  color: 'var(--accent-amber)' },
+  auth:              { bg: 'rgba(201,168,76,0.1)',  border: 'rgba(201,168,76,0.28)', color: 'var(--gold)' },
+  shipped:           { bg: 'rgba(60,125,200,0.1)',  border: 'rgba(60,125,200,0.3)',  color: 'var(--accent-blue)' },
+  disputed:          { bg: 'rgba(200,75,60,0.1)',   border: 'rgba(200,75,60,0.3)',   color: 'var(--accent-red)' },
+  'return-required': { bg: 'rgba(232,168,56,0.12)', border: 'rgba(232,168,56,0.4)',  color: 'var(--accent-amber)' },
+  complete:          { bg: 'rgba(76,175,124,0.1)',  border: 'rgba(76,175,124,0.3)',  color: 'var(--accent-green)' },
 }
 
 const TIER_LABEL = { new: 'New', trusted: 'Trusted', pro: 'Pro', elite: 'Elite' }
@@ -128,7 +134,7 @@ export default function BuyerDashboard() {
       const [activeRes, histRes, dispRes] = await Promise.all([
         supabase
           .from('orders')
-          .select(`id, status, escrow_amount, auth_tier, tracking_a, tracking_b, shipped_at, delivered_at, auto_release_at, created_at, onchain_order_id,
+          .select(`id, status, escrow_amount, auth_tier, tracking_a, tracking_b, tracking_c, shipped_at, delivered_at, auto_release_at, created_at, onchain_order_id, label_c_url, return_deadline_at, shipping_cost,
                    listing:listing_id (id, card_name, game, set, grade, grader, photos, price),
                    seller:seller_id (id, username, seller_tier)`)
           .eq('buyer_id', user.id)
@@ -136,7 +142,7 @@ export default function BuyerDashboard() {
           .order('created_at', { ascending: false }),
         supabase
           .from('orders')
-          .select(`id, status, escrow_amount, released_at, created_at, seller_id,
+          .select(`id, status, escrow_amount, shipping_cost, released_at, created_at, seller_id,
                    listing:listing_id (id, card_name, game, set, grade, grader, photos),
                    reviews (id, reviewer_role)`)
           .eq('buyer_id', user.id)
@@ -468,7 +474,25 @@ export default function BuyerDashboard() {
                 ? `Inspection window closed · Funds releasing automatically`
                 : (order.auto_release_at ? `Delivered ${fmtDate(order.delivered_at)} · Auto-release ${fmtDate(order.auto_release_at)} · Inspect and dispute if anything is wrong` : 'Delivered · Inspection window open')
             })()}
+            {order.status === 'awaiting_return' && (() => {
+              const daysLeft = order.return_deadline_at
+                ? Math.max(0, Math.ceil((new Date(order.return_deadline_at) - Date.now()) / (1000 * 60 * 60 * 24)))
+                : null
+              return <>Dispute won · Print your return label and ship the card back · <strong style={{ color: daysLeft <= 1 ? 'var(--accent-red)' : 'var(--accent-amber)' }}>{daysLeft !== null ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left` : 'Deadline set'}</strong> · Refund releases on delivery</>
+            })()}
+            {order.status === 'return_received' && `Card received by Chase Hollow · Inspecting return · Refund pending`}
+            {order.status === 'return_verified' && `Return verified · Refund processing`}
+            {order.status === 'return_received_seller' && `Card delivered to seller · Seller reviewing return · You will be notified once they confirm or dispute`}
+            {order.status === 'return_disputed_seller' && `Seller has disputed the returned card · Chase Hollow staff is reviewing evidence · No action required from you`}
           </div>
+
+          {/* Return required banner */}
+          {order.status === 'awaiting_return' && (
+            <div style={{ background: 'rgba(232,168,56,0.08)', border: '1px solid rgba(232,168,56,0.35)', borderRadius: '8px', padding: '12px 14px', marginBottom: '12px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <strong style={{ color: 'var(--accent-amber)' }}>Action required:</strong> You must ship the card back using the prepaid label below. Your refund will be released once the carrier confirms delivery. If you do not ship within the deadline, the dispute will be reversed.
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {order.status === 'inspection_window' && (() => {
               const expired = order.auto_release_at && new Date(order.auto_release_at) <= new Date()
@@ -488,6 +512,16 @@ export default function BuyerDashboard() {
                 </>
               )
             })()}
+            {order.status === 'awaiting_return' && order.label_c_url && (
+              <a href={order.label_c_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                <button style={btn({ background: 'var(--accent-amber)', border: 'none', color: '#0A0A0B', fontWeight: 700 })}>Print Return Label</button>
+              </a>
+            )}
+            {order.status === 'awaiting_return' && order.tracking_c && (
+              <a href={trackingUrl(order.tracking_c)} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                <button style={btn({ border: '1.5px solid rgba(232,168,56,0.35)', color: 'var(--accent-amber)' })}>Track Return</button>
+              </a>
+            )}
             <button onClick={() => setChatOrder({ id: order.id, label: card?.card_name })} style={btn({ border: '1.5px solid var(--teal-border)', color: 'var(--teal)' })}>Message Seller</button>
             <Link href={`/listing/${order.listing?.id || ''}`} style={{ textDecoration: 'none' }}>
               <button style={btn()}>View Listing</button>
@@ -882,7 +916,16 @@ export default function BuyerDashboard() {
                               <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 9px', borderRadius: '6px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>{order.listing.grader} {order.listing.grade}</span>
                             ) : <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Raw</span>}
                           </td>
-                          <td style={{ padding: '13px 16px', fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', fontWeight: 600, color: order.status === 'refunded' ? 'var(--accent-green)' : 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</td>
+                          <td style={{ padding: '13px 16px' }}>
+                            {order.status === 'refunded' && order.shipping_cost > 0 ? (
+                              <div>
+                                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', fontWeight: 600, color: 'var(--accent-green)' }}>{fmtUSD(order.escrow_amount - order.shipping_cost)}</div>
+                                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>−{fmtUSD(order.shipping_cost)} shipping kept</div>
+                              </div>
+                            ) : (
+                              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', fontWeight: 600, color: order.status === 'refunded' ? 'var(--accent-green)' : 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</div>
+                            )}
+                          </td>
                           <td style={{ padding: '13px 16px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(order.released_at || order.created_at)}</td>
                           <td style={{ padding: '13px 16px' }}>
                             {order.reviews?.some(r => r.reviewer_role === 'buyer') ? (

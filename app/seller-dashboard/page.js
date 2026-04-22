@@ -15,7 +15,7 @@ export default function SellerDashboardPage() {
   return <Suspense><SellerDashboard /></Suspense>
 }
 
-const ACTIVE_ORDER_STATUSES = ['awaiting_shipment', 'in_transit', 'auth_review', 'auth_passed', 'delivered', 'inspection_window', 'disputed']
+const ACTIVE_ORDER_STATUSES = ['awaiting_shipment', 'in_transit', 'auth_review', 'auth_passed', 'delivered', 'inspection_window', 'disputed', 'awaiting_return', 'return_received', 'return_verified', 'return_received_seller', 'return_disputed_seller']
 
 const BOND_RATE  = { new: 0.04, trusted: 0.03, pro: 0.02, elite: 0.01, legend: 0.01 }
 const TIER_LABEL = { new: 'New', trusted: 'Trusted', pro: 'Pro', elite: 'Elite', legend: 'Legend' }
@@ -89,6 +89,15 @@ function SellerDashboard() {
   const [disputeEvidenceError, setDisputeEvidenceError] = useState('')
   const [disputeEvidenceDone, setDisputeEvidenceDone]   = useState({}) // { [orderId]: true }
 
+  // Return review state (Tier 1 — seller confirms correct card or disputes wrong card)
+  const [returnDisputeModal, setReturnDisputeModal]       = useState(null) // { orderId, cardName }
+  const [returnDisputeNotes, setReturnDisputeNotes]       = useState('')
+  const [returnDisputeFiles, setReturnDisputeFiles]       = useState([]) // { file, preview }[]
+  const [returnDisputeUploading, setReturnDisputeUploading] = useState(false)
+  const [returnDisputeError, setReturnDisputeError]       = useState('')
+  const [confirmReturnLoading, setConfirmReturnLoading]   = useState({}) // { [orderId]: bool }
+  const [confirmReturnError, setConfirmReturnError]       = useState({}) // { [orderId]: message }
+
   // Review modal state
   const [reviewModal, setReviewModal]           = useState(null) // { orderId, cardName, buyerId }
   const [reviewRating, setReviewRating]         = useState(5)
@@ -140,7 +149,7 @@ function SellerDashboard() {
       const [ordersRes, listingsRes, salesRes] = await Promise.all([
         supabase
           .from('orders')
-          .select(`id, status, escrow_amount, auth_tier, bond_amount, bond_tx_hash, onchain_order_id, tracking_a, label_a_url, shipped_at, created_at, auto_release_at,
+          .select(`id, status, escrow_amount, auth_tier, bond_amount, bond_tx_hash, onchain_order_id, tracking_a, label_a_url, shipped_at, created_at, auto_release_at, return_deadline_at, return_review_deadline_at,
                    listing:listing_id (id, card_name, game, set, grade, grader, photos, price, auth_tier),
                    buyer:buyer_id (id, username),
                    disputes (id, reason, seller_evidence, outcome)`)
@@ -290,6 +299,40 @@ function SellerDashboard() {
       setDisputeEvidenceError(err.message)
     } finally {
       setDisputeEvidenceUploading(false)
+    }
+  }
+
+  const submitReturnDispute = async () => {
+    if (!returnDisputeModal || returnDisputeUploading) return
+    if (!returnDisputeNotes.trim()) { setReturnDisputeError('Please describe what was received'); return }
+    setReturnDisputeUploading(true)
+    setReturnDisputeError('')
+    try {
+      const uploadedUrls = []
+      for (const item of returnDisputeFiles) {
+        const fd = new FormData()
+        fd.append('file', item.file)
+        fd.append('order_id', returnDisputeModal.orderId)
+        const upRes = await fetch('/api/disputes/seller-evidence', { method: 'PUT', body: fd })
+        const upData = await upRes.json()
+        if (!upRes.ok) throw new Error(upData.error || 'Upload failed')
+        uploadedUrls.push(upData.url)
+      }
+      const res = await fetch('/api/orders/dispute-return', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: returnDisputeModal.orderId, notes: returnDisputeNotes, evidence: uploadedUrls }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to submit')
+      setReturnDisputeModal(null)
+      setReturnDisputeFiles([])
+      setReturnDisputeNotes('')
+      await fetchData()
+    } catch (err) {
+      setReturnDisputeError(err.message)
+    } finally {
+      setReturnDisputeUploading(false)
     }
   }
 
@@ -689,7 +732,7 @@ function SellerDashboard() {
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{order.listing?.game} · {shortId(order.id)} · Buyer: {order.buyer?.username || '—'}</div>
           </div>
           <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: sm.bg, border: `1px solid ${sm.border}`, color: sm.color, fontWeight: 500, flexShrink: 0 }}>{sm.label}</span>
-          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{fmtUSD(order.escrow_amount)}</div>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{fmtUSD(order.listing?.price ?? order.escrow_amount)}</div>
         </div>
         <div style={{ padding: '12px 18px' }}>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: sm.urgent ? 'var(--accent-amber)' : 'var(--text-secondary)', background: 'var(--bg-3)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', lineHeight: 1.5 }}>
@@ -849,6 +892,54 @@ function SellerDashboard() {
                 {disputeEvidenceUploading ? 'Uploading…' : 'Submit Evidence'}
               </button>
               <button onClick={() => { setDisputeModal(null); setDisputeEvidenceFiles([]); setDisputeSellerNotes('') }} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Return Dispute Modal — seller claims wrong card was returned (Tier 1) */}
+      {returnDisputeModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 600, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          onClick={e => { if (e.target === e.currentTarget && !returnDisputeUploading) { setReturnDisputeModal(null); setReturnDisputeFiles([]); setReturnDisputeNotes(''); setReturnDisputeError('') } }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.4)', borderRadius: '16px', width: '100%', maxWidth: '500px', padding: '28px' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Dispute <em style={{ color: 'var(--accent-red)' }}>Returned Card</em></div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '12px' }}>{returnDisputeModal.cardName}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', background: 'rgba(232,168,56,0.06)', border: '1px solid rgba(232,168,56,0.2)', borderRadius: '8px', padding: '10px 12px', marginBottom: '16px', lineHeight: 1.6 }}>
+              Chase Hollow staff will review your photos and notes and make a final decision. No further shipping is required from either party — this is a photo-evidence review only.
+            </div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>What did you receive? (required)</div>
+            <textarea
+              value={returnDisputeNotes}
+              onChange={e => setReturnDisputeNotes(e.target.value)}
+              placeholder="Describe what you received vs. what was expected — include any identifying details (e.g. wrong set, wrong card name, wrong grade)…"
+              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', minHeight: '90px', lineHeight: 1.6, marginBottom: '16px', boxSizing: 'border-box' }}
+            />
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500 }}>Photos of what was received (up to 5)</div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {returnDisputeFiles.map((item, i) => (
+                <div key={i} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <img src={item.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button onClick={() => setReturnDisputeFiles(prev => prev.filter((_, j) => j !== i))}
+                    style={{ position: 'absolute', top: '2px', right: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                </div>
+              ))}
+              {returnDisputeFiles.length < 5 && (
+                <label style={{ width: '80px', height: '80px', borderRadius: '8px', border: '1.5px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '22px', color: 'var(--text-muted)' }}>
+                  +
+                  <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => {
+                    const files = Array.from(e.target.files).slice(0, 5 - returnDisputeFiles.length)
+                    setReturnDisputeFiles(prev => [...prev, ...files.map(f => ({ file: f, preview: URL.createObjectURL(f) }))])
+                  }} />
+                </label>
+              )}
+            </div>
+            {returnDisputeError && <div style={{ fontSize: '12px', color: 'var(--accent-red)', marginBottom: '10px' }}>{returnDisputeError}</div>}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={submitReturnDispute} disabled={returnDisputeUploading || !returnDisputeNotes.trim()}
+                style={{ flex: 1, background: returnDisputeNotes.trim() ? 'var(--accent-red)' : 'var(--bg-3)', border: 'none', color: returnDisputeNotes.trim() ? '#fff' : 'var(--text-muted)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: (returnDisputeUploading || !returnDisputeNotes.trim()) ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: returnDisputeUploading ? 0.6 : 1 }}>
+                {returnDisputeUploading ? 'Submitting…' : 'Submit — Request Staff Review'}
+              </button>
+              <button onClick={() => { setReturnDisputeModal(null); setReturnDisputeFiles([]); setReturnDisputeNotes(''); setReturnDisputeError('') }} style={btn({ padding: '12px 20px', borderRadius: '10px' })}>Cancel</button>
             </div>
           </div>
         </div>
@@ -1020,6 +1111,97 @@ function SellerDashboard() {
                   You cannot create new listings until <strong style={{ color: 'var(--text-primary)' }}>{new Date(accountStanding.suspended_until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>. Active listings have been paused. All existing orders are unaffected.
                 </div>
               </div>
+            </div>
+          )}
+          {/* RETURN RECEIVED — SELLER REVIEW REQUIRED (Tier 1) */}
+          {activeOrders.filter(o => o.status === 'return_received_seller').map(o => {
+            const hoursLeft = o.return_review_deadline_at
+              ? Math.max(0, Math.ceil((new Date(o.return_review_deadline_at) - Date.now()) / (1000 * 60 * 60)))
+              : null
+            const isUrgent = hoursLeft !== null && hoursLeft <= 12
+            return (
+              <div key={o.id} style={{ background: 'rgba(232,168,56,0.06)', border: `1.5px solid ${isUrgent ? 'rgba(200,75,60,0.5)' : 'rgba(232,168,56,0.4)'}`, borderRadius: '10px', padding: '16px 18px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '16px' }}>📦</span>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 700, color: isUrgent ? 'var(--accent-red)' : 'var(--accent-amber)', letterSpacing: '0.06em' }}>
+                    RETURN RECEIVED — ACTION REQUIRED
+                    {hoursLeft !== null && ` · ${hoursLeft}hr${hoursLeft !== 1 ? 's' : ''} remaining`}
+                  </div>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '14px' }}>
+                  The buyer has returned the card (<strong style={{ color: 'var(--text-primary)' }}>{o.listing?.card_name || shortId(o.id)}</strong>). Review it now and confirm whether the correct card was returned. If you received a wrong card, dispute it with photos — Chase Hollow staff will review.
+                </div>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    disabled={!!confirmReturnLoading[o.id]}
+                    onClick={async () => {
+                      setConfirmReturnLoading(p => ({ ...p, [o.id]: true }))
+                      setConfirmReturnError(p => ({ ...p, [o.id]: null }))
+                      try {
+                        const res = await fetch('/api/orders/confirm-return', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ order_id: o.id }),
+                        })
+                        const data = await res.json()
+                        if (!res.ok) throw new Error(data.error || 'Failed')
+                        await fetchData()
+                      } catch (err) {
+                        setConfirmReturnError(p => ({ ...p, [o.id]: err.message }))
+                      } finally {
+                        setConfirmReturnLoading(p => ({ ...p, [o.id]: false }))
+                      }
+                    }}
+                    style={{ background: 'var(--accent-green)', border: 'none', color: '#fff', padding: '9px 18px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: confirmReturnLoading[o.id] ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: confirmReturnLoading[o.id] ? 0.6 : 1 }}>
+                    {confirmReturnLoading[o.id] ? 'Processing…' : '✓ Correct Card Received'}
+                  </button>
+                  <button
+                    onClick={() => { setReturnDisputeModal({ orderId: o.id, cardName: o.listing?.card_name || shortId(o.id) }); setReturnDisputeNotes(''); setReturnDisputeFiles([]); setReturnDisputeError('') }}
+                    style={{ background: 'rgba(200,75,60,0.1)', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '9px 18px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                    ✗ Wrong Card Received
+                  </button>
+                </div>
+                {confirmReturnError[o.id] && <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--accent-red)', fontFamily: 'DM Mono, monospace' }}>{confirmReturnError[o.id]}</div>}
+              </div>
+            )
+          })}
+
+          {/* RETURN UNDER REVIEW — dispute filed, waiting for staff decision */}
+          {activeOrders.some(o => o.status === 'return_disputed_seller') && (
+            <div style={{ background: 'rgba(60,125,200,0.06)', border: '1.5px solid rgba(60,125,200,0.3)', borderRadius: '10px', padding: '14px 18px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                <span style={{ fontSize: '16px' }}>🔍</span>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 700, color: 'var(--accent-blue)', letterSpacing: '0.06em' }}>RETURN DISPUTE UNDER REVIEW</div>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                You disputed the returned card. Chase Hollow staff is reviewing the evidence and will make a final decision. No further action is required from you at this time.
+              </div>
+            </div>
+          )}
+
+          {/* DISPUTE LOST BANNER — shown when buyer is returning card (Tier 2 / awaiting return) */}
+          {activeOrders.some(o => ['awaiting_return', 'return_received', 'return_verified'].includes(o.status)) && (
+            <div style={{ background: 'rgba(200,75,60,0.08)', border: '1.5px solid rgba(200,75,60,0.4)', borderRadius: '10px', padding: '14px 18px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                <span style={{ fontSize: '16px' }}>⚠</span>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 700, color: 'var(--accent-red)', letterSpacing: '0.06em' }}>DISPUTE LOST — BUYER RETURNING CARD</div>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                A dispute was decided in the buyer's favor. The buyer has been given a prepaid return label and has 5 days to ship the card back. Your bond has been forfeited. <strong style={{ color: 'var(--text-primary)' }}>Funds will be refunded to the buyer once the return is confirmed delivered.</strong> If the buyer does not ship within 5 days, the dispute is automatically reversed and funds release to you.
+              </div>
+              {activeOrders.filter(o => ['awaiting_return', 'return_received', 'return_verified'].includes(o.status)).map(o => {
+                const daysLeft = o.return_deadline_at
+                  ? Math.max(0, Math.ceil((new Date(o.return_deadline_at) - Date.now()) / (1000 * 60 * 60 * 24)))
+                  : null
+                return (
+                  <div key={o.id} style={{ marginTop: '8px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.15)', borderRadius: '6px', padding: '6px 10px', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{o.listing?.card_name || 'Order'} · #{o.id.slice(0, 6).toUpperCase()}</span>
+                    <span style={{ color: o.status === 'awaiting_return' ? (daysLeft <= 1 ? 'var(--accent-red)' : 'var(--accent-amber)') : 'var(--accent-green)' }}>
+                      {o.status === 'awaiting_return' ? (daysLeft !== null ? `${daysLeft}d left` : 'Awaiting return') : o.status === 'return_received' ? 'Return received' : 'Return verified'}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           )}
 

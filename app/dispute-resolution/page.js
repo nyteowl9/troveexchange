@@ -225,11 +225,13 @@ export default function DisputeResolution() {
               </div>
             )}
             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>
-              {showConfirmModal.decision === 'buyer_wins' ? 'Refund Buyer' : 'Release to Seller'}
+              {showConfirmModal.decision === 'buyer_wins' ? 'Buyer Wins' : 'Release to Seller'}
             </div>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
               {showConfirmModal.decision === 'buyer_wins'
-                ? `Full escrow refund to buyer. Seller receives Strike 1. This cannot be undone.`
+                ? showConfirmModal.isReturnDispute
+                  ? `Card is already at the seller. Refund executes on-chain immediately. Seller bond forfeited. This cannot be undone.`
+                  : `A prepaid return label (Label C) will be generated. Buyer has 5 days to ship the card back. Strike 1 applied to seller now. Refund releases on confirmed delivery. This cannot be undone.`
                 : `Escrow releases to seller. Seller bond returned. This cannot be undone.`}
             </div>
             {execError && (
@@ -391,6 +393,7 @@ export default function DisputeResolution() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
                             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: 'var(--text-primary)' }}>{card}</div>
                             {isHighValue && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '10px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>High Value</span>}
+                            {d.orders?.status === 'return_disputed_seller' && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '10px', background: 'rgba(232,168,56,0.12)', border: '1px solid rgba(232,168,56,0.35)', color: 'var(--accent-amber)', fontWeight: 500 }}>↩ Return Dispute</span>}
                           </div>
                           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '6px' }}>
                             {d.orders?.listing?.set || ''} · #{d.id.slice(0, 8).toUpperCase()}
@@ -423,12 +426,12 @@ export default function DisputeResolution() {
                           const rec = d.staff_recommendation
                           const primaryDecision = rec
                           const overrideDecision = rec === 'buyer_wins' ? 'seller_wins' : 'buyer_wins'
-                          const primaryLabel = rec === 'buyer_wins' ? 'Execute — Refund Buyer' : 'Execute — Release to Seller'
-                          const overrideLabel = rec === 'buyer_wins' ? 'Override — Release to Seller' : 'Override — Refund Buyer'
+                          const primaryLabel = rec === 'buyer_wins' ? 'Execute — Buyer Wins' : 'Execute — Release to Seller'
+                          const overrideLabel = rec === 'buyer_wins' ? 'Override — Release to Seller' : 'Override — Buyer Wins'
                           return (
                             <>
-                              <button onClick={() => setShowConfirmModal({ decision: primaryDecision, disputeId: d.id, staffRec: rec, isOverride: false })} style={{ background: rec === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)', border: 'none', color: '#0A0A0B', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>{primaryLabel}</button>
-                              <button onClick={() => { setOverrideReason(''); setShowConfirmModal({ decision: overrideDecision, disputeId: d.id, staffRec: rec, isOverride: true }) }} style={{ background: 'transparent', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)', padding: '8px 14px', fontSize: '11px', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: 0.7 }}>Override ↗</button>
+                              <button onClick={() => setShowConfirmModal({ decision: primaryDecision, disputeId: d.id, staffRec: rec, isOverride: false, isReturnDispute: d.orders?.status === 'return_disputed_seller' })} style={{ background: rec === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)', border: 'none', color: '#0A0A0B', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>{primaryLabel}</button>
+                              <button onClick={() => { setOverrideReason(''); setShowConfirmModal({ decision: overrideDecision, disputeId: d.id, staffRec: rec, isOverride: true, isReturnDispute: d.orders?.status === 'return_disputed_seller' }) }} style={{ background: 'transparent', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)', padding: '8px 14px', fontSize: '11px', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: 0.7 }}>Override ↗</button>
                             </>
                           )
                         })()}
@@ -535,6 +538,14 @@ export default function DisputeResolution() {
                   {/* Evidence */}
                   {activeTab === 'evidence' && (
                     <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
+
+                      {/* Return dispute banner — seller contested the returned card */}
+                      {dispute.orders?.status === 'return_disputed_seller' && (
+                        <div style={{ background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.25)', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                          <strong style={{ color: 'var(--accent-red)' }}>Return Dispute</strong> — The seller received the return but claims it is the wrong card. Review the original dispute evidence above alongside the seller's return photos below. No further shipping is required — your decision executes on-chain immediately.
+                        </div>
+                      )}
+
                       <EvidenceCard urls={dispute.buyer_evidence} label={`Buyer Evidence — ${dispute.orders?.buyer?.username || dispute.orders?.buyer?.full_name || 'Buyer'}`} color="var(--accent-blue)" />
                       {dispute.seller_notes && (
                         <div style={{ marginBottom: '14px' }}>
@@ -547,6 +558,23 @@ export default function DisputeResolution() {
                         </div>
                       )}
                       <EvidenceCard urls={dispute.seller_evidence} label={`Seller Photos — ${dispute.orders?.seller?.username || dispute.orders?.seller?.full_name || 'Seller'}`} color="var(--gold)" />
+
+                      {/* Return dispute evidence — seller's photos of what was returned */}
+                      {dispute.orders?.status === 'return_disputed_seller' && (
+                        <>
+                          {dispute.seller_return_notes && (
+                            <div style={{ marginBottom: '14px', marginTop: '8px' }}>
+                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-red)', marginBottom: '8px', fontWeight: 500 }}>
+                                Seller Return Dispute — What They Claim Was Received
+                              </div>
+                              <div style={{ background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.2)', borderRadius: '8px', padding: '12px 14px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                                {dispute.seller_return_notes}
+                              </div>
+                            </div>
+                          )}
+                          <EvidenceCard urls={dispute.seller_return_evidence} label="Seller Return Photos — What Was Received" color="var(--accent-red)" />
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -596,16 +624,16 @@ export default function DisputeResolution() {
                         {(() => {
                           const rec = dispute.staff_recommendation
                           const overrideDecision = rec === 'buyer_wins' ? 'seller_wins' : 'buyer_wins'
-                          const primaryLabel = rec === 'buyer_wins' ? 'Execute — Refund Buyer' : 'Execute — Release to Seller'
-                          const overrideLabel = rec === 'buyer_wins' ? 'Override — Release to Seller' : 'Override — Refund Buyer'
+                          const primaryLabel = rec === 'buyer_wins' ? 'Execute — Buyer Wins' : 'Execute — Release to Seller'
+                          const overrideLabel = rec === 'buyer_wins' ? 'Override — Release to Seller' : 'Override — Buyer Wins'
                           const primaryBg = rec === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)'
                           return (
                             <>
-                              <button onClick={() => setShowConfirmModal({ decision: rec, disputeId: dispute.id, staffRec: rec, isOverride: false })}
+                              <button onClick={() => setShowConfirmModal({ decision: rec, disputeId: dispute.id, staffRec: rec, isOverride: false, isReturnDispute: dispute.orders?.status === 'return_disputed_seller' })}
                                 style={{ width: '100%', background: primaryBg, border: 'none', color: '#0A0A0B', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
                                 {primaryLabel}
                               </button>
-                              <button onClick={() => { setOverrideReason(''); setShowConfirmModal({ decision: overrideDecision, disputeId: dispute.id, staffRec: rec, isOverride: true }) }}
+                              <button onClick={() => { setOverrideReason(''); setShowConfirmModal({ decision: overrideDecision, disputeId: dispute.id, staffRec: rec, isOverride: true, isReturnDispute: dispute.orders?.status === 'return_disputed_seller' }) }}
                                 style={{ width: '100%', background: 'transparent', border: '1px solid rgba(200,75,60,0.25)', color: 'var(--accent-red)', padding: '9px', fontSize: '11px', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: 0.65 }}>
                                 {overrideLabel} — requires written reason
                               </button>
@@ -617,7 +645,7 @@ export default function DisputeResolution() {
                       !recommendation ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           <button onClick={() => setRecommendation('buyer_wins')} style={{ width: '100%', background: 'rgba(76,175,124,0.1)', border: '1.5px solid rgba(76,175,124,0.3)', color: 'var(--accent-green)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                            ✓ Recommend — Refund Buyer
+                            ✓ Recommend — Buyer Wins
                           </button>
                           <button onClick={() => setRecommendation('seller_wins')} style={{ width: '100%', background: 'rgba(201,168,76,0.1)', border: '1.5px solid rgba(201,168,76,0.3)', color: 'var(--gold)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
                             ✓ Recommend — Release to Seller
@@ -628,7 +656,7 @@ export default function DisputeResolution() {
                           <div style={{ textAlign: 'center', marginBottom: '14px' }}>
                             <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: recommendation === 'buyer_wins' ? 'rgba(76,175,124,0.12)' : 'rgba(201,168,76,0.12)', border: `2px solid ${recommendation === 'buyer_wins' ? 'rgba(76,175,124,0.4)' : 'rgba(201,168,76,0.4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', margin: '0 auto 10px' }}>✓</div>
                             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 300, color: recommendation === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)' }}>
-                              {recommendation === 'buyer_wins' ? 'Refund Buyer' : 'Release to Seller'}
+                              {recommendation === 'buyer_wins' ? 'Buyer Wins' : 'Release to Seller'}
                             </div>
                           </div>
                           <div style={{ marginBottom: '12px' }}>
@@ -656,31 +684,43 @@ export default function DisputeResolution() {
                   <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
                     {(() => {
                       const o = dispute.orders || {}
-                      const escrow   = parseFloat(o.escrow_amount  || 0)
-                      const platFee  = parseFloat(o.platform_fee   || 0)
-                      const shipCost = parseFloat(o.shipping_cost  || 0)
-                      const authFee  = parseFloat(o.auth_fee       || 0)
-                      // Seller net = escrow minus what Chase Hollow keeps (platform fee + shipping + auth fee)
-                      const sellerNet = escrow - platFee - shipCost - authFee
+                      const escrow      = parseFloat(o.escrow_amount  || 0)
+                      const platFee     = parseFloat(o.platform_fee   || 0)
+                      const shipCost    = parseFloat(o.shipping_cost  || 0)
+                      const authFee     = parseFloat(o.auth_fee       || 0)
+                      const sellerNet   = escrow - platFee - shipCost - authFee
+                      const isReturnDispute = o.status === 'return_disputed_seller'
+                      const buyerWinsItems = isReturnDispute ? [
+                        `Refund executes on-chain immediately — no return shipping needed`,
+                        `${fmtUSD(escrow)} USDC → Buyer wallet immediately`,
+                        `Seller bond forfeited`,
+                        `Strike already applied (from original buyer wins decision)`,
+                      ] : [
+                        `Label C generated → buyer ships card back (5-day window)`,
+                        `${fmtUSD(escrow)} USDC → Buyer wallet on confirmed return (shipping non-refundable)`,
+                        `Seller bond forfeited`,
+                        `Strike 1 applied to seller immediately`,
+                      ]
+                      const sellerWinsItems = isReturnDispute ? [
+                        `Escrow releases to seller immediately — card is already at seller`,
+                        `${fmtUSD(sellerNet > 0 ? sellerNet : escrow)} USDC → Seller wallet${platFee || shipCost ? ` (after ${fmtUSD(platFee)} fee + ${fmtUSD(shipCost)} shipping)` : ''}`,
+                        `Seller bond returned`,
+                        `Buyer strike applied — fraudulent return`,
+                      ] : [
+                        `${fmtUSD(sellerNet > 0 ? sellerNet : escrow)} USDC → Seller wallet${platFee || shipCost ? ` (after ${fmtUSD(platFee)} fee + ${fmtUSD(shipCost)} shipping)` : ''}`,
+                        `Seller bond returned`,
+                        `No strikes issued`,
+                      ]
                       return (
                         <>
                           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500 }}>If Buyer Wins</div>
-                          {[
-                            `${fmtUSD(escrow)} USDC → Buyer wallet (full refund)`,
-                            `Label A shipping cost absorbed by seller (not recovered)`,
-                            `Seller bond forfeited`,
-                            `Seller receives Strike 1`,
-                          ].map((item, i) => (
+                          {buyerWinsItems.map((item, i) => (
                             <div key={i} style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '3px 0', display: 'flex', gap: '6px' }}>
                               <span style={{ color: 'var(--accent-green)' }}>→</span>{item}
                             </div>
                           ))}
                           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '10px 0 10px', fontWeight: 500 }}>If Seller Wins</div>
-                          {[
-                            `${fmtUSD(sellerNet > 0 ? sellerNet : escrow)} USDC → Seller wallet${platFee || shipCost ? ` (after ${fmtUSD(platFee)} fee + ${fmtUSD(shipCost)} shipping)` : ''}`,
-                            `Seller bond returned`,
-                            `No strikes issued`,
-                          ].map((item, i) => (
+                          {sellerWinsItems.map((item, i) => (
                             <div key={i} style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '3px 0', display: 'flex', gap: '6px' }}>
                               <span style={{ color: 'var(--gold)' }}>→</span>{item}
                             </div>
@@ -725,10 +765,10 @@ export default function DisputeResolution() {
                       const overrideDecision = rec === 'buyer_wins' ? 'seller_wins' : 'buyer_wins'
                       return (
                         <>
-                          <button onClick={() => setShowConfirmModal({ decision: rec, disputeId: d.id, staffRec: rec, isOverride: false })} style={{ background: rec === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)', border: 'none', color: '#0A0A0B', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                            {rec === 'buyer_wins' ? 'Execute — Refund Buyer' : 'Execute — Release to Seller'}
+                          <button onClick={() => setShowConfirmModal({ decision: rec, disputeId: d.id, staffRec: rec, isOverride: false, isReturnDispute: d.orders?.status === 'return_disputed_seller' })} style={{ background: rec === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)', border: 'none', color: '#0A0A0B', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                            {rec === 'buyer_wins' ? 'Execute — Buyer Wins' : 'Execute — Release to Seller'}
                           </button>
-                          <button onClick={() => { setOverrideReason(''); setShowConfirmModal({ decision: overrideDecision, disputeId: d.id, staffRec: rec, isOverride: true }) }} style={{ background: 'transparent', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)', padding: '10px 16px', fontSize: '11px', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: 0.65 }}>Override ↗</button>
+                          <button onClick={() => { setOverrideReason(''); setShowConfirmModal({ decision: overrideDecision, disputeId: d.id, staffRec: rec, isOverride: true, isReturnDispute: d.orders?.status === 'return_disputed_seller' }) }} style={{ background: 'transparent', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)', padding: '10px 16px', fontSize: '11px', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: 0.65 }}>Override ↗</button>
                         </>
                       )
                     })()}
