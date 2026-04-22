@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 const PAGE_SIZE = 24
 
 const TIER_COLORS = {
+  legend:  { bg: 'rgba(155,89,210,0.12)', border: 'rgba(155,89,210,0.4)',  color: 'rgb(185,140,245)',    label: 'Legend' },
   elite:   { bg: 'rgba(201,168,76,0.1)',  border: 'rgba(201,168,76,0.3)',  color: 'var(--gold)',         label: 'Elite' },
   pro:     { bg: 'rgba(232,168,56,0.1)',  border: 'rgba(232,168,56,0.3)',  color: 'var(--accent-amber)', label: 'Pro' },
   trusted: { bg: 'rgba(60,125,200,0.1)',  border: 'rgba(60,125,200,0.3)',  color: 'var(--accent-blue)',  label: 'Trusted' },

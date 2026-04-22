@@ -7,11 +7,20 @@ import Nav from '@/app/components/Nav'
 import { supabase } from '@/lib/supabase'
 
 const TIER_COLORS = {
-  elite:   { color: 'var(--gold)',         bg: 'rgba(201,168,76,0.15)', border: 'rgba(201,168,76,0.3)',  label: '⭐ Elite' },
+  legend:  { color: 'rgb(185,140,245)',    bg: 'rgba(155,89,210,0.12)', border: 'rgba(155,89,210,0.4)',  label: 'Legend' },
+  elite:   { color: 'var(--gold)',         bg: 'rgba(201,168,76,0.15)', border: 'rgba(201,168,76,0.3)',  label: 'Elite' },
   pro:     { color: 'var(--accent-amber)', bg: 'rgba(232,168,56,0.1)', border: 'rgba(232,168,56,0.3)',  label: 'Pro' },
   trusted: { color: 'var(--accent-blue)',  bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)',  label: 'Trusted' },
   new:     { color: 'var(--text-muted)',   bg: 'rgba(255,255,255,0.05)', border: 'var(--border)',        label: 'New' },
 }
+
+const TIER_INFO = [
+  { key: 'legend',  label: 'Legend',  color: 'rgb(185,140,245)',    sales: '2,500+ sales',  desc: 'Top 1% of sellers. Exceptional track record, near-zero dispute rate.' },
+  { key: 'elite',   label: 'Elite',   color: 'var(--gold)',         sales: '500–2,499 sales', desc: 'Established sellers with strong reputation and consistent delivery.' },
+  { key: 'pro',     label: 'Pro',     color: 'var(--accent-amber)', sales: '100–499 sales', desc: 'Experienced sellers with a solid history on the platform.' },
+  { key: 'trusted', label: 'Trusted', color: 'var(--accent-blue)',  sales: '10–99 sales',   desc: 'Verified sellers who have completed their first transactions successfully.' },
+  { key: 'new',     label: 'New',     color: 'var(--text-muted)',   sales: '0–9 sales',     desc: 'New to Chase Hollow. Every card is authenticated regardless of tier.' },
+]
 
 export default function ListingPage() {
   const { id } = useParams()
@@ -22,6 +31,7 @@ export default function ListingPage() {
   const [showBuyModal, setShowBuyModal] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [currentUserId, setCurrentUserId] = useState(null)
+  const [showTierInfo, setShowTierInfo] = useState(false)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768)
@@ -255,15 +265,39 @@ export default function ListingPage() {
             )}
 
             {/* Seller row */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-3)', borderRadius: '10px', padding: '12px 14px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Playfair Display, serif', fontSize: '16px', fontWeight: 600, color: 'var(--teal)', flexShrink: 0 }}>{sellerInitials}</div>
-              <div style={{ flex: 1 }}>
-                <Link href={`/profile/${seller?.username}`} style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}>@{seller?.username}</Link>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: tc.color, marginTop: '2px' }}>{tc.label}</div>
+            <div style={{ background: 'var(--bg-3)', borderRadius: '10px', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Playfair Display, serif', fontSize: '16px', fontWeight: 600, color: 'var(--teal)', flexShrink: 0 }}>{sellerInitials}</div>
+                <div style={{ flex: 1 }}>
+                  <Link href={`/profile/${seller?.username}`} style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}>@{seller?.username}</Link>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                    <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: tc.color }}>{tc.label}</span>
+                    <button onClick={() => setShowTierInfo(v => !v)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '50%', width: '14px', height: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, color: 'var(--text-muted)', fontSize: '9px', lineHeight: 1, fontFamily: 'DM Mono, monospace', flexShrink: 0 }}>?</button>
+                  </div>
+                </div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: seller?.strike_count === 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                  {seller?.strike_count === 0 ? '0 strikes' : `${seller?.strike_count} strike${seller.strike_count > 1 ? 's' : ''}`}
+                </div>
               </div>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: seller?.strike_count === 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                {seller?.strike_count === 0 ? '0 strikes' : `${seller?.strike_count} strike${seller.strike_count > 1 ? 's' : ''}`}
-              </div>
+              {showTierInfo && (
+                <div style={{ borderTop: '1px solid var(--border)', padding: '14px 14px 12px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500 }}>Seller Tier System</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {TIER_INFO.map(t => (
+                      <div key={t.key} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', background: TIER_COLORS[t.key].bg, border: `1px solid ${TIER_COLORS[t.key].border}`, color: t.color, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>{t.label}</span>
+                        <div>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '1px' }}>{t.sales}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{t.desc}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border)', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                    Every card is authenticated by Chase Hollow regardless of tier — buyer protection never changes.
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
