@@ -105,6 +105,19 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     uint256 public feeRecipientChangeAt;
     uint256 public constant FEE_RECIPIENT_DELAY = 48 hours;
 
+    // ── Guardian change timelock ──────────────────────────────
+    // Adding or removing a guardian requires a 48hr timelock.
+    // Either existing guardian can cancel a pending proposal during the window.
+    // This prevents a compromised G1 from instantly removing G2 and adding their own wallet.
+    struct GuardianProposal {
+        address target;
+        bool    isAdd;        // true = addGuardian, false = removeGuardian
+        uint256 proposedAt;
+        address proposedBy;
+    }
+    GuardianProposal public pendingGuardianChange;
+    uint256 public constant GUARDIAN_CHANGE_DELAY = 48 hours;
+
     uint256 public platformFeeBps = 300;     // 3%
     uint256 public creatorFeeBps  = 50;      // 0.5%
     uint256 public buyerInspectWindow  = 72 hours;
@@ -139,6 +152,8 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     event FeeRecipientChangeCancelled(address indexed cancelled);
     event GuardianAdded(address indexed guardian);
     event GuardianRemoved(address indexed guardian);
+    event GuardianChangeProposed(address indexed target, bool isAdd, address indexed proposedBy, uint256 executeAfter);
+    event GuardianChangeCancelled(address indexed target, bool isAdd, address indexed cancelledBy);
     // sweepStuckFunds — emitted with full detail so off-chain can reconstruct redistribution
     event FundsSwept(address indexed recipient, uint256 amount, uint256 timestamp);
 
@@ -670,23 +685,57 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         emit FeeRecipientChangeCancelled(cancelled);
     }
 
+    // ── Guardian self-management (timelocked) ───────────────────
     // Guardians manage themselves — owner cannot add or remove guardians.
-    // If G1 is compromised: G2 cancels any pending malicious change, removes G1, adds replacement.
+    // All changes require a 48hr timelock. Either guardian can cancel during the window.
+    //
+    // Compromise scenario: G1 is compromised and proposes to remove G2.
+    //   → G2 sees the on-chain event within 48hrs and calls cancelGuardianChange().
+    //   → G2 then proposes to remove G1, waits 48hrs, executes.
+    // If G2 is also unavailable: owner can pause() to freeze the contract
+    //   during the timelock window, buying time to respond.
 
-    function addGuardian(address _guardian) external onlyGuardian {
-        require(_guardian != address(0), "Invalid address");
-        require(!isGuardian[_guardian], "Already a guardian");
-        isGuardian[_guardian] = true;
-        guardianCount++;
-        emit GuardianAdded(_guardian);
+    function proposeGuardianChange(address _target, bool _isAdd) external onlyGuardian {
+        require(_target != address(0), "Invalid address");
+        if (_isAdd)  require(!isGuardian[_target],  "Already a guardian");
+        if (!_isAdd) {
+            require(isGuardian[_target],  "Not a guardian");
+            require(guardianCount > 1,    "Cannot remove last guardian");
+        }
+        require(pendingGuardianChange.proposedAt == 0, "Change already pending - cancel first");
+        pendingGuardianChange = GuardianProposal({
+            target:     _target,
+            isAdd:      _isAdd,
+            proposedAt: block.timestamp,
+            proposedBy: msg.sender
+        });
+        emit GuardianChangeProposed(_target, _isAdd, msg.sender, block.timestamp + GUARDIAN_CHANGE_DELAY);
     }
 
-    function removeGuardian(address _guardian) external onlyGuardian {
-        require(isGuardian[_guardian], "Not a guardian");
-        require(guardianCount > 1, "Cannot remove last guardian");
-        isGuardian[_guardian] = false;
-        guardianCount--;
-        emit GuardianRemoved(_guardian);
+    function executeGuardianChange() external onlyGuardian {
+        GuardianProposal memory p = pendingGuardianChange;
+        require(p.proposedAt != 0, "No pending change");
+        require(block.timestamp >= p.proposedAt + GUARDIAN_CHANGE_DELAY, "Timelock not elapsed");
+        delete pendingGuardianChange;
+        if (p.isAdd) {
+            require(!isGuardian[p.target], "Already a guardian");
+            isGuardian[p.target] = true;
+            guardianCount++;
+            emit GuardianAdded(p.target);
+        } else {
+            require(isGuardian[p.target],  "Not a guardian");
+            require(guardianCount > 1,     "Cannot remove last guardian");
+            isGuardian[p.target] = false;
+            guardianCount--;
+            emit GuardianRemoved(p.target);
+        }
+    }
+
+    function cancelGuardianChange() external onlyGuardian {
+        GuardianProposal memory p = pendingGuardianChange;
+        require(p.proposedAt != 0, "No pending change");
+        delete pendingGuardianChange;
+        emit GuardianChangeCancelled(p.target, p.isAdd, msg.sender);
     }
 
     // ── Safety Valve ─────────────────────────────────────────

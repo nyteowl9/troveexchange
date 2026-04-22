@@ -937,56 +937,94 @@ describe("ChaseHollowEscrow", function () {
       });
     });
 
-    describe("guardian self-management", function () {
-      it("guardian can add a second guardian", async function () {
-        await expect(escrow.connect(guardian).addGuardian(stranger.address))
+    describe("guardian self-management (timelocked)", function () {
+      const GUARDIAN_DELAY = 48 * 60 * 60; // 48 hours in seconds
+
+      it("guardian can propose + execute adding a second guardian after timelock", async function () {
+        await expect(escrow.connect(guardian).proposeGuardianChange(stranger.address, true))
+          .to.emit(escrow, "GuardianChangeProposed");
+        // Cannot execute before timelock
+        await expect(escrow.connect(guardian).executeGuardianChange())
+          .to.be.revertedWith("Timelock not elapsed");
+        // Advance time past 48hrs
+        await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
+        await ethers.provider.send("evm_mine");
+        await expect(escrow.connect(guardian).executeGuardianChange())
           .to.emit(escrow, "GuardianAdded").withArgs(stranger.address);
         expect(await escrow.isGuardian(stranger.address)).to.be.true;
         expect(await escrow.guardianCount()).to.equal(2n);
       });
 
-      it("second guardian can cancel a malicious change proposed by first", async function () {
-        // Add a second guardian
-        await escrow.connect(guardian).addGuardian(stranger.address);
-        // G1 (compromised) proposes a malicious feeRecipient
-        await escrow.connect(guardian).proposeFeeRecipient(operator.address);
-        // G2 cancels it
-        await expect(escrow.connect(stranger).cancelFeeRecipientChange())
-          .to.emit(escrow, "FeeRecipientChangeCancelled");
-        expect(await escrow.pendingFeeRecipient()).to.equal(ethers.ZeroAddress);
-      });
-
-      it("guardian can remove another guardian (but not the last)", async function () {
-        await escrow.connect(guardian).addGuardian(stranger.address);
-        await expect(escrow.connect(stranger).removeGuardian(guardian.address))
+      it("guardian can propose + execute removing another guardian after timelock", async function () {
+        // Add G2 first
+        await escrow.connect(guardian).proposeGuardianChange(stranger.address, true);
+        await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
+        await ethers.provider.send("evm_mine");
+        await escrow.connect(guardian).executeGuardianChange();
+        // Now G2 removes G1
+        await escrow.connect(stranger).proposeGuardianChange(guardian.address, false);
+        await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
+        await ethers.provider.send("evm_mine");
+        await expect(escrow.connect(stranger).executeGuardianChange())
           .to.emit(escrow, "GuardianRemoved").withArgs(guardian.address);
         expect(await escrow.isGuardian(guardian.address)).to.be.false;
         expect(await escrow.guardianCount()).to.equal(1n);
       });
 
+      it("G2 can cancel a malicious guardian-removal proposed by compromised G1", async function () {
+        // Add G2
+        await escrow.connect(guardian).proposeGuardianChange(stranger.address, true);
+        await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
+        await ethers.provider.send("evm_mine");
+        await escrow.connect(guardian).executeGuardianChange();
+        // Compromised G1 tries to remove G2
+        await escrow.connect(guardian).proposeGuardianChange(stranger.address, false);
+        // G2 cancels it within the 48hr window
+        await expect(escrow.connect(stranger).cancelGuardianChange())
+          .to.emit(escrow, "GuardianChangeCancelled").withArgs(stranger.address, false, stranger.address);
+        // Pending change is cleared — G2 is still a guardian
+        const pending = await escrow.pendingGuardianChange();
+        expect(pending.proposedAt).to.equal(0n);
+        expect(await escrow.isGuardian(stranger.address)).to.be.true;
+      });
+
+      it("cannot queue two guardian changes simultaneously", async function () {
+        await escrow.connect(guardian).proposeGuardianChange(stranger.address, true);
+        await expect(
+          escrow.connect(guardian).proposeGuardianChange(operator.address, true)
+        ).to.be.revertedWith("Change already pending - cancel first");
+      });
+
       it("cannot remove the last guardian", async function () {
         await expect(
-          escrow.connect(guardian).removeGuardian(guardian.address)
+          escrow.connect(guardian).proposeGuardianChange(guardian.address, false)
         ).to.be.revertedWith("Cannot remove last guardian");
       });
 
-      it("owner CANNOT add a guardian — critical security check", async function () {
+      it("owner CANNOT propose a guardian change — critical security check", async function () {
         await expect(
-          escrow.connect(owner).addGuardian(stranger.address)
+          escrow.connect(owner).proposeGuardianChange(stranger.address, true)
         ).to.be.revertedWith("Not guardian");
       });
 
-      it("owner CANNOT remove a guardian — critical security check", async function () {
-        await escrow.connect(guardian).addGuardian(stranger.address);
+      it("stranger cannot propose a guardian change", async function () {
         await expect(
-          escrow.connect(owner).removeGuardian(guardian.address)
+          escrow.connect(stranger).proposeGuardianChange(stranger.address, true)
         ).to.be.revertedWith("Not guardian");
       });
 
-      it("stranger cannot add a guardian", async function () {
-        await expect(
-          escrow.connect(stranger).addGuardian(stranger.address)
-        ).to.be.revertedWith("Not guardian");
+      it("second guardian can cancel a malicious feeRecipient change proposed by compromised G1", async function () {
+        // Add G2
+        await escrow.connect(guardian).proposeGuardianChange(stranger.address, true);
+        await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
+        await ethers.provider.send("evm_mine");
+        await escrow.connect(guardian).executeGuardianChange();
+        // Compromised G1 proposes malicious feeRecipient change
+        await escrow.connect(guardian).proposeFeeRecipient(operator.address);
+        // G2 cancels it
+        await expect(escrow.connect(stranger).cancelFeeRecipientChange())
+          .to.emit(escrow, "FeeRecipientChangeCancelled");
+        expect(await escrow.pendingFeeRecipient()).to.equal(ethers.ZeroAddress);
       });
     });
 
@@ -1504,8 +1542,17 @@ describe("ChaseHollowEscrow", function () {
     // ── Guardian removes themselves ──────────────────────────────
     describe("Guardian self-removal", function () {
       it("guardian can remove themselves if another guardian exists", async function () {
-        await escrow.connect(guardian).addGuardian(stranger.address);
-        await expect(escrow.connect(guardian).removeGuardian(guardian.address))
+        const GUARDIAN_DELAY = 48 * 60 * 60;
+        // Add G2 first
+        await escrow.connect(guardian).proposeGuardianChange(stranger.address, true);
+        await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
+        await ethers.provider.send("evm_mine");
+        await escrow.connect(guardian).executeGuardianChange();
+        // G1 proposes to remove themselves
+        await escrow.connect(guardian).proposeGuardianChange(guardian.address, false);
+        await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
+        await ethers.provider.send("evm_mine");
+        await expect(escrow.connect(guardian).executeGuardianChange())
           .to.emit(escrow, "GuardianRemoved").withArgs(guardian.address);
         expect(await escrow.isGuardian(guardian.address)).to.be.false;
         expect(await escrow.isGuardian(stranger.address)).to.be.true;
