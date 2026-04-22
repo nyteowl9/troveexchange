@@ -811,9 +811,12 @@ export default function DisputeResolution() {
                           <td style={{ padding: '10px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{row.orders?.listing?.card_name || '—'}</td>
                           <td style={{ padding: '10px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600 }}>{fmtUSD(row.orders?.escrow_amount)}</td>
                           <td style={{ padding: '10px 14px' }}>
-                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '5px', background: row.outcome === 'buyer_wins' ? 'rgba(76,175,124,0.1)' : 'rgba(201,168,76,0.1)', border: `1px solid ${row.outcome === 'buyer_wins' ? 'rgba(76,175,124,0.3)' : 'rgba(201,168,76,0.3)'}`, color: row.outcome === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)', fontWeight: 500 }}>
-                              {row.outcome === 'buyer_wins' ? '✓ Buyer Refunded' : '✓ Seller Paid'}
-                            </span>
+                            {(() => {
+                              const s = disputeStatus(row)
+                              const sc = statusColors[s] || statusColors.resolved_buyer
+                              const label = s === 'awaiting_return' ? '⏳ Awaiting Return' : s === 'resolved_buyer' ? '✓ Buyer Refunded' : '✓ Seller Paid'
+                              return <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '5px', background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, fontWeight: 500 }}>{label}</span>
+                            })()}
                           </td>
                           <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>@{row.resolver?.username || row.resolver?.full_name || '—'}</td>
                           <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(row.resolved_at || row.created_at)}</td>
