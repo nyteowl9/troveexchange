@@ -13,7 +13,7 @@
   --bg-4: #222228;
   --text-primary: #F0EDE6;
   --text-secondary: #B8B4AC;
-  --text-muted: #6C6A66;
+  --text-muted: #7C7A76;
   --accent-green: #4CAF7C;
   --accent-red: #C84B3C;
   --accent-blue: #3C7DC8;
@@ -209,6 +209,21 @@ table {
   div[style*="fontSize: '24px'"] {
     font-size: 20px !important;
   }
+}
+
+/* ── MINIMUM FONT SIZES — prevent sub-10px text sitewide ── */
+/* DM Mono labels/tags: floor at 10px */
+[style*="fontFamily: 'DM Mono"][style*="fontSize: '8px'"],
+[style*='fontFamily: "DM Mono'][style*="fontSize: '8px'"] {
+  font-size: 10px !important;
+}
+[style*="fontFamily: 'DM Mono"][style*="fontSize: '9px'"],
+[style*='fontFamily: "DM Mono'][style*="fontSize: '9px'"] {
+  font-size: 10px !important;
+}
+/* DM Sans body text: floor at 9px */
+[style*="fontSize: '8px'"]:not([style*="DM Mono"]) {
+  font-size: 9px !important;
 }
 
 /* ── HOMEPAGE SPECIFIC ── */
