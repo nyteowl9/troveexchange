@@ -616,14 +616,14 @@ export default function AdminPanel() {
         <aside className="dash-aside" style={{ width: '210px', flexShrink: 0, background: 'var(--bg-2)', borderRight: '0.5px solid var(--border)', position: 'fixed', top: '56px', left: 0, height: 'calc(100vh - 56px)', overflowY: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column' }}>
           {navItems.map(item => (
             <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%' }}>
-              <span style={{ fontSize: '14px', width: '16px', textAlign: 'center' }}>{item.icon}</span>
-              {item.label}
-              {item.badge && <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor || 'var(--teal)', color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
+              <span style={{ fontSize: '14px', width: '16px', textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+              {item.badge > 0 && <span style={{ marginLeft: '6px', flexShrink: 0, fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor || 'var(--teal)', color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
             </button>
           ))}
 
           {/* Safe multisig status */}
-          <div style={{ margin: '12px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', marginTop: 'auto' }}>
+          <div style={{ margin: '12px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px', marginTop: 'auto' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Safe Multisig</div>
             {[
               { label: 'W1 Operational', status: 'online', color: 'var(--accent-green)' },
@@ -680,10 +680,10 @@ export default function AdminPanel() {
               {/* Metrics grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '28px' }}>
                 {metrics.map((m, i) => (
-                  <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px 18px' }}>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, lineHeight: 1, color: m.color }}>{m.val}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
+                  <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '10px 14px' }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 500 }}>{m.label}</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 600, lineHeight: 1, color: m.color }}>{m.val}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
                   </div>
                 ))}
               </div>
@@ -717,12 +717,12 @@ export default function AdminPanel() {
                           onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
-                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{'#' + (order.id || '').slice(0, 8).toUpperCase()}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '14px', color: 'var(--text-primary)' }}>{cardName}</td>
-                          <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--accent-blue)' }}>{buyerName}</td>
-                          <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--gold)' }}>{sellerName}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', fontWeight: 600, color: 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</td>
-                          <td style={{ padding: '11px 14px' }}>
+                          <td style={{ padding: '7px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{'#' + (order.id || '').slice(0, 8).toUpperCase()}</td>
+                          <td style={{ padding: '7px 14px', fontFamily: 'Playfair Display, serif', fontSize: '13px', color: 'var(--text-primary)' }}>{cardName}</td>
+                          <td style={{ padding: '7px 14px', fontSize: '12px', color: 'var(--text-secondary)' }}>{buyerName}</td>
+                          <td style={{ padding: '7px 14px', fontSize: '12px', color: 'var(--text-secondary)' }}>{sellerName}</td>
+                          <td style={{ padding: '7px 14px', fontFamily: 'DM Mono, monospace', fontSize: '12px', fontWeight: 600, color: 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</td>
+                          <td style={{ padding: '7px 14px' }}>
                             <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18`, fontWeight: 500 }}>{(order.status || '').replace(/_/g, ' ')}</span>
                           </td>
                         </tr>

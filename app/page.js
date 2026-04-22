@@ -84,20 +84,22 @@ export default function Home() {
         </p>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', position: 'relative' }}>
           <button style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '13px 32px', fontSize: '14px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', borderRadius: '10px' }}>Explore Listings</button>
-          <button style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '13px 32px', fontSize: '14px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', borderRadius: '10px' }}>How It Works</button>
+          <button style={{ background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', padding: '13px 32px', fontSize: '14px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', borderRadius: '10px' }}>How It Works →</button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
           <div style={{ height: '0.5px', width: '40px', background: 'var(--border)' }} />
-          <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '10px', padding: '10px 22px', textAlign: 'center', cursor: 'pointer' }}>
-            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', lineHeight: 1 }}>Home of the 3.5% Fee</div>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)', letterSpacing: '0.1em', marginTop: '3px', fontWeight: 500 }}>SELLERS KEEP MORE · PERIOD</div>
+          <div style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: '20px', padding: '7px 20px', textAlign: 'center', cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', display: 'inline-block', flexShrink: 0 }} />
+            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--gold)', letterSpacing: '0.12em', fontWeight: 500 }}>HOME OF THE 3.5% FEE</span>
+            <span style={{ color: 'rgba(201,168,76,0.4)', fontSize: '10px' }}>|</span>
+            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'rgba(240,237,230,0.65)', letterSpacing: '0.12em', fontWeight: 500 }}>BLOCKCHAIN-SECURED</span>
           </div>
           <div style={{ height: '0.5px', width: '40px', background: 'var(--border)' }} />
         </div>
       </section>
 
       {/* TICKER */}
-      <div style={{ background: 'var(--bg-3)', borderTop: '0.5px solid var(--teal-border)', borderBottom: '0.5px solid var(--teal-border)', padding: '10px 0', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg-3)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '10px 0', overflow: 'hidden' }}>
         <div style={{ display: 'flex', whiteSpace: 'nowrap', animation: 'ticker 35s linear infinite' }}>
           {[
             { name: 'Charizard Base Holo', grade: 'PSA 9', price: '$487', change: '▲ 2.4%', up: true },
@@ -115,7 +117,7 @@ export default function Home() {
               <span style={{ color: 'var(--text-secondary)' }}>{item.name}</span>
               <span style={{ color: 'var(--text-muted)' }}>{item.grade}</span>
               <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.price}</span>
-              <span style={{ color: item.up ? 'var(--accent-green)' : 'var(--accent-red)' }}>{item.change}</span>
+              <span style={{ color: item.up ? '#5DC98A' : '#E05A4A', fontWeight: 600 }}>{item.change}</span>
               <span style={{ color: 'var(--border)' }}>·</span>
             </span>
           ))}
