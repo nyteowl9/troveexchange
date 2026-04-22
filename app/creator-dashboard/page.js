@@ -139,7 +139,7 @@ export default function CreatorDashboard() {
     return (
       <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <div style={{ textAlign: 'center', maxWidth: '480px' }}>
-          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '36px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '12px' }}>
+          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '12px' }}>
             Creator <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Dashboard</em>
           </div>
           <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '28px' }}>
@@ -168,14 +168,14 @@ export default function CreatorDashboard() {
 
       {/* NAV */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'var(--nav-bg, rgba(10,10,11,0.94))', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-        <a href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '19px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+        <a href="/" style={{ fontFamily: 'Playfair Display, serif', fontSize: '19px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
           <div style={{ width: '22px', height: '22px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
           CHASE HOLLOW
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button onClick={toggleTheme} style={{ width: '34px', height: '34px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: '14px', color: 'var(--text-secondary)' }}>{theme === 'dark' ? '🌙' : '☀️'}</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', border: '1.5px solid var(--border)', borderRadius: '10px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '13px', fontWeight: 600, color: 'var(--teal)' }}>{initials}</div>
+            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Playfair Display, serif', fontSize: '13px', fontWeight: 600, color: 'var(--teal)' }}>{initials}</div>
             <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>{creator?.handle?.replace(/^@/, '')}</span>
             <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 7px', borderRadius: '20px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', color: 'var(--teal)', fontWeight: 500 }}>Creator</span>
           </div>
@@ -205,7 +205,7 @@ export default function CreatorDashboard() {
 
           <div style={{ margin: '12px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', borderRadius: '10px', padding: '12px', marginTop: 'auto' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '8px', fontWeight: 500 }}>All-Time Earnings</div>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--gold)', lineHeight: 1 }}>${allTimeEarnings}</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--gold)', lineHeight: 1 }}>${allTimeEarnings}</div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>USDC · {payouts.length} payout{payouts.length !== 1 ? 's' : ''}</div>
           </div>
         </aside>
@@ -229,7 +229,7 @@ export default function CreatorDashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>Welcome back, <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{creator?.handle?.replace(/^@/, '')}</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>Welcome back, <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{creator?.handle?.replace(/^@/, '')}</em></div>
                   <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>Creator Partner · Active · Next payout {nextPayoutDate()}</div>
                 </div>
               </div>
@@ -258,7 +258,7 @@ export default function CreatorDashboard() {
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px 18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, lineHeight: 1, color: m.color }}>{m.val}</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, lineHeight: 1, color: m.color }}>{m.val}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
                   </div>
                 ))}
@@ -266,7 +266,7 @@ export default function CreatorDashboard() {
 
               {/* Recent conversions */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Recent <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Conversions</em></div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Recent <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Conversions</em></div>
                 <button onClick={() => setActiveSection('conversions')} style={{ fontSize: '11px', color: 'var(--teal)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 500 }}>View all →</button>
               </div>
 
@@ -288,9 +288,9 @@ export default function CreatorDashboard() {
                       {conversions.slice(0, 5).map((conv, i) => (
                         <tr key={conv.id} style={{ borderBottom: i < Math.min(4, conversions.length - 1) ? '0.5px solid var(--border)' : 'none' }}>
                           <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(conv.converted_at)}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{conv.orders?.listings?.card_name || 'Card'}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600 }}>${parseFloat(conv.sale_amount || 0).toLocaleString()}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--accent-green)', fontWeight: 600 }}>${parseFloat(conv.commission || 0).toFixed(2)}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{conv.orders?.listings?.card_name || 'Card'}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600 }}>${parseFloat(conv.sale_amount || 0).toLocaleString()}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '18px', color: 'var(--accent-green)', fontWeight: 600 }}>${parseFloat(conv.commission || 0).toFixed(2)}</td>
                           <td style={{ padding: '11px 14px' }}>
                             <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: conv.paid ? 'rgba(76,175,124,0.1)' : 'rgba(232,168,56,0.1)', border: conv.paid ? '1px solid rgba(76,175,124,0.3)' : '1px solid rgba(232,168,56,0.3)', color: conv.paid ? 'var(--accent-green)' : 'var(--accent-amber)', fontWeight: 500 }}>
                               {conv.paid ? '✓ Paid' : 'Pending'}
@@ -308,7 +308,7 @@ export default function CreatorDashboard() {
           {/* CONVERSIONS */}
           {activeSection === 'conversions' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>All <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Conversions</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>All <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Conversions</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Every purchase attributed to your link · Buyer identity kept anonymous</div>
 
               {conversions.length === 0 ? (
@@ -330,9 +330,9 @@ export default function CreatorDashboard() {
                       {conversions.map((conv, i) => (
                         <tr key={conv.id} style={{ borderBottom: i < conversions.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
                           <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(conv.converted_at)}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{conv.orders?.listings?.card_name || 'Card'}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600 }}>${parseFloat(conv.sale_amount || 0).toLocaleString()}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--accent-green)', fontWeight: 600 }}>${parseFloat(conv.commission || 0).toFixed(2)}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{conv.orders?.listings?.card_name || 'Card'}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600 }}>${parseFloat(conv.sale_amount || 0).toLocaleString()}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '18px', color: 'var(--accent-green)', fontWeight: 600 }}>${parseFloat(conv.commission || 0).toFixed(2)}</td>
                           <td style={{ padding: '11px 14px' }}>
                             <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: conv.paid ? 'rgba(76,175,124,0.1)' : 'rgba(232,168,56,0.1)', border: conv.paid ? '1px solid rgba(76,175,124,0.3)' : '1px solid rgba(232,168,56,0.3)', color: conv.paid ? 'var(--accent-green)' : 'var(--accent-amber)', fontWeight: 500 }}>
                               {conv.paid ? '✓ Paid' : `Pending — ${nextPayoutDate()}`}
@@ -350,13 +350,13 @@ export default function CreatorDashboard() {
           {/* PAYOUTS */}
           {activeSection === 'payouts' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Payout <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Payout <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>All payouts in USDC · Base network · Publicly verifiable on Basescan</div>
 
               <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '12px', padding: '18px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--teal)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px', fontWeight: 500 }}>Next Payout — {nextPayoutDate()}</div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '36px', fontWeight: 300, color: 'var(--gold)' }}>${pendingEarnings} USDC</div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: 300, color: 'var(--gold)' }}>${pendingEarnings} USDC</div>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
                     {conversions.filter(c => !c.paid).length} conversion{conversions.filter(c => !c.paid).length !== 1 ? 's' : ''} this cycle · Paid to {creator?.wallet_address ? creator.wallet_address.slice(0, 6) + '...' + creator.wallet_address.slice(-4) : 'no wallet set'}
                   </div>
@@ -387,8 +387,8 @@ export default function CreatorDashboard() {
                     <tbody>
                       {payouts.map((p, i) => (
                         <tr key={p.id} style={{ borderBottom: i < payouts.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
-                          <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{fmtMonth(p.paid_at)}</td>
-                          <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)' }}>${parseFloat(p.amount).toFixed(2)}</td>
+                          <td style={{ padding: '12px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{fmtMonth(p.paid_at)}</td>
+                          <td style={{ padding: '12px 14px', fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)' }}>${parseFloat(p.amount).toFixed(2)}</td>
                           <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: p.status === 'sent' ? 'var(--accent-green)' : 'var(--accent-amber)' }}>
                             {p.status === 'sent' ? `✓ ${fmtDate(p.paid_at)}` : 'Processing'}
                           </td>
@@ -409,7 +409,7 @@ export default function CreatorDashboard() {
           {/* ASSETS */}
           {activeSection === 'assets' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Assets & <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Links</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Assets & <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Links</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>All your links in one place</div>
 
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '14px' }}>
@@ -452,7 +452,7 @@ export default function CreatorDashboard() {
           {/* SETTINGS */}
           {activeSection === 'settings' && (
             <div style={{ maxWidth: '560px' }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '20px' }}>Creator <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Settings</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '20px' }}>Creator <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Settings</em></div>
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '14px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px', fontWeight: 500 }}>Payout Wallet</div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-primary)', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', marginBottom: '10px', wordBreak: 'break-all' }}>

@@ -224,7 +224,7 @@ export default function DisputeResolution() {
                 ⚠ <strong>Override — going against staff recommendation.</strong> This will be logged and auditable.
               </div>
             )}
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>
               {showConfirmModal.decision === 'buyer_wins' ? 'Buyer Wins' : 'Release to Seller'}
             </div>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
@@ -279,7 +279,7 @@ export default function DisputeResolution() {
       {/* NAV */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(10,10,11,0.96)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <a href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <a href="/" style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <div style={{ width: '20px', height: '20px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
             CHASE HOLLOW
           </a>
@@ -331,7 +331,7 @@ export default function DisputeResolution() {
             ].map((s, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
                 <span style={{ color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '9px' }}>{s.label}</span>
-                <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: s.green ? 'var(--accent-green)' : s.gold ? 'var(--gold)' : s.amber ? 'var(--accent-amber)' : 'var(--text-primary)' }}>{s.val}</span>
+                <span style={{ fontFamily: 'Playfair Display, serif', fontSize: '16px', color: s.green ? 'var(--accent-green)' : s.gold ? 'var(--gold)' : s.amber ? 'var(--accent-amber)' : 'var(--text-primary)' }}>{s.val}</span>
               </div>
             ))}
           </div>
@@ -354,7 +354,7 @@ export default function DisputeResolution() {
           {activeSection === 'queue' && (
             <div>
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)' }}>Dispute <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Queue</em></div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)' }}>Dispute <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Queue</em></div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                   {openQueue.length} open · {pendingQueue.length} pending owner decision · Staff recommends, owner executes
                 </div>
@@ -391,7 +391,7 @@ export default function DisputeResolution() {
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '10px', flexWrap: 'wrap' }}>
                         <div style={{ flex: 1, minWidth: '140px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
-                            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: 'var(--text-primary)' }}>{card}</div>
+                            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '17px', color: 'var(--text-primary)' }}>{card}</div>
                             {isHighValue && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '10px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>High Value</span>}
                             {d.orders?.status === 'return_disputed_seller' && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '10px', background: 'rgba(232,168,56,0.12)', border: '1px solid rgba(232,168,56,0.35)', color: 'var(--accent-amber)', fontWeight: 500 }}>↩ Return Dispute</span>}
                           </div>
@@ -408,7 +408,7 @@ export default function DisputeResolution() {
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', marginBottom: '4px' }}>{fmtUSD(escrowAmt)}</div>
+                          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', marginBottom: '4px' }}>{fmtUSD(escrowAmt)}</div>
                           <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, fontWeight: 500 }}>{sc.label}</span>
                           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>{fmtDate(d.created_at)}</div>
                         </div>
@@ -448,7 +448,7 @@ export default function DisputeResolution() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
                 <button onClick={() => setActiveSection('queue')} style={btn({ fontSize: '11px', padding: '5px 12px' })}>← Queue</button>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)' }}>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)' }}>
                   Case <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>#{dispute.id.slice(0, 8).toUpperCase()}</em>
                 </div>
                 {(() => { const sc = statusColors[disputeStatus(dispute)]; return <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, fontWeight: 500 }}>{sc.label}</span> })()}
@@ -461,7 +461,7 @@ export default function DisputeResolution() {
                   {/* Case summary */}
                   <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '4px' }}>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--text-primary)' }}>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', color: 'var(--text-primary)' }}>
                         {dispute.orders?.listing?.card_name || 'Unknown Card'}
                       </div>
                       {dispute.orders?.listing_id && (
@@ -655,7 +655,7 @@ export default function DisputeResolution() {
                         <div>
                           <div style={{ textAlign: 'center', marginBottom: '14px' }}>
                             <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: recommendation === 'buyer_wins' ? 'rgba(76,175,124,0.12)' : 'rgba(201,168,76,0.12)', border: `2px solid ${recommendation === 'buyer_wins' ? 'rgba(76,175,124,0.4)' : 'rgba(201,168,76,0.4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', margin: '0 auto 10px' }}>✓</div>
-                            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 300, color: recommendation === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)' }}>
+                            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 300, color: recommendation === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)' }}>
                               {recommendation === 'buyer_wins' ? 'Buyer Wins' : 'Release to Seller'}
                             </div>
                           </div>
@@ -738,7 +738,7 @@ export default function DisputeResolution() {
           {/* PENDING OWNER */}
           {activeSection === 'pending' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Pending <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Owner Decision</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Pending <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Owner Decision</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Staff has reviewed these cases and submitted recommendations. Only the owner can execute the final decision.</div>
               {pendingQueue.length === 0 && (
                 <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>No cases pending owner decision</div>
@@ -747,7 +747,7 @@ export default function DisputeResolution() {
                 <div key={d.id} style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(60,125,200,0.3)', borderRadius: '12px', padding: '18px 20px', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '12px', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', color: 'var(--text-primary)', marginBottom: '4px' }}>
                         {d.orders?.listing?.card_name || 'Unknown Card'} — #{d.id.slice(0, 8).toUpperCase()}
                       </div>
                       <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{d.reason}</div>
@@ -757,7 +757,7 @@ export default function DisputeResolution() {
                         {d.notes && ` — ${d.notes}`}
                       </div>
                     </div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{fmtUSD(d.orders?.escrow_amount)}</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{fmtUSD(d.orders?.escrow_amount)}</div>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {['owner','dispute_resolver'].includes(currentUser?.role) && (() => {
@@ -782,7 +782,7 @@ export default function DisputeResolution() {
           {/* RESOLVED */}
           {activeSection === 'resolved' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>
                 <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Resolved</em> Disputes
               </div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>
@@ -804,8 +804,8 @@ export default function DisputeResolution() {
                       {resolvedDisputes.map((row, i) => (
                         <tr key={row.id} style={{ borderBottom: i < resolvedDisputes.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
                           <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>#{row.id.slice(0, 8).toUpperCase()}</td>
-                          <td style={{ padding: '10px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{row.orders?.listing?.card_name || '—'}</td>
-                          <td style={{ padding: '10px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600 }}>{fmtUSD(row.orders?.escrow_amount)}</td>
+                          <td style={{ padding: '10px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{row.orders?.listing?.card_name || '—'}</td>
+                          <td style={{ padding: '10px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600 }}>{fmtUSD(row.orders?.escrow_amount)}</td>
                           <td style={{ padding: '10px 14px' }}>
                             <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '5px', background: row.outcome === 'buyer_wins' ? 'rgba(76,175,124,0.1)' : 'rgba(201,168,76,0.1)', border: `1px solid ${row.outcome === 'buyer_wins' ? 'rgba(76,175,124,0.3)' : 'rgba(201,168,76,0.3)'}`, color: row.outcome === 'buyer_wins' ? 'var(--accent-green)' : 'var(--gold)', fontWeight: 500 }}>
                               {row.outcome === 'buyer_wins' ? '✓ Buyer Refunded' : '✓ Seller Paid'}

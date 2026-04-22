@@ -728,11 +728,11 @@ function SellerDashboard() {
             {photo ? <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🃏'}
           </div>
           <div style={{ flex: 1, minWidth: '120px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', lineHeight: 1.2, color: 'var(--text-primary)', marginBottom: '2px' }}>{order.listing?.card_name || '—'}</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '17px', lineHeight: 1.2, color: 'var(--text-primary)', marginBottom: '2px' }}>{order.listing?.card_name || '—'}</div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{order.listing?.game} · {shortId(order.id)} · Buyer: {order.buyer?.username || '—'}</div>
           </div>
           <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: sm.bg, border: `1px solid ${sm.border}`, color: sm.color, fontWeight: 500, flexShrink: 0 }}>{sm.label}</span>
-          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{fmtUSD(order.listing?.price ?? order.escrow_amount)}</div>
+          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{fmtUSD(order.listing?.price ?? order.escrow_amount)}</div>
         </div>
         <div style={{ padding: '12px 18px' }}>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: sm.urgent ? 'var(--accent-amber)' : 'var(--text-secondary)', background: 'var(--bg-3)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', lineHeight: 1.5 }}>
@@ -854,7 +854,7 @@ function SellerDashboard() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 600, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
           onClick={e => { if (e.target === e.currentTarget && !disputeEvidenceUploading) { setDisputeModal(null); setDisputeEvidenceFiles([]); setDisputeSellerNotes('') } }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.4)', borderRadius: '16px', width: '100%', maxWidth: '500px', padding: '28px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Submit <em style={{ color: 'var(--accent-red)' }}>Counter Evidence</em></div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Submit <em style={{ color: 'var(--accent-red)' }}>Counter Evidence</em></div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>{disputeModal.cardName}</div>
             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.2)', borderRadius: '8px', padding: '10px 12px', marginBottom: '16px', lineHeight: 1.6 }}>
               <strong style={{ color: 'var(--accent-red)' }}>Buyer's claim:</strong> {disputeModal.reason}
@@ -902,7 +902,7 @@ function SellerDashboard() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 600, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
           onClick={e => { if (e.target === e.currentTarget && !returnDisputeUploading) { setReturnDisputeModal(null); setReturnDisputeFiles([]); setReturnDisputeNotes(''); setReturnDisputeError('') } }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.4)', borderRadius: '16px', width: '100%', maxWidth: '500px', padding: '28px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Dispute <em style={{ color: 'var(--accent-red)' }}>Returned Card</em></div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Dispute <em style={{ color: 'var(--accent-red)' }}>Returned Card</em></div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '12px' }}>{returnDisputeModal.cardName}</div>
             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', background: 'rgba(232,168,56,0.06)', border: '1px solid rgba(232,168,56,0.2)', borderRadius: '8px', padding: '10px 12px', marginBottom: '16px', lineHeight: 1.6 }}>
               Chase Hollow staff will review your photos and notes and make a final decision. No further shipping is required from either party — this is a photo-evidence review only.
@@ -950,12 +950,12 @@ function SellerDashboard() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 600, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
           onClick={e => { if (e.target === e.currentTarget && !reviewSubmitting) { setReviewModal(null); setReviewSuccess(false); setReviewRating(5); setReviewComment(''); setReviewError(null) } }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '16px', width: '100%', maxWidth: '460px', padding: '28px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Rate <em style={{ color: 'var(--gold)' }}>Buyer</em></div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Rate <em style={{ color: 'var(--gold)' }}>Buyer</em></div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '20px' }}>{reviewModal.cardName}</div>
             {reviewSuccess ? (
               <div style={{ textAlign: 'center', padding: '24px 0' }}>
                 <div style={{ fontSize: '32px', marginBottom: '8px' }}>★</div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--accent-green)' }}>Review submitted</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--accent-green)' }}>Review submitted</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px', fontFamily: 'DM Mono, monospace' }}>Thanks for the feedback</div>
                 <button onClick={() => { setReviewModal(null); setReviewSuccess(false); setReviewRating(5); setReviewComment('') }} style={{ marginTop: '16px', background: 'var(--teal)', border: 'none', color: '#fff', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600 }}>Done</button>
               </div>
@@ -995,7 +995,7 @@ function SellerDashboard() {
       {photoOrderId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '480px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '6px' }}>Upload Auth Photos</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '6px' }}>Upload Auth Photos</div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>3 required: front, back, card in sealed package</div>
 
             <input id="auth-photo-input" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => {
@@ -1077,7 +1077,7 @@ function SellerDashboard() {
             ].map((stat, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '3px 0' }}>
                 <span style={{ color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '10px' }}>{stat.label}</span>
-                <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', fontWeight: 300, color: stat.gold ? 'var(--gold)' : stat.green ? 'var(--accent-green)' : 'var(--text-primary)' }}>{stat.val}</span>
+                <span style={{ fontFamily: 'Playfair Display, serif', fontSize: '16px', fontWeight: 300, color: stat.gold ? 'var(--gold)' : stat.green ? 'var(--accent-green)' : 'var(--text-primary)' }}>{stat.val}</span>
               </div>
             ))}
           </div>
@@ -1210,7 +1210,7 @@ function SellerDashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: 'var(--text-primary)' }}>Welcome back, <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{profile?.username || 'Seller'}</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '32px', fontWeight: 300, color: 'var(--text-primary)' }}>Welcome back, <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{profile?.username || 'Seller'}</em></div>
                   <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{TIER_LABEL[profile?.seller_tier] || 'New'} Seller · {releasedSales.length} sales · {profile?.strike_count ?? 0} strikes · Ship within 48hrs of sale</div>
                 </div>
                 <button onClick={() => setActiveSection('new-listing')} style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>+ New Listing</button>
@@ -1249,14 +1249,14 @@ function SellerDashboard() {
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px 18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, lineHeight: 1, color: m.color }}>{m.val}</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, lineHeight: 1, color: m.color }}>{m.val}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
                   </div>
                 ))}
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
                 {activeOrders.length > 2 && <button onClick={() => setActiveSection('orders')} style={{ fontSize: '11px', color: 'var(--teal)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 500 }}>View all →</button>}
               </div>
               {dataLoading ? (
@@ -1272,7 +1272,7 @@ function SellerDashboard() {
           {/* ORDERS */}
           {activeSection === 'orders' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>{activeOrders.length} orders in progress · Ship within 48hrs of sale · One extension available</div>
               {dataLoading ? (
                 <div style={{ color: 'var(--text-muted)', fontSize: '13px', fontFamily: 'DM Mono, monospace' }}>Loading…</div>
@@ -1289,7 +1289,7 @@ function SellerDashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>My <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listings</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>My <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listings</em></div>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{myListings.length} active · {fmtUSD(totalActiveSalesValue)} total value · Listings go live immediately</div>
                 </div>
                 <button onClick={() => setActiveSection('new-listing')} style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>+ New Listing</button>
@@ -1299,7 +1299,7 @@ function SellerDashboard() {
               ) : myListings.length === 0 ? (
                 <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
                   <div style={{ fontSize: '32px', marginBottom: '12px' }}>◆</div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '8px' }}>No active listings</div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '8px' }}>No active listings</div>
                   <button onClick={() => setActiveSection('new-listing')} style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>+ Create First Listing</button>
                 </div>
               ) : (
@@ -1314,8 +1314,8 @@ function SellerDashboard() {
                         </div>
                         <div style={{ padding: '12px 14px' }}>
                           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '3px' }}>{listing.game}</div>
-                          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', lineHeight: 1.2, marginBottom: '6px', color: 'var(--text-primary)' }}>{listing.card_name}</div>
-                          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', marginBottom: '10px' }}>{fmtUSD(listing.price)}</div>
+                          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '16px', lineHeight: 1.2, marginBottom: '6px', color: 'var(--text-primary)' }}>{listing.card_name}</div>
+                          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', marginBottom: '10px' }}>{fmtUSD(listing.price)}</div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <div style={{ display: 'flex', gap: '5px' }}>
                               <Link href={`/listing/${listing.id}`} style={{ textDecoration: 'none', flex: 1 }}>
@@ -1344,7 +1344,7 @@ function SellerDashboard() {
           {/* NEW LISTING */}
           {activeSection === 'new-listing' && (
             <div style={{ maxWidth: '720px' }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>New <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listing</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>New <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listing</em></div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '24px', fontFamily: 'DM Mono, monospace' }}>Listings go live immediately — no wallet needed until a buyer purchases</div>
 
               {/* Listing type */}
@@ -1545,7 +1545,7 @@ function SellerDashboard() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Price & Fee Calculator</div>
                 <Label text="LISTING PRICE (USDC) *" />
-                <input type="number" placeholder="Minimum $1" value={price} onChange={e => setPrice(e.target.value)} style={{ ...inputStyle, marginBottom: parseFloat(price) > 50000 ? '8px' : '14px', fontSize: '18px', fontFamily: 'Cormorant Garamond, serif', borderColor: parseFloat(price) > 50000 ? 'rgba(200,75,60,0.6)' : undefined }} />
+                <input type="number" placeholder="Minimum $1" value={price} onChange={e => setPrice(e.target.value)} style={{ ...inputStyle, marginBottom: parseFloat(price) > 50000 ? '8px' : '14px', fontSize: '18px', fontFamily: 'Playfair Display, serif', borderColor: parseFloat(price) > 50000 ? 'rgba(200,75,60,0.6)' : undefined }} />
                 {parseFloat(price) > 50000 && (
                   <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontWeight: 700 }}>⚠</span> Maximum listing price is $50,000. Please lower your price to publish.
@@ -1561,7 +1561,7 @@ function SellerDashboard() {
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
                         <span style={{ color: row.total ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row.total ? 600 : 400 }}>{row.label}</span>
-                        <span style={{ fontFamily: row.total ? 'Cormorant Garamond, serif' : 'DM Mono, monospace', fontSize: row.total ? '20px' : '12px', color: row.green ? 'var(--accent-green)' : 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
+                        <span style={{ fontFamily: row.total ? 'Playfair Display, serif' : 'DM Mono, monospace', fontSize: row.total ? '20px' : '12px', color: row.green ? 'var(--accent-green)' : 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
                       </div>
                     ))}
                   </div>
@@ -1621,7 +1621,7 @@ function SellerDashboard() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '6px' }}>
                 <button onClick={() => setActiveSection('listings')} style={{ background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', padding: 0 }}>← My Listings</button>
               </div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Edit <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listing</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Edit <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listing</em></div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '24px', fontFamily: 'DM Mono, monospace' }}>Changes go live immediately — active buyers will see the updated listing</div>
 
               {/* Listing type */}
@@ -1756,7 +1756,7 @@ function SellerDashboard() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Price</div>
                 <Label text="LISTING PRICE (USDC) *" />
-                <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} style={{ ...inputStyle, fontSize: '18px', fontFamily: 'Cormorant Garamond, serif', marginBottom: '4px' }} />
+                <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} style={{ ...inputStyle, fontSize: '18px', fontFamily: 'Playfair Display, serif', marginBottom: '4px' }} />
                 {editPrice && parseFloat(editPrice) > 0 && parseFloat(editPrice) <= 50000 && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '6px' }}>
                     Auth tier: {parseFloat(editPrice) <= 300 ? 'Remote Photo ($10 fee)' : 'Physical Auth ($25 fee)'}
@@ -1786,7 +1786,7 @@ function SellerDashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Earnings</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Earnings</em></div>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{releasedSales.length} completed sales · All USDC on Base</div>
                 </div>
               </div>
@@ -1798,7 +1798,7 @@ function SellerDashboard() {
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: m.color }}>{m.val}</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '32px', fontWeight: 300, color: m.color }}>{m.val}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
                   </div>
                 ))}
@@ -1829,14 +1829,14 @@ function SellerDashboard() {
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                           >
                             <td style={{ padding: '12px 14px' }}>
-                              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{sale.listing?.card_name || '—'}</div>
+                              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{sale.listing?.card_name || '—'}</div>
                               {isRefunded && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-red)', marginTop: '2px', letterSpacing: '0.08em' }}>DISPUTE LOST — REFUNDED</div>}
                             </td>
                             <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(sale.released_at)}</td>
-                            <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: isRefunded ? 'var(--accent-red)' : 'var(--gold)', fontWeight: 600 }}>{fmtUSD(gross)}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'Playfair Display, serif', fontSize: '16px', color: isRefunded ? 'var(--accent-red)' : 'var(--gold)', fontWeight: 600 }}>{fmtUSD(gross)}</td>
                             <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>{isRefunded ? '—' : `−${fmtUSD(fee)}`}</td>
                             <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>{isRefunded ? '—' : `−${fmtUSD(ship)}`}</td>
-                            <td style={{ padding: '12px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: isRefunded ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 600 }}>{isRefunded ? '—' : fmtUSD(net)}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'Playfair Display, serif', fontSize: '16px', color: isRefunded ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 600 }}>{isRefunded ? '—' : fmtUSD(net)}</td>
                             <td style={{ padding: '12px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: bond > 0 ? (isRefunded ? 'var(--accent-red)' : 'var(--accent-green)') : 'var(--text-muted)' }}>{bond > 0 ? (isRefunded ? `${fmtUSD(bond)} Forfeited` : `${fmtUSD(bond)} ✓`) : '—'}</td>
                             <td style={{ padding: '12px 14px' }}>
                               {sale.reviews?.some(r => r.reviewer_role === 'seller') ? (
@@ -1861,7 +1861,7 @@ function SellerDashboard() {
           {/* BOND WALLET */}
           {activeSection === 'bond' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Bond <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Wallet</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Bond <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Wallet</em></div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>Bonds post per transaction when a buyer purchases — not when you list. All bonds return within 5–7 days on completion.</div>
 
               {/* Payment wallet */}
@@ -1907,7 +1907,7 @@ function SellerDashboard() {
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: m.color }}>{m.val}</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: m.color }}>{m.val}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
                   </div>
                 ))}
@@ -1970,7 +1970,7 @@ function SellerDashboard() {
                         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{t.range}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: isMe ? 'var(--teal)' : 'var(--text-muted)' }}>{t.rate}%<span style={{ fontSize: '13px', fontFamily: 'DM Sans, sans-serif', fontWeight: 400 }}> + $20</span></div>
+                        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 600, color: isMe ? 'var(--teal)' : 'var(--text-muted)' }}>{t.rate}%<span style={{ fontSize: '13px', fontFamily: 'DM Sans, sans-serif', fontWeight: 400 }}> + $20</span></div>
                         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>per sale</div>
                       </div>
                     </div>
@@ -1986,11 +1986,11 @@ function SellerDashboard() {
           {/* NOTIFICATIONS — Phase 3 */}
           {activeSection === 'notifications' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Notifications</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Notifications</em></div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>Email notifications active — in-app alerts coming in Phase 3</div>
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
                 <div style={{ fontSize: '32px', marginBottom: '12px' }}>◉</div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '8px' }}>In-app notifications coming in Phase 3</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '8px' }}>In-app notifications coming in Phase 3</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>You're receiving order updates by email. Real-time alerts will be added at public launch.</div>
               </div>
             </div>
@@ -1999,7 +1999,7 @@ function SellerDashboard() {
           {/* PROFILE */}
           {activeSection === 'profile' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '20px' }}>Your <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Profile</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '20px' }}>Your <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Profile</em></div>
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <div style={{ fontSize: '48px', marginBottom: '12px' }}>◑</div>
                 <div>Profile settings — bio, specialties, shipping preferences, contact info.</div>

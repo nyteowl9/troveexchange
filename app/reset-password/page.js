@@ -54,7 +54,7 @@ export default function ResetPassword() {
       <div style={{ maxWidth: '400px', width: '100%' }}>
 
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <Link href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <Link href="/" style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <div style={{ width: '24px', height: '24px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
             CHASE HOLLOW
           </Link>
@@ -64,12 +64,12 @@ export default function ResetPassword() {
           {done ? (
             <div style={{ textAlign: 'center' }}>
               <div style={{ width: '52px', height: '52px', background: 'rgba(76,175,124,0.12)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: '22px' }}>✓</div>
-              <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 0.75rem' }}>Password updated</h2>
+              <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 0.75rem' }}>Password updated</h2>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>You're signed in. Redirecting you home...</p>
             </div>
           ) : (
             <>
-              <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>
+              <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '26px', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>
                 Choose a new <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>password</em>
               </h2>
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 1.5rem', lineHeight: 1.6 }}>Must be at least 8 characters.</p>

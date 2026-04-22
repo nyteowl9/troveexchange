@@ -114,7 +114,7 @@ export default function CustomerSupport() {
       {/* NAV */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(10,10,11,0.96)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <a href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <a href="/" style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <div style={{ width: '20px', height: '20px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
             CHASE HOLLOW
           </a>
@@ -156,7 +156,7 @@ export default function CustomerSupport() {
             ].map((s, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
                 <span style={{ color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '9px' }}>{s.label}</span>
-                <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: s.green ? 'var(--accent-green)' : s.red ? 'var(--accent-red)' : 'var(--text-primary)' }}>{s.val}</span>
+                <span style={{ fontFamily: 'Playfair Display, serif', fontSize: '16px', color: s.green ? 'var(--accent-green)' : s.red ? 'var(--accent-red)' : 'var(--text-primary)' }}>{s.val}</span>
               </div>
             ))}
           </div>
@@ -185,7 +185,7 @@ export default function CustomerSupport() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)' }}>Support <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Queue</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)' }}>Support <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Queue</em></div>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>3 open · 1 escalated · 8 resolved today</div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -202,7 +202,7 @@ export default function CustomerSupport() {
                       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--teal-border)'}
                       onMouseLeave={e => e.currentTarget.style.borderColor = t.unread ? 'var(--teal-border)' : 'var(--border)'}
                     >
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: t.type === 'buyer' ? 'rgba(60,125,200,0.15)' : 'rgba(201,168,76,0.15)', border: `1.5px solid ${t.type === 'buyer' ? 'rgba(60,125,200,0.3)' : 'rgba(201,168,76,0.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '14px', fontWeight: 600, color: t.type === 'buyer' ? 'var(--accent-blue)' : 'var(--gold)', flexShrink: 0 }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: t.type === 'buyer' ? 'rgba(60,125,200,0.15)' : 'rgba(201,168,76,0.15)', border: `1.5px solid ${t.type === 'buyer' ? 'rgba(60,125,200,0.3)' : 'rgba(201,168,76,0.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Playfair Display, serif', fontSize: '14px', fontWeight: 600, color: t.type === 'buyer' ? 'var(--accent-blue)' : 'var(--gold)', flexShrink: 0 }}>
                         {t.user[0]}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -229,7 +229,7 @@ export default function CustomerSupport() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
                 <button onClick={() => setActiveSection('queue')} style={btn({ fontSize: '11px', padding: '5px 12px' })}>← Queue</button>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)', flex: 1, minWidth: '200px' }}>{ticket.subject}</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)', flex: 1, minWidth: '200px' }}>{ticket.subject}</div>
                 <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: statusColors[ticket.status]?.bg, border: `1px solid ${statusColors[ticket.status]?.border}`, color: statusColors[ticket.status]?.color, fontWeight: 500 }}>{statusColors[ticket.status]?.label}</span>
               </div>
 
@@ -259,7 +259,7 @@ export default function CustomerSupport() {
                       {ticket.messages.map((msg, i) => (
                         <div key={i} style={{ display: 'flex', gap: '10px', justifyContent: msg.from === 'staff' ? 'flex-end' : 'flex-start' }}>
                           {msg.from === 'user' && (
-                            <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(60,125,200,0.15)', border: '1.5px solid rgba(60,125,200,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '12px', fontWeight: 600, color: 'var(--accent-blue)', flexShrink: 0 }}>{msg.name[0]}</div>
+                            <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(60,125,200,0.15)', border: '1.5px solid rgba(60,125,200,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Playfair Display, serif', fontSize: '12px', fontWeight: 600, color: 'var(--accent-blue)', flexShrink: 0 }}>{msg.name[0]}</div>
                           )}
                           <div style={{ maxWidth: '75%' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', justifyContent: msg.from === 'staff' ? 'flex-end' : 'flex-start' }}>
@@ -271,7 +271,7 @@ export default function CustomerSupport() {
                             </div>
                           </div>
                           {msg.from === 'staff' && (
-                            <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '12px', fontWeight: 600, color: 'var(--teal)', flexShrink: 0 }}>MT</div>
+                            <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Playfair Display, serif', fontSize: '12px', fontWeight: 600, color: 'var(--teal)', flexShrink: 0 }}>MT</div>
                           )}
                         </div>
                       ))}
@@ -301,7 +301,7 @@ export default function CustomerSupport() {
                   <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '14px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>User Info</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: ticket.type === 'buyer' ? 'rgba(60,125,200,0.15)' : 'rgba(201,168,76,0.15)', border: `1.5px solid ${ticket.type === 'buyer' ? 'rgba(60,125,200,0.3)' : 'rgba(201,168,76,0.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', fontWeight: 600, color: ticket.type === 'buyer' ? 'var(--accent-blue)' : 'var(--gold)' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: ticket.type === 'buyer' ? 'rgba(60,125,200,0.15)' : 'rgba(201,168,76,0.15)', border: `1.5px solid ${ticket.type === 'buyer' ? 'rgba(60,125,200,0.3)' : 'rgba(201,168,76,0.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Playfair Display, serif', fontSize: '16px', fontWeight: 600, color: ticket.type === 'buyer' ? 'var(--accent-blue)' : 'var(--gold)' }}>
                         {ticket.user[0]}
                       </div>
                       <div>
@@ -361,7 +361,7 @@ export default function CustomerSupport() {
           {/* USER LOOKUP */}
           {activeSection === 'user-lookup' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>User <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Lookup</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>User <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Lookup</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Search by username, email, or wallet address</div>
               <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
                 <input type="text" placeholder="Username, email, or 0x wallet address..." value={searchUser} onChange={e => setSearchUser(e.target.value)} style={{ flex: 1, background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '11px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }} />
@@ -370,7 +370,7 @@ export default function CustomerSupport() {
               {/* Mock result */}
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--teal-border)', borderRadius: '12px', padding: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(60,125,200,0.15)', border: '2px solid rgba(60,125,200,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--accent-blue)', flexShrink: 0 }}>R</div>
+                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(60,125,200,0.15)', border: '2px solid rgba(60,125,200,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 600, color: 'var(--accent-blue)', flexShrink: 0 }}>R</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>RareVault_99</div>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>pdwatermelon@gmail.com · 0x742d...f44e · Buyer · Joined Jan 2024</div>
@@ -386,7 +386,7 @@ export default function CustomerSupport() {
                   ].map((stat, i) => (
                     <div key={i} style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '10px 12px', textAlign: 'center' }}>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px', fontWeight: 500 }}>{stat.label}</div>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: stat.color }}>{stat.val}</div>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 300, color: stat.color }}>{stat.val}</div>
                     </div>
                   ))}
                 </div>
@@ -402,7 +402,7 @@ export default function CustomerSupport() {
           {/* ORDER LOOKUP */}
           {activeSection === 'order-lookup' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Order <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Lookup</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Order <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Lookup</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Search by order number, transaction hash, or card name</div>
               <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
                 <input type="text" placeholder="Order #, tx hash 0x..., or card name..." value={searchOrder} onChange={e => setSearchOrder(e.target.value)} style={{ flex: 1, background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '11px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }} />
@@ -412,7 +412,7 @@ export default function CustomerSupport() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--teal-border)', borderRadius: '12px', padding: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '2px' }}>Order <em style={{ color: 'var(--gold)' }}>#4821</em> — Charizard Holo PSA 9</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '2px' }}>Order <em style={{ color: 'var(--gold)' }}>#4821</em> — Charizard Holo PSA 9</div>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>Pokémon · Base Set Shadowless · AUTH-4821</div>
                   </div>
                   <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(232,168,56,0.1)', border: '1px solid rgba(232,168,56,0.3)', color: 'var(--accent-amber)', fontWeight: 500 }}>Auto-Release Pending</span>
@@ -447,7 +447,7 @@ export default function CustomerSupport() {
           {/* CANNED RESPONSES */}
           {activeSection === 'canned' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Canned <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Responses</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Canned <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Responses</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Click to copy to clipboard or insert into active ticket</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {cannedResponses.map((r, i) => (
@@ -469,7 +469,7 @@ export default function CustomerSupport() {
           {/* ESCALATION GUIDE */}
           {activeSection === 'escalation' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Escalation <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Guide</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Escalation <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Guide</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>When to escalate vs. resolve yourself</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {[

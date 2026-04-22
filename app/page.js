@@ -76,7 +76,7 @@ export default function Home() {
           Blockchain-Secured TCG Marketplace
           <span style={{ width: '28px', height: '0.5px', background: 'var(--gold)', opacity: 0.6, display: 'block' }} />
         </div>
-        <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(44px, 7.5vw, 90px)', fontWeight: 300, lineHeight: 1.02, marginBottom: '1.2rem', maxWidth: '860px', position: 'relative' }}>
+        <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(44px, 7.5vw, 90px)', fontWeight: 300, lineHeight: 1.02, marginBottom: '1.2rem', maxWidth: '860px', position: 'relative' }}>
           Where <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Rare Cards</em><br />Meet Trustless Trade
         </h1>
         <p style={{ fontSize: '17px', fontWeight: 400, color: 'var(--text-secondary)', maxWidth: '520px', lineHeight: 1.75, marginBottom: '2.2rem', position: 'relative' }}>
@@ -89,7 +89,7 @@ export default function Home() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
           <div style={{ height: '0.5px', width: '40px', background: 'var(--border)' }} />
           <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '10px', padding: '10px 22px', textAlign: 'center', cursor: 'pointer' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', lineHeight: 1 }}>Home of the 3.5% Fee</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 600, color: 'var(--gold)', lineHeight: 1 }}>Home of the 3.5% Fee</div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)', letterSpacing: '0.1em', marginTop: '3px', fontWeight: 500 }}>SELLERS KEEP MORE · PERIOD</div>
           </div>
           <div style={{ height: '0.5px', width: '40px', background: 'var(--border)' }} />
@@ -156,7 +156,7 @@ export default function Home() {
       <section style={{ padding: '40px 2.5rem 72px', background: 'var(--bg)' }}>
         <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '34px', fontWeight: 300, color: 'var(--text-primary)' }}>
+            <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '34px', fontWeight: 300, color: 'var(--text-primary)' }}>
               Featured <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listings</em>
             </h2>
             <a href="/marketplace" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>View all →</a>
@@ -191,7 +191,7 @@ export default function Home() {
                   <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 500 }}>{card.game}</div>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', fontWeight: 400, lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{card.card_name}</div>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '17px', fontWeight: 400, lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{card.card_name}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.set}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px' }}>
@@ -232,7 +232,7 @@ export default function Home() {
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '12px', fontWeight: 500 }}>Why Chase Hollow</div>
-            <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 300, lineHeight: 1.05, marginBottom: '12px', color: 'var(--text-primary)' }}>
+            <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 300, lineHeight: 1.05, marginBottom: '12px', color: 'var(--text-primary)' }}>
               We Charge <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>3.5%</em>.<br />Everyone Else Charges 13%.
             </h2>
             <p style={{ fontSize: '16px', color: 'var(--text-secondary)', maxWidth: '520px', margin: '0 auto', lineHeight: 1.7 }}>
@@ -262,16 +262,16 @@ export default function Home() {
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{row.sub}</div>
                     </td>
                     <td style={{ textAlign: 'center', padding: '16px 20px' }}>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: row.highlight ? '26px' : '22px', fontWeight: 600, color: row.highlight ? 'var(--teal)' : 'var(--accent-red)' }}>{row.fee}</div>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: row.highlight ? '26px' : '22px', fontWeight: 600, color: row.highlight ? 'var(--teal)' : 'var(--accent-red)' }}>{row.fee}</div>
                     </td>
                     <td style={{ textAlign: 'center', padding: '16px 20px' }}>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: row.highlight ? '26px' : '22px', fontWeight: 600, color: row.highlight ? 'var(--teal)' : 'var(--accent-red)' }}>{row.processing}</div>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: row.highlight ? '26px' : '22px', fontWeight: 600, color: row.highlight ? 'var(--teal)' : 'var(--accent-red)' }}>{row.processing}</div>
                     </td>
                     <td style={{ textAlign: 'center', padding: '16px 20px' }}>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: row.highlight ? '28px' : '24px', fontWeight: 600, color: row.highlight ? 'var(--accent-green)' : 'var(--accent-red)' }}>{row.total}</div>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: row.highlight ? '28px' : '24px', fontWeight: 600, color: row.highlight ? 'var(--accent-green)' : 'var(--accent-red)' }}>{row.total}</div>
                     </td>
                     <td style={{ textAlign: 'center', padding: '16px 20px' }}>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: row.highlight ? '28px' : '24px', fontWeight: 600, color: row.highlight ? 'var(--accent-green)' : 'var(--accent-red)' }}>{row.keep}</div>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: row.highlight ? '28px' : '24px', fontWeight: 600, color: row.highlight ? 'var(--accent-green)' : 'var(--accent-red)' }}>{row.keep}</div>
                       {row.highlight && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-green)', marginTop: '2px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '20px', padding: '2px 8px', display: 'inline-block' }}>You keep $965</div>}
                     </td>
                   </tr>
@@ -291,7 +291,7 @@ export default function Home() {
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: item.total ? '10px 0 0' : '7px 0', borderBottom: item.total ? 'none' : '0.5px solid var(--border)', borderTop: item.total ? '0.5px solid var(--border)' : 'none', marginTop: item.total ? '4px' : '0', fontSize: '13px' }}>
                   <span style={{ color: item.total ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: item.total ? 600 : 400 }}>{item.label}</span>
-                  <span style={{ fontFamily: item.total ? 'Cormorant Garamond, serif' : 'DM Mono, monospace', fontSize: item.total ? '22px' : '12px', color: 'var(--accent-red)', fontWeight: 500 }}>{item.val}</span>
+                  <span style={{ fontFamily: item.total ? 'Playfair Display, serif' : 'DM Mono, monospace', fontSize: item.total ? '22px' : '12px', color: 'var(--accent-red)', fontWeight: 500 }}>{item.val}</span>
                 </div>
               ))}
             </div>
@@ -307,7 +307,7 @@ export default function Home() {
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: item.total ? '10px 0 0' : '7px 0', borderBottom: item.total ? 'none' : '0.5px solid var(--teal-border)', borderTop: item.total ? '0.5px solid var(--teal-border)' : 'none', marginTop: item.total ? '4px' : '0', fontSize: '13px' }}>
                   <span style={{ color: item.total ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: item.total ? 600 : 400 }}>{item.label}</span>
-                  <span style={{ fontFamily: item.total ? 'Cormorant Garamond, serif' : 'DM Mono, monospace', fontSize: item.total ? '22px' : '12px', color: item.zero ? 'var(--accent-green)' : 'var(--teal)', fontWeight: 500 }}>{item.zero ? `0% — no ${item.label.toLowerCase().split(' ')[0]}s` : item.val}</span>
+                  <span style={{ fontFamily: item.total ? 'Playfair Display, serif' : 'DM Mono, monospace', fontSize: item.total ? '22px' : '12px', color: item.zero ? 'var(--accent-green)' : 'var(--teal)', fontWeight: 500 }}>{item.zero ? `0% — no ${item.label.toLowerCase().split(' ')[0]}s` : item.val}</span>
                 </div>
               ))}
             </div>
@@ -320,7 +320,7 @@ export default function Home() {
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: '48px', alignItems: 'center' }}>
           <div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '12px', fontWeight: 500 }}>Why Blockchain</div>
-            <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(34px, 4vw, 50px)', fontWeight: 300, lineHeight: 1.08, marginBottom: '16px', color: 'var(--text-primary)' }}>
+            <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(34px, 4vw, 50px)', fontWeight: 300, lineHeight: 1.08, marginBottom: '16px', color: 'var(--text-primary)' }}>
               Trustless by Design.<br /><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Cheap by Default.</em>
             </h2>
             <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: '28px' }}>
@@ -351,7 +351,7 @@ export default function Home() {
               { num: '~$0.05', label: 'Cost per blockchain transaction', sub: 'Base (Ethereum L2) processes transactions for cents.' },
             ].map((stat, i) => (
               <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '36px', fontWeight: 300, color: i === 2 ? 'var(--teal)' : 'var(--gold)', lineHeight: 1, minWidth: '80px' }}>{stat.num}</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: 300, color: i === 2 ? 'var(--teal)' : 'var(--gold)', lineHeight: 1, minWidth: '80px' }}>{stat.num}</div>
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{stat.label}</div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{stat.sub}</div>
@@ -366,7 +366,7 @@ export default function Home() {
       <section id="how-it-works" style={{ padding: '80px 2.5rem', background: 'var(--bg-2)', borderTop: '0.5px solid var(--border)' }}>
         <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(36px, 5vw, 46px)', fontWeight: 300, marginBottom: '10px', color: 'var(--text-primary)' }}>
+            <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(36px, 5vw, 46px)', fontWeight: 300, marginBottom: '10px', color: 'var(--text-primary)' }}>
               Built for <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Trust</em>
             </h2>
             <p style={{ fontSize: '16px', color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto' }}>Every card authenticated. Every dollar escrowed. Neither party can get burned.</p>
@@ -379,9 +379,9 @@ export default function Home() {
               { num: '04', title: 'Auto Settlement', desc: '72hrs after delivery, USDC releases automatically. No action needed. All on-chain. Final.' },
             ].map((step, i) => (
               <div key={i} style={{ background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '28px 22px', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '10px', right: '14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '72px', fontWeight: 300, color: 'var(--border)', lineHeight: 1, userSelect: 'none' }}>{step.num}</div>
+                <div style={{ position: 'absolute', top: '10px', right: '14px', fontFamily: 'Playfair Display, serif', fontSize: '72px', fontWeight: 300, color: 'var(--border)', lineHeight: 1, userSelect: 'none' }}>{step.num}</div>
                 <div style={{ width: '40px', height: '40px', border: '1.5px solid var(--teal-border)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--teal)', position: 'relative', zIndex: 1 }}>{step.num}</div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '19px', fontWeight: 400, marginBottom: '8px', color: 'var(--text-primary)', position: 'relative', zIndex: 1 }}>{step.title}</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '19px', fontWeight: 400, marginBottom: '8px', color: 'var(--text-primary)', position: 'relative', zIndex: 1 }}>{step.title}</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.65, position: 'relative', zIndex: 1 }}>{step.desc}</div>
               </div>
             ))}
@@ -393,7 +393,7 @@ export default function Home() {
       <section style={{ padding: '80px 2.5rem', borderTop: '0.5px solid var(--border)' }}>
         <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '34px', fontWeight: 300, color: 'var(--text-primary)' }}>
+            <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '34px', fontWeight: 300, color: 'var(--text-primary)' }}>
               Recent <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Sales</em>
             </h2>
             <a href="#" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>Full price guide →</a>
@@ -417,7 +417,7 @@ export default function Home() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '30px', height: '42px', borderRadius: '4px', background: sale.bg, flexShrink: 0 }} />
                         <div>
-                          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: 'var(--text-primary)' }}>{sale.name}</div>
+                          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '17px', color: 'var(--text-primary)' }}>{sale.name}</div>
                           <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '1px' }}>{sale.set}</div>
                         </div>
                       </div>
@@ -425,7 +425,7 @@ export default function Home() {
                     <td style={{ padding: '14px 16px' }}>
                       <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 9px', borderRadius: '6px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>{sale.grade}</span>
                     </td>
-                    <td style={{ padding: '14px 16px', fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)' }}>{sale.price}</td>
+                    <td style={{ padding: '14px 16px', fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)' }}>{sale.price}</td>
                     <td style={{ padding: '14px 16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 500, color: sale.up ? 'var(--accent-green)' : 'var(--accent-red)' }}>{sale.change}</td>
                     <td style={{ padding: '14px 16px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{sale.time}</td>
                   </tr>
@@ -441,7 +441,7 @@ export default function Home() {
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '12px', fontWeight: 500 }}>For Buyers</div>
-            <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(36px, 5vw, 54px)', fontWeight: 300, lineHeight: 1.05, marginBottom: '14px', color: 'var(--text-primary)' }}>
+            <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(36px, 5vw, 54px)', fontWeight: 300, lineHeight: 1.05, marginBottom: '14px', color: 'var(--text-primary)' }}>
               Buy With <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Total Confidence</em>
             </h2>
             <p style={{ fontSize: '16px', color: 'var(--text-secondary)', maxWidth: '520px', margin: '0 auto', lineHeight: 1.75 }}>
@@ -459,7 +459,7 @@ export default function Home() {
             ].map((item, i) => (
               <div key={i} style={{ background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '28px 26px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: item.iconBg, border: `1.5px solid ${item.iconBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', fontSize: '20px' }}>{item.icon}</div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 400, marginBottom: '8px', color: 'var(--text-primary)' }}>{item.title}</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 400, marginBottom: '8px', color: 'var(--text-primary)' }}>{item.title}</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{item.desc}</div>
               </div>
             ))}
@@ -493,7 +493,7 @@ export default function Home() {
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ marginBottom: '40px' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '12px', fontWeight: 500 }}>Getting Started</div>
-            <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(34px, 4vw, 50px)', fontWeight: 300, marginBottom: '12px', color: 'var(--text-primary)' }}>
+            <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(34px, 4vw, 50px)', fontWeight: 300, marginBottom: '12px', color: 'var(--text-primary)' }}>
               Connect Your Wallet.<br />Get <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Base USDC.</em>
             </h2>
             <p style={{ fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '520px', lineHeight: 1.7 }}>
@@ -521,7 +521,7 @@ export default function Home() {
               { num: '03', title: 'Connect to Chase Hollow', body: 'Click Connect Wallet on any listing. Select your wallet. Approve the Base network connection. USDC stays in your wallet until you purchase.' },
             ].map((step, i) => (
               <div key={i} style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px 22px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '42px', fontWeight: 300, color: 'var(--border)', lineHeight: 1, marginBottom: '10px' }}>{step.num}</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '42px', fontWeight: 300, color: 'var(--border)', lineHeight: 1, marginBottom: '10px' }}>{step.num}</div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>{step.title}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{step.body}</div>
               </div>
@@ -539,7 +539,7 @@ export default function Home() {
           <div style={{ background: 'var(--bg-3)', border: '1.5px solid var(--teal-border)', padding: '52px 60px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '40px', flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '10px', fontWeight: 500 }}>For Sellers</div>
-              <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(32px, 4vw, 40px)', fontWeight: 300, lineHeight: 1.1, marginBottom: '12px', color: 'var(--text-primary)' }}>
+              <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(32px, 4vw, 40px)', fontWeight: 300, lineHeight: 1.1, marginBottom: '12px', color: 'var(--text-primary)' }}>
                 List Your Cards.<br /><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Keep More.</em>
               </h2>
               <p style={{ fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '460px', lineHeight: 1.7, marginBottom: '20px' }}>
@@ -551,7 +551,7 @@ export default function Home() {
               </div>
             </div>
             <div style={{ textAlign: 'center', flexShrink: 0 }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '96px', fontWeight: 300, color: 'var(--gold)', lineHeight: 1 }}>3%</div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '96px', fontWeight: 300, color: 'var(--gold)', lineHeight: 1 }}>3%</div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 500 }}>Our only fee</div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>vs. ~13% everywhere else</div>
             </div>

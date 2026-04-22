@@ -144,7 +144,7 @@ function payoutEmail({ fullName, handle, total, walletAddress }) {
   body { margin: 0; padding: 0; background: #0A0A0B; font-family: 'DM Sans', Arial, sans-serif; }
   .wrap { max-width: 560px; margin: 40px auto; background: #111114; border: 1px solid #2A2A32; border-radius: 12px; overflow: hidden; }
   .header { background: #18181C; padding: 32px; text-align: center; border-bottom: 1px solid #2A2A32; }
-  .header h1 { margin: 0; font-size: 22px; color: #C9A84C; font-family: 'Cormorant Garamond', Georgia, serif; letter-spacing: 0.05em; }
+  .header h1 { margin: 0; font-size: 22px; color: #C9A84C; font-family: 'Playfair Display', Georgia, serif; letter-spacing: 0.05em; }
   .body { padding: 32px; }
   .body p { color: #B8B4AC; font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
   .amount { background: #18181C; border: 1px solid #C9A84C33; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0; }

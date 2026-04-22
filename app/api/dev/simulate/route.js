@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { callMarkDelivered } from '@/lib/escrow'
 
 // POST /api/dev/simulate
 // DEV ONLY — simulates carrier scan / delivery events so you can test the
@@ -38,7 +39,7 @@ export async function POST(request) {
 
     const { data: order } = await supabaseAdmin
       .from('orders')
-      .select('id, status, auth_tier, tracking_a, tracking_b')
+      .select('id, status, auth_tier, tracking_a, tracking_b, onchain_order_id')
       .eq('id', order_id)
       .single()
 
@@ -95,6 +96,8 @@ export async function POST(request) {
             auto_release_at: autoReleaseAt,
           })
           .eq('id', order_id)
+        // Advance on-chain state so buyer can call openDispute
+        await callMarkDelivered(order.onchain_order_id)
         return NextResponse.json({
           ok: true,
           prev: order.status,

@@ -23,7 +23,7 @@ export async function GET(request) {
     const select = `
       id, order_id, reason, buyer_evidence, seller_evidence, seller_notes, auth_photos,
       staff_recommendation, owner_decision, outcome, notes, onchain_tx_hash, created_at,
-      resolved_by, resolved_at
+      resolved_by, resolved_at, seller_return_evidence, seller_return_notes
     `
 
     let query = supabaseAdmin.from('disputes').select(select).order('created_at', { ascending: false })

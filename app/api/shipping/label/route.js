@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { shippo, AUTH_CENTER_ADDRESS } from '@/lib/shippo'
 import { createClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { ethers } from 'ethers'
 
 // POST /api/shipping/label
 // Body: { order_id, label: 'A' | 'B' | 'C' | 'D' }
@@ -11,7 +12,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 // Label D: auth center → seller (Tier 2 dispute return — after return verified)
 export async function POST(request) {
   try {
-    const { order_id, label = 'A' } = await request.json()
+    const { order_id, label = 'A', outcome } = await request.json()
 
     const supabase = await createClient()
 
@@ -110,7 +111,7 @@ export async function POST(request) {
       addressTo = isTier2 ? { ...AUTH_CENTER_ADDRESS } : sellerAddr
 
     } else if (label === 'D') {
-      // Auth center → seller (Tier 2 only — after Chase Hollow verifies returned card)
+      // Auth center → seller (dispute valid, buyer_wins) OR auth center → buyer (dispute invalid, seller_wins)
       // Tier 1 returns go buyer → seller directly (Label C), no Label D step.
       if (!isTier2) {
         return NextResponse.json({ error: 'Label D only applies to Tier 2 (physical auth) orders' }, { status: 400 })
@@ -118,8 +119,13 @@ export async function POST(request) {
       if (order.status !== 'return_received') {
         return NextResponse.json({ error: 'Order must be in return_received status' }, { status: 400 })
       }
+      if (!['buyer_wins', 'seller_wins'].includes(outcome)) {
+        return NextResponse.json({ error: 'outcome required for Label D: buyer_wins or seller_wins' }, { status: 400 })
+      }
       addressFrom = { ...AUTH_CENTER_ADDRESS }
-      addressTo = sellerAddr
+      // buyer_wins (dispute valid): card → seller, on-chain deferred to delivery
+      // seller_wins (dispute invalid): card → buyer (return it), on-chain fires immediately
+      addressTo = outcome === 'seller_wins' ? buyerAddr : sellerAddr
 
     } else {
       return NextResponse.json({ error: 'Invalid label type. Must be A, B, C, or D' }, { status: 400 })
@@ -180,12 +186,90 @@ export async function POST(request) {
       return NextResponse.json({ error: `Label purchase failed: ${detail}${addrHint}` }, { status: 500 })
     }
 
-    // Save label URL + tracking; advance order status
+    // Label D — two paths depending on auth center's determination:
+    //
+    // buyer_wins (dispute valid — card doesn't match listing):
+    //   Card → seller. On-chain resolveDispute(true) deferred to Label D delivery via webhook.
+    //   Seller receives card first, then buyer gets refunded.
+    //
+    // seller_wins (dispute invalid — card matches listing, buyer was wrong):
+    //   Card → buyer (returned to them). On-chain resolveDispute(false) fires immediately.
+    //   Seller gets paid now. No review window needed.
+    if (label === 'D') {
+      const { data: dispute } = await supabaseAdmin
+        .from('disputes')
+        .select('id, outcome')
+        .eq('order_id', order_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (outcome === 'seller_wins') {
+        // Dispute invalid — fire on-chain immediately, release escrow to seller
+        await supabaseAdmin.from('orders').update({
+          label_d_url: transaction.labelUrl,
+          tracking_d:  transaction.trackingNumber,
+          status:      'released',
+        }).eq('id', order_id)
+
+        let txHash = null
+        if (order.onchain_order_id) {
+          try {
+            const rpc         = process.env.ALCHEMY_RPC_URL
+            const escrowAddr  = process.env.NEXT_PUBLIC_ESCROW_ADDRESS
+            const resolverKey = process.env.DISPUTE_RESOLVER_PRIVATE_KEY
+            if (rpc && escrowAddr && resolverKey) {
+              const provider = new ethers.JsonRpcProvider(rpc)
+              const wallet   = new ethers.Wallet(resolverKey, provider)
+              const escrow   = new ethers.Contract(escrowAddr, ['function resolveDispute(bytes32,bool) external'], wallet)
+              const tx = await escrow.resolveDispute(order.onchain_order_id, false, { gasLimit: 300000n })
+              await tx.wait()
+              txHash = tx.hash
+            }
+          } catch (chainErr) {
+            console.error('[shipping/label] Label D seller_wins on-chain failed:', chainErr.message)
+          }
+        }
+
+        if (dispute) {
+          await supabaseAdmin.from('disputes').update({
+            outcome:         'seller_wins',
+            resolved_at:     new Date().toISOString(),
+            onchain_tx_hash: txHash,
+          }).eq('id', dispute.id)
+        }
+
+        try {
+          const { emailDisputeResolved } = await import('@/lib/emails')
+          if (order.buyer?.email)  await emailDisputeResolved(order.buyer.email,  order.buyer.full_name,  'seller_wins', 'buyer')
+          if (order.seller?.email) await emailDisputeResolved(order.seller.email, order.seller.full_name, 'seller_wins', 'seller')
+        } catch (emailErr) {
+          console.error('[shipping/label] Label D seller_wins emails failed:', emailErr.message)
+        }
+
+      } else {
+        // buyer_wins — dispute valid, defer on-chain to Label D delivery via webhook
+        await supabaseAdmin.from('orders').update({
+          label_d_url: transaction.labelUrl,
+          tracking_d:  transaction.trackingNumber,
+          status:      'return_verified',
+        }).eq('id', order_id)
+        // Webhook fires handleBuyerWinsResolve on Label D delivery
+      }
+
+      return NextResponse.json({
+        label_url:       transaction.labelUrl,
+        tracking_number: transaction.trackingNumber,
+        carrier:         'FedEx',
+        service:         bestRate.servicelevel?.name,
+      })
+    }
+
+    // Save label URL + tracking; advance order status (Labels A, B, C)
     const labelFieldMap = {
       A: { label_a_url: transaction.labelUrl, tracking_a: transaction.trackingNumber, status: 'awaiting_shipment' },
       B: { label_b_url: transaction.labelUrl, tracking_b: transaction.trackingNumber, status: 'auth_passed' },
       C: { label_c_url: transaction.labelUrl, tracking_c: transaction.trackingNumber },   // status already awaiting_return
-      D: { label_d_url: transaction.labelUrl, tracking_d: transaction.trackingNumber, status: 'return_verified' },
     }
 
     await supabaseAdmin
@@ -194,10 +278,10 @@ export async function POST(request) {
       .eq('id', order_id)
 
     return NextResponse.json({
-      label_url: transaction.labelUrl,
+      label_url:       transaction.labelUrl,
       tracking_number: transaction.trackingNumber,
-      carrier: 'FedEx',
-      service: bestRate.servicelevel?.name,
+      carrier:         'FedEx',
+      service:         bestRate.servicelevel?.name,
     })
 
   } catch (err) {

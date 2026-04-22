@@ -2,7 +2,7 @@ const { ethers } = require("ethers")
 require("dotenv").config({ path: ".env.contracts" })
 
 const ESCROW_ADDRESS   = "0xdA2a50d6EcC7DCc579DAF3aa306bb42Af2d09ba4"
-const ONCHAIN_ORDER_ID = "0x2b003e0be569f25b0fc9480452dc66103ceaae75330802f1e8d36e53f9db25c8"
+const ONCHAIN_ORDER_ID = process.argv[2] || "0x2397f3b7f91a01a1fd7077b4a204ddd9ea6b156e2d6cb99fe3bc70e885d525fc"
 
 async function main() {
   const rpc         = process.env.ALCHEMY_BASE_SEPOLIA

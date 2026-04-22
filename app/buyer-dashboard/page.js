@@ -426,12 +426,12 @@ export default function BuyerDashboard() {
             {photo ? <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🃏'}
           </div>
           <div style={{ flex: 1, minWidth: '140px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', lineHeight: 1.2, color: 'var(--text-primary)', marginBottom: '2px' }}>{card?.card_name || '—'}</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', lineHeight: 1.2, color: 'var(--text-primary)', marginBottom: '2px' }}>{card?.card_name || '—'}</div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{card?.game}{card?.set ? ` · ${card.set}` : ''} · {shortId(order.id)}</div>
           </div>
           <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, fontWeight: 500, flexShrink: 0 }}>{sm.label}</span>
           <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', textAlign: 'right' }}>{fmtUSD(order.escrow_amount)}</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)', textAlign: 'right' }}>{fmtUSD(order.escrow_amount)}</div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textAlign: 'right' }}>Escrowed USDC</div>
           </div>
         </div>
@@ -555,12 +555,12 @@ export default function BuyerDashboard() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 600, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
           onClick={e => { if (e.target === e.currentTarget && !reviewSubmitting) { setReviewModal(null); setReviewSuccess(false); setReviewRating(5); setReviewComment(''); setReviewError(null) } }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '16px', width: '100%', maxWidth: '460px', padding: '28px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Rate <em style={{ color: 'var(--gold)' }}>Seller</em></div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Rate <em style={{ color: 'var(--gold)' }}>Seller</em></div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '20px' }}>{reviewModal.cardName}</div>
             {reviewSuccess ? (
               <div style={{ textAlign: 'center', padding: '24px 0' }}>
                 <div style={{ fontSize: '32px', marginBottom: '8px' }}>★</div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--accent-green)' }}>Review submitted</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--accent-green)' }}>Review submitted</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px', fontFamily: 'DM Mono, monospace' }}>Thanks for the feedback</div>
                 <button onClick={() => { setReviewModal(null); setReviewSuccess(false); setReviewRating(5); setReviewComment('') }} style={{ marginTop: '16px', background: 'var(--teal)', border: 'none', color: '#fff', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600 }}>Done</button>
               </div>
@@ -648,7 +648,7 @@ export default function BuyerDashboard() {
           {/* Rep card */}
           <div style={{ margin: '16px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', borderRadius: '10px', padding: '14px', marginTop: 'auto' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '4px', fontWeight: 500 }}>Buyer Reputation</div>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1 }}>{profile?.buyer_rep_score?.toFixed(2) ?? '—'}</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1 }}>{profile?.buyer_rep_score?.toFixed(2) ?? '—'}</div>
             <div style={{ color: 'var(--gold)', fontSize: '12px', letterSpacing: '1px', margin: '3px 0' }}>★★★★★</div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{historyOrders.length} purchases · {disputes.length} disputes</div>
           </div>
@@ -668,7 +668,7 @@ export default function BuyerDashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: 'var(--text-primary)' }}>Welcome back, <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{profile?.username || 'Collector'}</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '32px', fontWeight: 300, color: 'var(--text-primary)' }}>Welcome back, <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{profile?.username || 'Collector'}</em></div>
                   <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{tierLabel} Buyer · {historyOrders.length} purchases · Member since {fmtDate(profile?.joined_at)}</div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -722,7 +722,7 @@ export default function BuyerDashboard() {
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px 18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, lineHeight: 1, color: m.color }}>{m.val}</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, lineHeight: 1, color: m.color }}>{m.val}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
                   </div>
                 ))}
@@ -730,7 +730,7 @@ export default function BuyerDashboard() {
 
               {/* Active Orders Preview */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
                 {activeOrders.length > 2 && <button onClick={() => setActiveSection('active')} style={{ fontSize: '11px', color: 'var(--teal)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 500 }}>View all →</button>}
               </div>
               {dataLoading ? (
@@ -738,7 +738,7 @@ export default function BuyerDashboard() {
               ) : activeOrders.length === 0 ? (
                 <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
                   <div style={{ fontSize: '32px', marginBottom: '12px' }}>🃏</div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '6px' }}>No active orders</div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '6px' }}>No active orders</div>
                   <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>Browse the marketplace to find your next card</div>
                   <Link href="/marketplace" style={{ textDecoration: 'none' }}>
                     <button style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>Browse Marketplace</button>
@@ -755,7 +755,7 @@ export default function BuyerDashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Purchases</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Purchases</em></div>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'DM Mono, monospace' }}>{activeOrders.length} orders in progress</div>
                 </div>
               </div>
@@ -772,7 +772,7 @@ export default function BuyerDashboard() {
           {/* AUTO-RELEASE / INSPECTION */}
           {activeSection === 'inspection' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Auto-Release <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Window</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Auto-Release <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Window</em></div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>Funds release automatically — only act if something is wrong</div>
 
               {inspectionOrders.length === 0 ? (
@@ -817,7 +817,7 @@ export default function BuyerDashboard() {
                           ].map((row, i) => (
                             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '5px 0', borderBottom: i < 2 ? '0.5px solid var(--border)' : 'none' }}>
                               <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
-                              <span style={{ color: row.gold ? 'var(--gold)' : row.teal ? 'var(--teal)' : 'var(--text-primary)', fontFamily: row.gold ? 'Cormorant Garamond, serif' : 'inherit', fontSize: row.gold ? '17px' : '13px', fontWeight: 500 }}>{row.val}</span>
+                              <span style={{ color: row.gold ? 'var(--gold)' : row.teal ? 'var(--teal)' : 'var(--text-primary)', fontFamily: row.gold ? 'Playfair Display, serif' : 'inherit', fontSize: row.gold ? '17px' : '13px', fontWeight: 500 }}>{row.val}</span>
                             </div>
                           ))}
                         </div>
@@ -843,7 +843,7 @@ export default function BuyerDashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>My <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Watchlist</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>My <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Watchlist</em></div>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'DM Mono, monospace' }}>Price alerts coming in Phase 3</div>
                 </div>
                 <Link href="/marketplace" style={{ textDecoration: 'none' }}>
@@ -852,7 +852,7 @@ export default function BuyerDashboard() {
               </div>
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '60px 40px', textAlign: 'center' }}>
                 <div style={{ fontSize: '40px', marginBottom: '16px' }}>♡</div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', color: 'var(--text-primary)', marginBottom: '8px' }}>Watchlist coming in Phase 3</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', color: 'var(--text-primary)', marginBottom: '8px' }}>Watchlist coming in Phase 3</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: '360px', margin: '0 auto' }}>Save cards, get price drop alerts, and track market movement. Available at public launch.</div>
               </div>
             </div>
@@ -861,11 +861,11 @@ export default function BuyerDashboard() {
           {/* OFFERS — Phase 3 */}
           {activeSection === 'offers' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>My <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Offers</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>My <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Offers</em></div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>Offer system coming in Phase 3</div>
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '60px 40px', textAlign: 'center' }}>
                 <div style={{ fontSize: '40px', marginBottom: '16px' }}>◆</div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', color: 'var(--text-primary)', marginBottom: '8px' }}>Make Offers coming in Phase 3</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', color: 'var(--text-primary)', marginBottom: '8px' }}>Make Offers coming in Phase 3</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: '360px', margin: '0 auto' }}>Counter-offer and negotiation tools are planned for public launch.</div>
               </div>
             </div>
@@ -876,7 +876,7 @@ export default function BuyerDashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>Purchase <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>Purchase <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{historyOrders.length} completed · {fmtUSD(totalSpent)} total spent</div>
                 </div>
               </div>
@@ -906,7 +906,7 @@ export default function BuyerDashboard() {
                                 {order.listing?.photos?.[0] ? <img src={order.listing.photos[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🃏'}
                               </div>
                               <div>
-                                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{order.listing?.card_name || '—'}</div>
+                                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{order.listing?.card_name || '—'}</div>
                                 <div style={{ fontSize: '10px', color: order.status === 'refunded' ? 'var(--accent-green)' : 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '1px' }}>{order.status === 'refunded' ? 'Dispute Won — Refunded' : (order.listing?.set || '—')}</div>
                               </div>
                             </div>
@@ -919,11 +919,11 @@ export default function BuyerDashboard() {
                           <td style={{ padding: '13px 16px' }}>
                             {order.status === 'refunded' && order.shipping_cost > 0 ? (
                               <div>
-                                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', fontWeight: 600, color: 'var(--accent-green)' }}>{fmtUSD(order.escrow_amount - order.shipping_cost)}</div>
+                                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '17px', fontWeight: 600, color: 'var(--accent-green)' }}>{fmtUSD(order.escrow_amount - order.shipping_cost)}</div>
                                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>−{fmtUSD(order.shipping_cost)} shipping kept</div>
                               </div>
                             ) : (
-                              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', fontWeight: 600, color: order.status === 'refunded' ? 'var(--accent-green)' : 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</div>
+                              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '17px', fontWeight: 600, color: order.status === 'refunded' ? 'var(--accent-green)' : 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</div>
                             )}
                           </td>
                           <td style={{ padding: '13px 16px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(order.released_at || order.created_at)}</td>
@@ -951,13 +951,13 @@ export default function BuyerDashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Notifications</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}><em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Notifications</em></div>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>Email notifications active — in-app alerts coming in Phase 3</div>
                 </div>
               </div>
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
                 <div style={{ fontSize: '32px', marginBottom: '12px' }}>◉</div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '8px' }}>In-app notifications coming in Phase 3</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '8px' }}>In-app notifications coming in Phase 3</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>You're receiving order updates by email. Real-time alerts will be added at public launch.</div>
               </div>
             </div>
@@ -966,17 +966,17 @@ export default function BuyerDashboard() {
           {/* DISPUTES */}
           {activeSection === 'disputes' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Raise a <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Dispute</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Raise a <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Dispute</em></div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>Only open a dispute if there is a genuine issue with your order</div>
 
               {/* Existing disputes */}
               {disputes.length > 0 && (
                 <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '12px' }}>Your Disputes</div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '12px' }}>Your Disputes</div>
                   {disputes.map((d) => (
                     <div key={d.id} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '14px 18px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                       <div>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{d.order?.listing?.card_name || '—'}</div>
+                        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{d.order?.listing?.card_name || '—'}</div>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '2px' }}>{d.reason} · Opened {fmtDate(d.created_at)}</div>
                       </div>
                       <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: d.outcome ? 'rgba(76,175,124,0.1)' : 'rgba(232,168,56,0.1)', border: `1px solid ${d.outcome ? 'rgba(76,175,124,0.3)' : 'rgba(232,168,56,0.3)'}`, color: d.outcome ? 'var(--accent-green)' : 'var(--accent-amber)', fontWeight: 500 }}>{d.outcome ? d.outcome : 'Under Review'}</span>
@@ -988,7 +988,7 @@ export default function BuyerDashboard() {
               {/* Gate — contact seller first */}
               {disputeGateStep === 'gate' && inspectionOrders.length > 0 && (
                 <div style={{ background: 'rgba(232,168,56,0.05)', border: '1.5px solid rgba(232,168,56,0.25)', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Have you contacted the <em style={{ color: 'var(--gold)' }}>seller</em> first?</div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Have you contacted the <em style={{ color: 'var(--gold)' }}>seller</em> first?</div>
                   {(() => {
                     const targetOrder = inspectionOrders.find(o => o.id === disputeOrderId) || inspectionOrders[0]
                     return targetOrder ? (
@@ -1173,7 +1173,7 @@ function AccountSection({ user, profile, supabase, btn }) {
 
   return (
     <div style={{ maxWidth: '560px' }}>
-      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '20px' }}>
+      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '20px' }}>
         My <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Account</em>
       </div>
 

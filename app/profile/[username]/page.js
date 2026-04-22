@@ -20,7 +20,7 @@ function StarRating({ score, count, label }) {
   const empty = 5 - full - (half ? 1 : 0)
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-      <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 300, color: 'var(--gold)' }}>{parseFloat(score).toFixed(2)}</span>
+      <span style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 300, color: 'var(--gold)' }}>{parseFloat(score).toFixed(2)}</span>
       <span style={{ display: 'flex', gap: '1px' }}>
         {'★'.repeat(full)}{half ? '½' : ''}{'☆'.repeat(empty)}
       </span>
@@ -109,7 +109,7 @@ export default function ProfilePage() {
   if (notFoundState) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', gap: '16px' }}>
-        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '48px', color: 'var(--text-muted)' }}>404</div>
+        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '48px', color: 'var(--text-muted)' }}>404</div>
         <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '14px', color: 'var(--text-secondary)' }}>User @{username} not found.</div>
         <Link href="/marketplace" style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--gold)', textDecoration: 'none', marginTop: '8px' }}>← Back to Marketplace</Link>
       </div>
@@ -160,7 +160,7 @@ export default function ProfilePage() {
 
               {/* Avatar */}
               <div style={{ position: 'relative', flexShrink: 0 }}>
-                <div style={{ width: '96px', height: '96px', borderRadius: '50%', background: 'var(--teal-bg)', border: '3px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '38px', fontWeight: 600, color: 'var(--teal)' }}>
+                <div style={{ width: '96px', height: '96px', borderRadius: '50%', background: 'var(--teal-bg)', border: '3px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Playfair Display, serif', fontSize: '38px', fontWeight: 600, color: 'var(--teal)' }}>
                   {initials}
                 </div>
               </div>
@@ -168,7 +168,7 @@ export default function ProfilePage() {
               {/* Info */}
               <div style={{ flex: 1, minWidth: '200px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                  <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '34px', fontWeight: 300, color: 'var(--text-primary)', margin: 0 }}>
+                  <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: '34px', fontWeight: 300, color: 'var(--text-primary)', margin: 0 }}>
                     @{profile.username}
                   </h1>
                   {/* Tier badge — only shown if user has sales */}
@@ -193,12 +193,12 @@ export default function ProfilePage() {
                 {/* Stats row */}
                 <div style={{ display: 'flex', gap: '24px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                    <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>{listings.length}</span>
+                    <span style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>{listings.length}</span>
                     <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.06em' }}>Active Listings</span>
                   </div>
                   {sales > 0 && (
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                      <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>{sales.toLocaleString()}</span>
+                      <span style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>{sales.toLocaleString()}</span>
                       <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.06em' }}>Sales</span>
                     </div>
                   )}
@@ -258,12 +258,12 @@ export default function ProfilePage() {
             {activeTab === 'listings' && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listings</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)' }}>Active <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listings</em></div>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{listings.length} cards</div>
                 </div>
                 {listings.length === 0 ? (
                   <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', color: 'var(--text-muted)', marginBottom: '8px' }}>No active listings</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', color: 'var(--text-muted)', marginBottom: '8px' }}>No active listings</div>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>This seller has no cards listed right now.</div>
                   </div>
                 ) : (
@@ -284,8 +284,8 @@ export default function ProfilePage() {
                           </div>
                           <div style={{ padding: '11px 12px' }}>
                             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '3px' }}>{card.game}{card.set ? ` · ${card.set}` : ''}</div>
-                            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', lineHeight: 1.2, marginBottom: '8px', color: 'var(--text-primary)' }}>{card.card_name}{card.grade ? ` ${card.grader} ${card.grade}` : ''}</div>
-                            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)' }}>${parseFloat(card.price).toLocaleString()}</div>
+                            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '16px', lineHeight: 1.2, marginBottom: '8px', color: 'var(--text-primary)' }}>{card.card_name}{card.grade ? ` ${card.grader} ${card.grade}` : ''}</div>
+                            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)' }}>${parseFloat(card.price).toLocaleString()}</div>
                           </div>
                         </div>
                       </Link>
@@ -299,7 +299,7 @@ export default function ProfilePage() {
             {activeTab === 'feedback' && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)' }}>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)' }}>
                     <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Feedback</em>
                   </div>
                   {/* Toggle buyer / seller view */}
@@ -330,7 +330,7 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total Sales</div>
-                        <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--text-primary)' }}>{(profile.total_sales || 0).toLocaleString()}</span>
+                        <span style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)' }}>{(profile.total_sales || 0).toLocaleString()}</span>
                       </div>
                     </>
                   ) : (
@@ -348,7 +348,7 @@ export default function ProfilePage() {
                 {/* Review list */}
                 {(feedbackView === 'seller' ? sellerReviews : buyerReviews).length === 0 ? (
                   <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: 'var(--text-muted)', marginBottom: '8px' }}>No reviews yet</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', color: 'var(--text-muted)', marginBottom: '8px' }}>No reviews yet</div>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Reviews are left after each completed transaction.</div>
                   </div>
                 ) : (
@@ -361,12 +361,12 @@ export default function ProfilePage() {
             {activeTab === 'history' && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)' }}>Sales <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)' }}>Sales <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{salesHistory.length} completed</div>
                 </div>
                 {salesHistory.length === 0 ? (
                   <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', color: 'var(--text-muted)', marginBottom: '8px' }}>No completed sales</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', color: 'var(--text-muted)', marginBottom: '8px' }}>No completed sales</div>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>This seller has not completed any sales yet.</div>
                   </div>
                 ) : (
@@ -378,12 +378,12 @@ export default function ProfilePage() {
                     </div>
                     {salesHistory.map((order, i) => (
                       <div key={order.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', padding: '12px 16px', borderBottom: i < salesHistory.length - 1 ? '0.5px solid var(--border)' : 'none', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {order.listing?.card_name
                             ? `${order.listing.card_name}${order.listing.grade ? ` ${order.listing.grader} ${order.listing.grade}` : ''}`
                             : `Order ${order.id.slice(0, 8)}…`}
                         </div>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--gold)', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '16px', color: 'var(--gold)', whiteSpace: 'nowrap' }}>
                           ${parseFloat(order.escrow_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </div>
                         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>

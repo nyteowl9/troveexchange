@@ -118,7 +118,7 @@ export default function ChatModal({ orderId, orderLabel, onClose }) {
         {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>
               Message <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>@{otherName}</em>
             </div>
             {orderLabel && (
@@ -134,7 +134,7 @@ export default function ChatModal({ orderId, orderLabel, onClose }) {
             <div style={{ textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', paddingTop: '32px' }}>Loading…</div>
           ) : messages.length === 0 ? (
             <div style={{ textAlign: 'center', paddingTop: '32px' }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: 'var(--text-muted)', marginBottom: '8px' }}>No messages yet</div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', color: 'var(--text-muted)', marginBottom: '8px' }}>No messages yet</div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>Use this to work things out before filing a dispute.<br />All messages are private between you and @{otherName}.</div>
             </div>
           ) : (

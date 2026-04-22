@@ -405,7 +405,7 @@ function Checkout() {
   if (!listingLoading && listingId && !listing) {
     return (
       <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', color: 'var(--text-primary)' }}>Listing not found</div>
+        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '32px', color: 'var(--text-primary)' }}>Listing not found</div>
         <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>This listing may have sold or been removed.</div>
         <Link href="/marketplace" style={{ color: 'var(--teal)', fontSize: '14px' }}>← Back to marketplace</Link>
       </div>
@@ -415,7 +415,7 @@ function Checkout() {
   if (!listingLoading && listing && !listing.seller?.wallet_address) {
     return (
       <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '20px' }}>
-        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', color: 'var(--text-primary)' }}>Purchase Unavailable</div>
+        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '32px', color: 'var(--text-primary)' }}>Purchase Unavailable</div>
         <div style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center', maxWidth: '420px', lineHeight: 1.7 }}>
           This seller hasn't connected a wallet to their account yet. They need to connect a wallet before they can receive payment.
           <br /><br />
@@ -434,7 +434,7 @@ function Checkout() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '20px', padding: '40px', maxWidth: '420px', width: '100%', textAlign: 'center' }}>
             <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--teal-bg)', border: '2px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', margin: '0 auto 20px' }}>🔑</div>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, marginBottom: '8px', color: 'var(--text-primary)' }}>Sign in Wallet</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, marginBottom: '8px', color: 'var(--text-primary)' }}>Sign in Wallet</div>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '24px' }}>Your wallet is asking you to approve the USDC transfer into escrow. Review the details carefully before signing.</div>
             <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px', marginBottom: '20px', fontFamily: 'DM Mono, monospace', fontSize: '11px', lineHeight: 2, textAlign: 'left' }}>
               {[
@@ -490,7 +490,7 @@ function Checkout() {
           {/* STEP 1 — CONNECT WALLET */}
           {step === 1 && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Connect Your <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Wallet</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Connect Your <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Wallet</em></div>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>Your USDC lives in your wallet. Connect it to lock funds into escrow — the only movement of money in this transaction.</p>
 
               {walletAddress ? (
@@ -530,7 +530,7 @@ function Checkout() {
           {/* STEP 2 — SHIPPING ADDRESS + USDC BALANCE */}
           {step === 2 && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Confirm <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Shipping Address</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Confirm <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Shipping Address</em></div>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>We'll ship your card here. Confirm it's correct before we calculate your final shipping cost.</p>
 
               {/* ADDRESS CARD */}
@@ -638,7 +638,7 @@ function Checkout() {
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '2px' }}>{walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)} · Base Network</div>
                     </div>
                   </div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '40px', fontWeight: 300, lineHeight: 1, color: 'var(--text-primary)', marginBottom: '2px' }}>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '40px', fontWeight: 300, lineHeight: 1, color: 'var(--text-primary)', marginBottom: '2px' }}>
                     {balanceLoading ? '…' : usdcBalanceFormatted !== null ? `$${parseFloat(usdcBalanceFormatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginBottom: '14px' }}>USDC available on Base</div>
@@ -681,7 +681,7 @@ function Checkout() {
           {/* STEP 3 — REVIEW & SIGN */}
           {step === 3 && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Review <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>&amp; Sign</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Review <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>&amp; Sign</em></div>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>Everything about this transaction. Review carefully — the blockchain signature is irreversible.</p>
 
               {/* Sections */}
@@ -733,7 +733,7 @@ function Checkout() {
                   {section.rows.map((row, ri) => (
                     <div key={ri} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: row.total ? '10px 0 0' : '8px 0', borderBottom: row.total ? 'none' : '0.5px solid var(--border)', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0', fontSize: '13px' }}>
                       <span style={{ color: row.total ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row.total ? 600 : 400 }}>{row.label}</span>
-                      <span style={{ fontWeight: 500, color: row.gold ? 'var(--gold)' : row.teal ? 'var(--teal)' : row.green ? 'var(--accent-green)' : 'var(--text-primary)', fontFamily: row.total ? 'Cormorant Garamond, serif' : 'inherit', fontSize: row.total ? '20px' : '13px' }}>{row.val}</span>
+                      <span style={{ fontWeight: 500, color: row.gold ? 'var(--gold)' : row.teal ? 'var(--teal)' : row.green ? 'var(--accent-green)' : 'var(--text-primary)', fontFamily: row.total ? 'Playfair Display, serif' : 'inherit', fontSize: row.total ? '20px' : '13px' }}>{row.val}</span>
                     </div>
                   ))}
                 </div>
@@ -769,7 +769,7 @@ function Checkout() {
                 ].map((row, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '8px 0', borderBottom: i < 4 ? '0.5px solid var(--teal-border)' : 'none' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
-                    <span style={{ fontWeight: 500, color: row.gold ? 'var(--gold)' : row.teal ? 'var(--teal)' : row.green ? 'var(--accent-green)' : 'var(--text-primary)', fontFamily: row.gold ? 'Cormorant Garamond, serif' : 'inherit', fontSize: row.gold ? '20px' : '13px' }}>{row.val}</span>
+                    <span style={{ fontWeight: 500, color: row.gold ? 'var(--gold)' : row.teal ? 'var(--teal)' : row.green ? 'var(--accent-green)' : 'var(--text-primary)', fontFamily: row.gold ? 'Playfair Display, serif' : 'inherit', fontSize: row.gold ? '20px' : '13px' }}>{row.val}</span>
                   </div>
                 ))}
               </div>
@@ -813,7 +813,7 @@ function Checkout() {
           {step === 4 && (
             <div style={{ textAlign: 'center' }}>
               <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(76,175,124,0.12)', border: '2px solid rgba(76,175,124,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', margin: '0 auto 20px' }}>✓</div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '44px', fontWeight: 300, marginBottom: '8px', color: 'var(--text-primary)' }}>You're <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Protected</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '44px', fontWeight: 300, marginBottom: '8px', color: 'var(--text-primary)' }}>You're <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Protected</em></div>
               <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: '480px', margin: '0 auto 28px' }}>
                 ${total} USDC is locked in escrow. {sellerName} has been notified and has 48 hours to ship. You'll receive updates at every step.
               </p>
@@ -828,7 +828,7 @@ function Checkout() {
 
               {/* Order tracker */}
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '24px', marginBottom: '24px', textAlign: 'left' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>Order <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>#{supabaseOrderId?.slice(-6).toUpperCase() || '—'}</em></div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>Order <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>#{supabaseOrderId?.slice(-6).toUpperCase() || '—'}</em></div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '20px' }}>Live tracking · Updates automatically</div>
                 {[
                   { title: 'Escrow Funded', desc: `$${total} USDC locked in smart contract on Base. Transaction confirmed.`, done: true, active: false },
@@ -867,7 +867,7 @@ function Checkout() {
                 {listing?.photos?.[0] ? <img src={listing.photos[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🃏'}
               </div>
               <div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)' }}>{listingLoading ? '…' : listing?.card_name || 'Listing not found'}</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)' }}>{listingLoading ? '…' : listing?.card_name || 'Listing not found'}</div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
                   {listing?.game}{listing?.set ? ` · ${listing.set}` : ''}<br />
                   {listing?.grade ? `${listing.grader} ${listing.grade}${listing.cert_number ? ` · Cert #${listing.cert_number}` : ''}` : listing ? 'Raw' : ''}<br />
@@ -895,7 +895,7 @@ function Checkout() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', marginTop: '4px' }}>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{shippingKnown ? 'Total to lock in escrow' : 'Subtotal (excl. shipping)'}</div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 600, color: 'var(--gold)' }}>${displayTotal}</div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 600, color: 'var(--gold)' }}>${displayTotal}</div>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{shippingKnown ? 'incl. shipping · USDC · Base' : '+ est. shipping · USDC · Base'}</div>
                 </div>
               </div>

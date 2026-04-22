@@ -291,7 +291,7 @@ export default function AuthenticatorPortal() {
       {showRejectModal && card && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.4)', borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '100%' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Reject <em style={{ fontStyle: 'italic', color: 'var(--accent-red)' }}>Card</em></div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Reject <em style={{ fontStyle: 'italic', color: 'var(--accent-red)' }}>Card</em></div>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.6 }}>Rejecting triggers an automatic full refund to the buyer. The seller is notified with your reason. Cannot be undone.</div>
             <div style={{ marginBottom: '12px' }}>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', fontWeight: 500 }}>Rejection Reason</div>
@@ -318,7 +318,7 @@ export default function AuthenticatorPortal() {
       {showLabelModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--teal-border)', borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '100%' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Print <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Shipping Label {labelType}</em></div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Print <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Shipping Label {labelType}</em></div>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
               {labelType === 'D'
                 ? 'Label D ships the verified return card to the seller. Print, attach, and drop with FedEx. On-chain refund executes automatically on delivery.'
@@ -360,7 +360,7 @@ export default function AuthenticatorPortal() {
       {/* NAV */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(10,10,11,0.96)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <a href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <a href="/" style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <div style={{ width: '20px', height: '20px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
             CHASE HOLLOW
           </a>
@@ -402,7 +402,7 @@ export default function AuthenticatorPortal() {
             {[{ label: 'Inspected', val: String(completed.length) }, { label: 'Passed', val: String(completed.filter(c => c.decision === 'pass').length), green: true }, { label: 'Rejected', val: String(completed.filter(c => c.decision === 'fail').length), red: true }, { label: 'In Queue', val: String(queue.filter(q => q.status === 'auth_review').length) }].map((s, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
                 <span style={{ color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '9px' }}>{s.label}</span>
-                <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: s.green ? 'var(--accent-green)' : s.red ? 'var(--accent-red)' : 'var(--text-primary)' }}>{s.val}</span>
+                <span style={{ fontFamily: 'Playfair Display, serif', fontSize: '16px', color: s.green ? 'var(--accent-green)' : s.red ? 'var(--accent-red)' : 'var(--text-primary)' }}>{s.val}</span>
               </div>
             ))}
           </div>
@@ -429,7 +429,7 @@ export default function AuthenticatorPortal() {
           {activeSection === 'queue' && (
             <div>
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)' }}>Inspection <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Queue</em></div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)' }}>Inspection <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Queue</em></div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{queueLoading ? 'Loading…' : (() => { const r = queue.filter(i => i.auth_tier === 'remote' && i.status === 'in_transit').length; const p = queue.filter(i => i.status === 'auth_review').length; return [r ? `${r} remote` : '', p ? `${p} physical` : ''].filter(Boolean).join(' · ') || 'No cards in queue' })()}</div>
               </div>
 
@@ -456,7 +456,7 @@ export default function AuthenticatorPortal() {
                           <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{item.name}</div>
                           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{item.order} · {item.seller} · In transit · {item.arrived}</div>
                         </div>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{item.value}</div>
+                        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)', flexShrink: 0 }}>{item.value}</div>
                         <button
                           onClick={() => { setActiveCard(item.id); setActiveSection('inspect'); setChecklist({}); setDecision(null); setUploadedPhotos({}); setListingPhotoIndex(0); setReceivedPhotoIdx(null) }}
                           style={{ background: 'var(--accent-blue)', border: 'none', color: '#fff', padding: '7px 14px', fontSize: '11px', fontWeight: 600, borderRadius: '7px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}
@@ -481,7 +481,7 @@ export default function AuthenticatorPortal() {
                             {item.photos[0] ? <img src={item.photos[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : item.icon}
                           </div>
                           <div style={{ flex: 1, minWidth: '120px' }}>
-                            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: 'var(--text-primary)', marginBottom: '2px' }}>{item.name}</div>
+                            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '16px', color: 'var(--text-primary)', marginBottom: '2px' }}>{item.name}</div>
                             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{item.order} · {item.value} · Buyer: {item.buyer}</div>
                           </div>
                           <button
@@ -514,7 +514,7 @@ export default function AuthenticatorPortal() {
                           </div>
                           <div style={{ flex: 1, minWidth: '140px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
-                              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: 'var(--text-primary)' }}>{item.name}</div>
+                              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '17px', color: 'var(--text-primary)' }}>{item.name}</div>
                               {item.priority === 'high' && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '10px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>High Value</span>}
                               {item.raw && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontWeight: 500 }}>Raw Card</span>}
                             </div>
@@ -525,7 +525,7 @@ export default function AuthenticatorPortal() {
                             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '3px' }}>{item.cert ? `#${item.cert}` : 'No cert'}</div>
                           </div>
                           <div style={{ textAlign: 'right', minWidth: '60px' }}>
-                            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)' }}>{item.value}</div>
+                            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 600, color: 'var(--gold)' }}>{item.value}</div>
                             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{item.arrived}</div>
                           </div>
                           <button onClick={() => { setActiveCard(item.id); setActiveSection('inspect'); setChecklist({}); setDecision(null); setUploadedPhotos({}); setListingPhotoIndex(0); setReceivedPhotoIdx(null) }} style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>Inspect →</button>
@@ -548,7 +548,7 @@ export default function AuthenticatorPortal() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
                 <button onClick={() => setActiveSection('queue')} style={btn({ fontSize: '11px', padding: '5px 12px' })}>← Queue</button>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)' }}>Inspecting: <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{card.name}</em></div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)' }}>Inspecting: <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{card.name}</em></div>
                 <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(60,125,200,0.1)', border: '1px solid rgba(60,125,200,0.3)', color: 'var(--accent-blue)', fontWeight: 500 }}>{card.id}</span>
                 {card.raw && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontWeight: 500 }}>Raw — no cert verification required</span>}
               </div>
@@ -745,7 +745,7 @@ export default function AuthenticatorPortal() {
                       <div>
                         <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                           <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(76,175,124,0.12)', border: '2px solid rgba(76,175,124,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 12px' }}>✓</div>
-                          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: 'var(--accent-green)' }}>Authentication Passed</div>
+                          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 300, color: 'var(--accent-green)' }}>Authentication Passed</div>
                           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{(decidedCard || card)?.auth_tier === 'remote' ? 'Card ships directly to buyer — no Label B needed.' : 'Print label and ship to buyer.'}</div>
                         </div>
                         {(decidedCard || card)?.auth_tier !== 'remote' && (
@@ -768,7 +768,7 @@ export default function AuthenticatorPortal() {
           {/* COMPLETED */}
           {activeSection === 'completed' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Completed <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Today</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Completed <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Today</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>
                 {completedLoading ? 'Loading…' : `${completed.length} inspection${completed.length !== 1 ? 's' : ''} · ${completed.filter(c => c.decision === 'pass').length} passed · ${completed.filter(c => c.decision === 'fail').length} rejected`}
               </div>
@@ -803,9 +803,9 @@ export default function AuthenticatorPortal() {
                         const passed = row.decision === 'pass'
                         return (
                           <tr key={i} style={{ borderBottom: i < completed.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
-                            <td style={{ padding: '10px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--text-primary)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.card_name || '—'}</td>
+                            <td style={{ padding: '10px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.card_name || '—'}</td>
                             <td style={{ padding: '10px 14px' }}><span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '5px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', whiteSpace: 'nowrap' }}>{grade}</span></td>
-                            <td style={{ padding: '10px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600, whiteSpace: 'nowrap' }}>{val}</td>
+                            <td style={{ padding: '10px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--gold)', fontWeight: 600, whiteSpace: 'nowrap' }}>{val}</td>
                             <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-secondary)' }}>{buyerName}</td>
                             <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{authName} · <span style={{ color: 'var(--text-muted)' }}>{timeAgo}</span></td>
                             <td style={{ padding: '10px 14px' }}><span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '5px', background: passed ? 'rgba(76,175,124,0.1)' : 'rgba(200,75,60,0.1)', border: `1px solid ${passed ? 'rgba(76,175,124,0.3)' : 'rgba(200,75,60,0.3)'}`, color: passed ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: 500 }}>{passed ? '✓ Passed' : '✕ Rejected'}</span></td>
@@ -830,7 +830,7 @@ export default function AuthenticatorPortal() {
           {/* FLAGGED */}
           {activeSection === 'flagged' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '20px' }}>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '20px' }}>
                 <em style={{ fontStyle: 'italic', color: 'var(--accent-amber)' }}>Flagged</em> for Senior Review
               </div>
               <div style={{ background: 'rgba(232,168,56,0.06)', border: '1.5px solid rgba(232,168,56,0.3)', borderRadius: '12px', padding: '18px 20px' }}>
@@ -854,7 +854,7 @@ export default function AuthenticatorPortal() {
           {/* DISPUTE RETURNS */}
           {activeSection === 'returns' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>
                 Dispute <em style={{ fontStyle: 'italic', color: 'var(--accent-amber)' }}>Returns</em>
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>
@@ -1089,7 +1089,7 @@ export default function AuthenticatorPortal() {
       {showWrongCardModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.4)', borderRadius: '16px', padding: '28px', maxWidth: '500px', width: '100%' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Wrong Card <em style={{ fontStyle: 'italic', color: 'var(--accent-red)' }}>Received</em></div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Wrong Card <em style={{ fontStyle: 'italic', color: 'var(--accent-red)' }}>Received</em></div>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
               Flag this return as the wrong card. The buyer will be notified and given 5 days to ship the correct card. The seller will be informed. If the correct card is not received within 5 days, the dispute reverses to seller wins.
             </div>

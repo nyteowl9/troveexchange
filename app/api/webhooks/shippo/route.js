@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ethers } from 'ethers'
+import { callMarkDelivered } from '@/lib/escrow'
 
 // POST /api/webhooks/shippo
 // Handles carrier scan and delivery events from Shippo for all 4 label types.
@@ -107,9 +108,21 @@ export async function POST(request) {
 
       } else if (label === 'C') {
         if (order.auth_tier === 'remote') {
-          // Tier 1: Label C delivers to SELLER directly — auto-resolve buyer wins
-          // No auth center inspection needed for low-value (<$300) returns
-          await handleBuyerWinsResolve(order)
+          // Tier 1: Label C delivers to SELLER directly — open seller review window (72hrs)
+          // Seller must confirm correct card received OR dispute with photos.
+          // On-chain resolve deferred until seller acts (or review deadline passes via cron).
+          const reviewDeadline = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+          await supabaseAdmin
+            .from('orders')
+            .update({ status: 'return_received_seller', return_review_deadline_at: reviewDeadline })
+            .eq('id', order.id)
+          try {
+            const { emailSellerReturnReceivedForReview } = await import('@/lib/emails')
+            const { data: seller } = await supabaseAdmin.from('users').select('email, full_name').eq('id', order.seller_id).single()
+            if (seller?.email) await emailSellerReturnReceivedForReview({ to: seller.email, order: { ...order, return_review_deadline_at: reviewDeadline } })
+          } catch (err) {
+            console.error('[webhooks/shippo] emailSellerReturnReceivedForReview failed:', err)
+          }
         } else {
           // Tier 2: Label C delivered to auth center — staff must inspect the return
           // Status → return_received; authenticator verifies, then generates Label D
@@ -120,7 +133,9 @@ export async function POST(request) {
         }
 
       } else if (label === 'D') {
-        // Tier 2: Label D delivered to seller — auto-execute on-chain resolveDispute(buyer wins)
+        // Tier 2: Label D delivered.
+        // buyer_wins path: order is return_verified, dispute pending → fires resolveDispute(true) now.
+        // seller_wins path: order is already released, dispute already resolved → no-op (graceful early return).
         await handleBuyerWinsResolve(order)
       }
     }
@@ -147,11 +162,11 @@ async function handleBuyerWinsResolve(order) {
     .single()
 
   if (!dispute || dispute.owner_decision !== 'buyer_wins') {
-    console.error(`[webhooks/shippo] Label D delivered but dispute has no buyer_wins decision for order ${order.id}`)
+    console.error(`[webhooks/shippo] Label C/D delivered but dispute has no buyer_wins decision for order ${order.id}`)
     return
   }
-  if (dispute.outcome) {
-    // Already resolved (e.g. webhook fired twice)
+  if (dispute.outcome && dispute.outcome !== 'pending') {
+    // Already fully resolved (e.g. webhook fired twice)
     return
   }
   if (!order.onchain_order_id) {
@@ -172,15 +187,15 @@ async function handleBuyerWinsResolve(order) {
   await supabaseAdmin
     .from('disputes')
     .update({
-      outcome: 'buyer_wins',
-      resolved_at: new Date().toISOString(),
+      outcome:         'buyer_wins',
+      resolved_at:     new Date().toISOString(),
       onchain_tx_hash: txHash,
     })
     .eq('id', dispute.id)
 
   await supabaseAdmin
     .from('orders')
-    .update({ status: 'released' })
+    .update({ status: 'refunded' })
     .eq('id', order.id)
 
   // Emails — import here to avoid circular dep
@@ -195,32 +210,6 @@ async function handleBuyerWinsResolve(order) {
   }
 }
 
-// ── On-chain markDelivered call (operator) ─────────────────────
-// Called when Shippo confirms delivery — starts 72hr window on-chain.
-// Uses OPERATOR_PRIVATE_KEY (not owner) since markDelivered is operator-accessible.
-// Silently skips if onchain_order_id is null (pre-Phase-3 orders).
-async function callMarkDelivered(onchainOrderId) {
-  if (!onchainOrderId) return
-  const rpc          = process.env.ALCHEMY_RPC_URL
-  const escrowAddr   = process.env.NEXT_PUBLIC_ESCROW_ADDRESS
-  const operatorKey  = process.env.OPERATOR_PRIVATE_KEY
-  if (!rpc || !escrowAddr || !operatorKey) return
-
-  try {
-    const provider = new ethers.JsonRpcProvider(rpc)
-    const wallet   = new ethers.Wallet(operatorKey, provider)
-    const escrow   = new ethers.Contract(
-      escrowAddr,
-      ['function markDelivered(bytes32 orderId) external'],
-      wallet
-    )
-    const tx = await escrow.markDelivered(onchainOrderId)
-    await tx.wait()
-  } catch (err) {
-    // Log but don't throw — DB is already updated, on-chain can be retried manually
-    console.error('[webhooks/shippo] callMarkDelivered failed:', err.message)
-  }
-}
 
 // ── On-chain resolveDispute call (dispute resolver) ────────────
 async function callResolveDispute(onchainOrderId, buyerWins) {

@@ -57,7 +57,7 @@ export default function Nav() {
   const isCheckout = pathname === '/checkout'
 
   const logoEl = (size = 20, hexSize = 24) => (
-    <Link href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: `${size}px`, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
+    <Link href="/" style={{ fontFamily: 'Playfair Display, serif', fontSize: `${size}px`, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
       <div style={{ width: `${hexSize}px`, height: `${hexSize}px`, background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', flexShrink: 0 }} />
       CHASE HOLLOW
     </Link>

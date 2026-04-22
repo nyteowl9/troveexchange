@@ -385,7 +385,7 @@ export default function AdminPanel() {
                 <div>
                   {/* Header */}
                   <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: '4px' }}>{card.card_name || '—'}</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '26px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: '4px' }}>{card.card_name || '—'}</div>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                       <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{'#' + order.id.slice(0, 8).toUpperCase()}</span>
                       <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18` }}>{order.status?.replace(/_/g, ' ')}</span>
@@ -427,7 +427,7 @@ export default function AdminPanel() {
 
                   {/* Auth Inspection */}
                   <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '20px' }}>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '12px' }}>Authentication <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Record</em></div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '12px' }}>Authentication <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Record</em></div>
                     {!inspection ? (
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', padding: '16px', background: 'var(--bg-3)', borderRadius: '8px' }}>No inspection record found for this order.</div>
                     ) : (
@@ -487,7 +487,7 @@ export default function AdminPanel() {
       {showActionModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: `1.5px solid ${showActionModal.color || 'var(--border)'}`, borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '100%' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>{showActionModal.title}</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>{showActionModal.title}</div>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>{showActionModal.description}</div>
             {showActionModal.note && (
               <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
@@ -524,7 +524,7 @@ export default function AdminPanel() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
           onClick={() => { if (!escrowLoading) { setEscrowModal(null); setEscrowAction(null); setEscrowResult(null) } }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(201,168,76,0.3)', borderRadius: '16px', padding: '28px', maxWidth: '500px', width: '100%' }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>Manual Escrow Action</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>Manual Escrow Action</div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)', marginBottom: '18px' }}>#{escrowModal.id?.slice(0,8).toUpperCase()} · {escrowModal.listing?.card_name || 'Unknown card'} · <span style={{ color: 'var(--text-muted)' }}>{escrowModal.status?.replace(/_/g,' ')}</span></div>
 
             {!escrowResult ? (
@@ -587,7 +587,7 @@ export default function AdminPanel() {
       {/* NAV */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(10,10,11,0.96)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <a href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <a href="/" style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <div style={{ width: '20px', height: '20px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
             CHASE HOLLOW
           </a>
@@ -665,7 +665,7 @@ export default function AdminPanel() {
             <div>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>Platform <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Overview</em></div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>Platform <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Overview</em></div>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Thursday, April 7 2025 · All systems operational</div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -682,7 +682,7 @@ export default function AdminPanel() {
                 {metrics.map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px 18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, lineHeight: 1, color: m.color }}>{m.val}</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, lineHeight: 1, color: m.color }}>{m.val}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
                   </div>
                 ))}
@@ -690,7 +690,7 @@ export default function AdminPanel() {
 
               {/* Recent orders */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Recent <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 300, color: 'var(--text-primary)' }}>Recent <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
                 <button onClick={() => setActiveSection('orders')} style={{ fontSize: '11px', color: 'var(--teal)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 500 }}>View all →</button>
               </div>
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
@@ -718,10 +718,10 @@ export default function AdminPanel() {
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
                           <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{'#' + (order.id || '').slice(0, 8).toUpperCase()}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '14px', color: 'var(--text-primary)' }}>{cardName}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '14px', color: 'var(--text-primary)' }}>{cardName}</td>
                           <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--accent-blue)' }}>{buyerName}</td>
                           <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--gold)' }}>{sellerName}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', fontWeight: 600, color: 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', fontWeight: 600, color: 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</td>
                           <td style={{ padding: '11px 14px' }}>
                             <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18`, fontWeight: 500 }}>{(order.status || '').replace(/_/g, ' ')}</span>
                           </td>
@@ -776,14 +776,14 @@ export default function AdminPanel() {
           {/* PENDING DECISIONS */}
           {activeSection === 'decisions' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Pending <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Decisions</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Pending <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Decisions</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>These require your direct action. Staff has reviewed and submitted recommendations — only you can execute.</div>
               {pendingDecisions.map((d, i) => (
                 <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.3)', borderRadius: '12px', padding: '20px', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--text-primary)' }}>{d.description}</div>
+                        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', color: 'var(--text-primary)' }}>{d.description}</div>
                         <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 8px', borderRadius: '10px', background: d.type === 'dispute' ? 'rgba(200,75,60,0.1)' : 'rgba(232,168,56,0.1)', border: d.type === 'dispute' ? '1px solid rgba(200,75,60,0.3)' : '1px solid rgba(232,168,56,0.3)', color: d.type === 'dispute' ? 'var(--accent-red)' : 'var(--accent-amber)', fontWeight: 500 }}>
                           {d.type === 'dispute' ? 'Dispute' : 'Strike Appeal'}
                         </span>
@@ -818,7 +818,7 @@ export default function AdminPanel() {
           {/* ORDERS */}
           {activeSection === 'orders' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>All <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>All <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Orders</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>{adminOrdersLoading ? 'Loading…' : `${adminOrdersTotal} total orders`}</div>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
                 <input
@@ -885,10 +885,10 @@ export default function AdminPanel() {
                       return (
                         <tr key={order.id} onClick={() => fetchOrderDetail(order.id)} style={{ borderBottom: i < adminOrders.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background='var(--bg-3)'} onMouseLeave={e => e.currentTarget.style.background=''}>
                           <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)' }}>{shortId}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '14px', color: 'var(--text-primary)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.listing?.card_name || '—'}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '14px', color: 'var(--text-primary)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.listing?.card_name || '—'}</td>
                           <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-blue)' }}>{buyer}</td>
                           <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--gold)' }}>{seller}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', fontWeight: 600, color: 'var(--gold)' }}>{val}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', fontWeight: 600, color: 'var(--gold)' }}>{val}</td>
                           <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{order.auth_tier || '—'}</td>
                           <td style={{ padding: '11px 14px' }}>
                             <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18`, fontWeight: 500, whiteSpace: 'nowrap' }}>{order.status?.replace(/_/g, ' ')}</span>
@@ -912,7 +912,7 @@ export default function AdminPanel() {
           {/* USERS */}
           {activeSection === 'users' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>User <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Management</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>User <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Management</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>{userResults.length} users shown · Search by email, username, or name</div>
 
               {/* Role legend */}
@@ -1017,7 +1017,7 @@ export default function AdminPanel() {
           {/* STRIKES */}
           {activeSection === 'strikes' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Strike <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Log</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Strike <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Log</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>{adminStrikes.length} strikes on record</div>
 
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '20px' }}>
@@ -1079,7 +1079,7 @@ export default function AdminPanel() {
           {/* FINANCIALS */}
           {activeSection === 'financials' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Platform <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Financials</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Platform <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Financials</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>All figures in USDC · On-chain · Base network</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
                 {[
@@ -1092,7 +1092,7 @@ export default function AdminPanel() {
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: m.color }}>{m.val}</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: m.color }}>{m.val}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
                   </div>
                 ))}
@@ -1106,7 +1106,7 @@ export default function AdminPanel() {
           {/* ESCROW MONITOR */}
           {activeSection === 'escrow' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Escrow <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Monitor</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Escrow <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Monitor</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Live view of all USDC locked in smart contract · Base network</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
                 {[
@@ -1117,7 +1117,7 @@ export default function AdminPanel() {
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: i === 3 ? 'DM Mono, monospace' : 'Cormorant Garamond, serif', fontSize: i === 3 ? '13px' : '26px', fontWeight: 300, color: m.color }}>{m.val}</div>
+                    <div style={{ fontFamily: i === 3 ? 'DM Mono, monospace' : 'Playfair Display, serif', fontSize: i === 3 ? '13px' : '26px', fontWeight: 300, color: m.color }}>{m.val}</div>
                   </div>
                 ))}
               </div>
@@ -1145,7 +1145,7 @@ export default function AdminPanel() {
           {/* SETTINGS */}
           {activeSection === 'settings' && (
             <div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Platform <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Settings</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Platform <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Settings</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Core parameters · Changes logged on-chain where applicable</div>
 
               {[
@@ -1183,7 +1183,7 @@ export default function AdminPanel() {
                         <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '2px' }}>{item.label}</div>
                         {item.note && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{item.note}</div>}
                       </div>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--gold)', fontWeight: 300, marginRight: '12px' }}>{item.val}</div>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', color: 'var(--gold)', fontWeight: 300, marginRight: '12px' }}>{item.val}</div>
                       {item.editable ? (
                         <button style={btn({ fontSize: '10px', padding: '5px 10px' })}>Edit</button>
                       ) : (

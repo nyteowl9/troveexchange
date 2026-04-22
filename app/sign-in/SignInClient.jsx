@@ -137,7 +137,7 @@ function SignInPage() {
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-1)', padding: '2rem' }}>
         <div style={{ maxWidth: '400px', width: '100%', textAlign: 'center' }}>
           <div style={{ width: '56px', height: '56px', background: 'rgba(76,175,124,0.15)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '24px' }}>✓</div>
-          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Check your email</h1>
+          <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Check your email</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6, marginBottom: '2rem' }}>
             We sent a confirmation link to <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>. Click it to activate your account.
           </p>
@@ -154,7 +154,7 @@ function SignInPage() {
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-1)', padding: '2rem' }}>
         <div style={{ maxWidth: '400px', width: '100%' }}>
           <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-            <Link href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+            <Link href="/" style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
               <div style={{ width: '24px', height: '24px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
               CHASE HOLLOW
             </Link>
@@ -163,7 +163,7 @@ function SignInPage() {
             {mode === 'forgot_sent' ? (
               <div style={{ textAlign: 'center' }}>
                 <div style={{ width: '52px', height: '52px', background: 'rgba(76,175,124,0.12)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: '22px' }}>✓</div>
-                <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 0.75rem' }}>Check your email</h2>
+                <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 0.75rem' }}>Check your email</h2>
                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.65, margin: '0 0 1.5rem' }}>
                   We sent a password reset link to <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>. Click it to set a new password.
                 </p>
@@ -173,7 +173,7 @@ function SignInPage() {
               </div>
             ) : (
               <>
-                <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>Reset password</h2>
+                <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>Reset password</h2>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 1.5rem', lineHeight: 1.6 }}>Enter your email and we'll send you a reset link.</p>
                 <form onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <div>
@@ -205,7 +205,7 @@ function SignInPage() {
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <Link href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <Link href="/" style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <div style={{ width: '24px', height: '24px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
             CHASE HOLLOW
           </Link>

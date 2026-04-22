@@ -170,7 +170,7 @@ export default function Marketplace() {
         <div style={{ maxWidth: '1300px', margin: '0 auto', padding: '28px 2.5rem 0' }}>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '36px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>
+              <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>
                 <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Marketplace</em>
               </h1>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -318,7 +318,7 @@ export default function Marketplace() {
           {/* EMPTY STATE */}
           {!loading && listings.length === 0 && (
             <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '60px', textAlign: 'center' }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', color: 'var(--text-muted)', marginBottom: '8px' }}>No listings found</div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', color: 'var(--text-muted)', marginBottom: '8px' }}>No listings found</div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Try adjusting your filters or search terms.</div>
               <button onClick={clearFilters} style={{ background: 'var(--teal)', border: 'none', color: 'var(--bg)', padding: '10px 24px', borderRadius: '8px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Clear Filters</button>
             </div>
@@ -350,7 +350,7 @@ export default function Marketplace() {
                       </div>
                       <div style={{ padding: '12px 14px' }}>
                         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '3px', fontWeight: 500 }}>{card.game}{card.set ? ` · ${card.set}` : ''}</div>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', lineHeight: 1.2, marginBottom: '6px', color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{card.card_name}</div>
+                        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '17px', lineHeight: 1.2, marginBottom: '6px', color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{card.card_name}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                           <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color, fontWeight: 500 }}>{tc.label}</span>
                           {card.seller?.username
@@ -384,7 +384,7 @@ export default function Marketplace() {
                         {card.photos?.[0] ? <img src={card.photos[0]} alt={card.card_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🃏'}
                       </div>
                       <div style={{ flex: 1, minWidth: '140px' }}>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: 'var(--text-primary)', marginBottom: '2px' }}>{card.card_name}</div>
+                        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', color: 'var(--text-primary)', marginBottom: '2px' }}>{card.card_name}</div>
                         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{card.game}{card.set ? ` · ${card.set}` : ''}</div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

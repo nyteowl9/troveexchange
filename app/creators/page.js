@@ -97,7 +97,7 @@ export default function Creators() {
 
       {/* NAV */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'var(--nav-bg, rgba(10,10,11,0.94))', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-        <a href="/" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+        <a href="/" style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 600, letterSpacing: '0.1em', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
           <div style={{ width: '24px', height: '24px', background: 'var(--gold)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
           CHASE HOLLOW
         </a>
@@ -114,7 +114,7 @@ export default function Creators() {
         <div style={{ background: 'var(--bg-2)', borderBottom: '0.5px solid var(--border)', padding: '60px 2.5rem' }}>
           <div style={{ maxWidth: '860px', margin: '0 auto', textAlign: 'center' }}>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '14px', fontWeight: 500 }}>Creator Program</div>
-            <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(40px, 6vw, 72px)', fontWeight: 300, lineHeight: 1.05, marginBottom: '16px', color: 'var(--text-primary)' }}>
+            <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(40px, 6vw, 72px)', fontWeight: 300, lineHeight: 1.05, marginBottom: '16px', color: 'var(--text-primary)' }}>
               Get Paid in <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>USDC</em><br />for Every Sale You Drive
             </h1>
             <p style={{ fontSize: '16px', color: 'var(--text-secondary)', maxWidth: '560px', margin: '0 auto 28px', lineHeight: 1.75 }}>
@@ -134,7 +134,7 @@ export default function Creators() {
                 { val: '$50', label: 'Minimum payout threshold' },
               ].map((stat, i) => (
                 <div key={i} style={{ textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--gold)' }}>{stat.val}</div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--gold)' }}>{stat.val}</div>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: '2px' }}>{stat.label}</div>
                 </div>
               ))}
@@ -169,9 +169,9 @@ export default function Creators() {
                   { num: '03', title: 'Earn on Every Sale', desc: 'Anyone who clicks your link and buys within 30 days earns you 0.5% of the sale. A $10,000 card = $50 USDC to you. Paid monthly, automatically.' },
                 ].map((step, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: '10px', right: '14px', fontFamily: 'Cormorant Garamond, serif', fontSize: '60px', fontWeight: 300, color: 'var(--border)', lineHeight: 1, userSelect: 'none' }}>{step.num}</div>
+                    <div style={{ position: 'absolute', top: '10px', right: '14px', fontFamily: 'Playfair Display, serif', fontSize: '60px', fontWeight: 300, color: 'var(--border)', lineHeight: 1, userSelect: 'none' }}>{step.num}</div>
                     <div style={{ width: '36px', height: '36px', border: '1.5px solid var(--teal-border)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px', fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--teal)', position: 'relative', zIndex: 1 }}>{step.num}</div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 400, marginBottom: '8px', color: 'var(--text-primary)', position: 'relative', zIndex: 1 }}>{step.title}</div>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 400, marginBottom: '8px', color: 'var(--text-primary)', position: 'relative', zIndex: 1 }}>{step.title}</div>
                     <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.65, position: 'relative', zIndex: 1 }}>{step.desc}</div>
                   </div>
                 ))}
@@ -211,7 +211,7 @@ export default function Creators() {
 
               {/* Example creators */}
               <div style={{ marginBottom: '32px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '16px' }}>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '16px' }}>
                   What Creators <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Earn</em>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
@@ -219,7 +219,7 @@ export default function Creators() {
                     <div key={i} style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '12px', padding: '18px' }}>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', fontWeight: 600, color: 'var(--teal)', marginBottom: '4px' }}>{ex.handle}</div>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '10px' }}>{ex.platform} · {ex.audience} followers · {ex.niche}</div>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: 'var(--gold)' }}>{ex.earning}</div>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--gold)' }}>{ex.earning}</div>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>Based on typical conversion rates</div>
                     </div>
                   ))}
@@ -235,7 +235,7 @@ export default function Creators() {
           {/* EARNINGS CALCULATOR */}
           {activeTab === 'earnings' && (
             <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Earnings <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Calculator</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Earnings <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Calculator</em></div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '28px' }}>Estimate your monthly earnings based on your audience size and content type.</div>
 
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '24px', marginBottom: '16px' }}>
@@ -254,7 +254,7 @@ export default function Creators() {
               {/* Result */}
               <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '14px', padding: '24px', textAlign: 'center', marginBottom: '20px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', fontWeight: 500 }}>Estimated Monthly Earnings</div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '64px', fontWeight: 300, color: 'var(--gold)', lineHeight: 1, marginBottom: '4px' }}>$125</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '64px', fontWeight: 300, color: 'var(--gold)', lineHeight: 1, marginBottom: '4px' }}>$125</div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>5,000 clicks · 1% CVR · $500 avg order · 0.5% commission</div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)', marginTop: '8px' }}>= 50 sales × $500 avg × 0.5% = $125 USDC/month</div>
               </div>
@@ -283,7 +283,7 @@ export default function Creators() {
           {/* APPLICATION FORM */}
           {activeTab === 'apply' && !submitted && (
             <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Creator <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Application</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Creator <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Application</em></div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '28px', lineHeight: 1.6 }}>Fill out the form below and you'll get instant access — your unique referral link is generated immediately on submit.</div>
 
               {/* Personal info */}
@@ -394,7 +394,7 @@ export default function Creators() {
           {activeTab === 'apply' && submitted && (
             <div style={{ maxWidth: '560px', margin: '0 auto', textAlign: 'center', padding: '40px 0' }}>
               <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'rgba(76,175,124,0.12)', border: '2px solid rgba(76,175,124,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 20px' }}>✓</div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '40px', fontWeight: 300, marginBottom: '10px', color: 'var(--text-primary)' }}>You're <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Approved</em></div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '40px', fontWeight: 300, marginBottom: '10px', color: 'var(--text-primary)' }}>You're <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Approved</em></div>
               <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: '28px' }}>
                 Welcome to the Chase Hollow Creator Program. Your referral link is live — start sharing and earn 0.5% USDC on every sale you drive.
               </p>
@@ -425,7 +425,7 @@ export default function Creators() {
 
       {/* FOOTER */}
       <footer style={{ background: 'var(--bg-2)', borderTop: '0.5px solid var(--border)', padding: '32px 2.5rem', textAlign: 'center' }}>
-        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: 'var(--gold)', letterSpacing: '0.08em', marginBottom: '8px', fontWeight: 600 }}>CHASE HOLLOW</div>
+        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--gold)', letterSpacing: '0.08em', marginBottom: '8px', fontWeight: 600 }}>CHASE HOLLOW</div>
         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>© 2025 Chase Hollow · chasehollow.com</div>
       </footer>
 

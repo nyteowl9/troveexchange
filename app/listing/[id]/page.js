@@ -77,7 +77,7 @@ export default function ListingPage() {
       <>
         <Nav />
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', gap: '16px', paddingTop: '64px' }}>
-          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '48px', color: 'var(--text-muted)' }}>404</div>
+          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '48px', color: 'var(--text-muted)' }}>404</div>
           <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '14px', color: 'var(--text-secondary)' }}>This listing doesn't exist or is no longer active.</div>
           <Link href="/marketplace" style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--gold)', textDecoration: 'none' }}>← Back to Marketplace</Link>
         </div>
@@ -142,7 +142,7 @@ export default function ListingPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '460px', position: 'relative' }}>
             <button onClick={() => setShowBuyModal(false)} style={{ position: 'absolute', top: '14px', right: '14px', width: '30px', height: '30px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '15px' }}>✕</button>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px' }}>Confirm <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Purchase</em></div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '26px', fontWeight: 300, marginBottom: '6px' }}>Confirm <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Purchase</em></div>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>Clicking confirm will take you to checkout where your USDC will be locked in escrow on Base.</div>
 
             <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 16px', marginBottom: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', lineHeight: 2 }}>
@@ -234,7 +234,7 @@ export default function ListingPage() {
 
           {/* CARD DETAILS */}
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: '24px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, marginBottom: '4px', color: 'var(--text-primary)' }}>
               {card_name}{card_number ? <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}> {card_number}</em> : ''}
             </div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: description ? '14px' : '18px' }}>{game}{set ? ` · ${set}` : ''}</div>
@@ -256,7 +256,7 @@ export default function ListingPage() {
 
             {/* Seller row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-3)', borderRadius: '10px', padding: '12px 14px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', fontWeight: 600, color: 'var(--teal)', flexShrink: 0 }}>{sellerInitials}</div>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Playfair Display, serif', fontSize: '16px', fontWeight: 600, color: 'var(--teal)', flexShrink: 0 }}>{sellerInitials}</div>
               <div style={{ flex: 1 }}>
                 <Link href={`/profile/${seller?.username}`} style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}>@{seller?.username}</Link>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: tc.color, marginTop: '2px' }}>{tc.label}</div>
@@ -291,7 +291,7 @@ export default function ListingPage() {
 
           {/* PRICE HISTORY PLACEHOLDER */}
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px', marginBottom: '24px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, marginBottom: '12px', color: 'var(--text-primary)' }}>Price <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 300, marginBottom: '12px', color: 'var(--text-primary)' }}>Price <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>History</em></div>
             <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '28px', textAlign: 'center' }}>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
                 Price history and comparable sales coming in Phase 3.<br />
@@ -302,7 +302,7 @@ export default function ListingPage() {
 
           {/* TRANSACTION FLOW */}
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: isMobile ? '14px' : '22px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, marginBottom: '20px', color: 'var(--text-primary)' }}>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 300, marginBottom: '20px', color: 'var(--text-primary)' }}>
               How This <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Transaction Works</em>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
@@ -331,7 +331,7 @@ export default function ListingPage() {
                 {photoList[0] ? <img src={photoList[0]} alt={card_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '22px', opacity: 0.4 }}>🃏</span>}
               </div>
               <div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)' }}>{card_name}</div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', lineHeight: 1.2, marginBottom: '3px', color: 'var(--text-primary)' }}>{card_name}</div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
                   {game}{set ? ` · ${set}` : ''}<br />
                   {isGraded ? `${grader} ${grade}${cert_number ? ` · #${cert_number}` : ''}` : (condition || listing_type)}
@@ -360,7 +360,7 @@ export default function ListingPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', marginTop: '4px' }}>
                 <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Subtotal</span>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 600, color: 'var(--gold)' }}>${parseFloat(buyTotal).toLocaleString()}</div>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 600, color: 'var(--gold)' }}>${parseFloat(buyTotal).toLocaleString()}</div>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>+ shipping & tax · USDC · Base</div>
                 </div>
               </div>
