@@ -50,6 +50,7 @@ export default function Nav() {
     { href: '/#how-it-works', label: 'How It Works' },
     { href: '/#fee-comparison', label: 'Fee Comparison' },
     { href: '/creators', label: 'Creators' },
+    { href: '/roadmap', label: 'Roadmap' },
     { href: '/#wallets', label: 'Get Started' },
   ]
 
