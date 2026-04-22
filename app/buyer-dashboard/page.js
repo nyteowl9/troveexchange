@@ -20,7 +20,7 @@ const STATUS_MAP = {
   auth_passed:       { key: 'auth',            label: 'Auth Passed',         steps: [true,  true,  true,  false, false], activeStep: 2 },
   delivered:         { key: 'auto-release',    label: 'Delivered',           steps: [true,  true,  true,  true,  false], activeStep: 3 },
   inspection_window: { key: 'auto-release',    label: 'Auto-Release Window', steps: [true,  true,  true,  true,  false], activeStep: 3 },
-  disputed:          { key: 'disputed',        label: 'Disputed',            steps: [true,  true,  true,  true,  false], activeStep: 3 },
+  disputed:          { key: 'disputed',        label: 'Dispute Under Review', steps: [true,  true,  true,  true,  false], activeStep: 3 },
   awaiting_return:   { key: 'return-required', label: 'Return Required',     steps: [true,  true,  true,  true,  false], activeStep: 3 },
   return_received:   { key: 'return-required', label: 'Return Received',     steps: [true,  true,  true,  true,  false], activeStep: 3 },
   return_verified:            { key: 'return-required', label: 'Return Verified',          steps: [true,  true,  true,  true,  false], activeStep: 3 },
@@ -480,11 +480,23 @@ export default function BuyerDashboard() {
                 : null
               return <>Dispute won · Print your return label and ship the card back · <strong style={{ color: daysLeft <= 1 ? 'var(--accent-red)' : 'var(--accent-amber)' }}>{daysLeft !== null ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left` : 'Deadline set'}</strong> · Refund releases on delivery</>
             })()}
+            {order.status === 'disputed' && `Dispute filed · Chase Hollow staff is reviewing your case · No action needed — you will be notified of the outcome`}
             {order.status === 'return_received' && `Card received by Chase Hollow · Inspecting return · Refund pending`}
             {order.status === 'return_verified' && `Return verified · Refund processing`}
             {order.status === 'return_received_seller' && `Card delivered to seller · Seller reviewing return · You will be notified once they confirm or dispute`}
             {order.status === 'return_disputed_seller' && `Seller has disputed the returned card · Chase Hollow staff is reviewing evidence · No action required from you`}
           </div>
+
+          {/* Dispute filed — waiting for review */}
+          {order.status === 'disputed' && (
+            <div style={{ background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.25)', borderRadius: '8px', padding: '12px 14px', marginBottom: '12px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+              <strong style={{ color: 'var(--accent-red)' }}>Dispute under review</strong> · Your funds are frozen and protected. Staff will review your evidence and the seller's response.
+              {order.auth_tier === 'physical'
+                ? ' If you win, you\'ll receive a prepaid return label to ship the card back to our auth center.'
+                : ' If you win, you\'ll receive a prepaid return label to ship the card back to the seller.'}
+              {' '}Decisions are typically made within 1–3 business days.
+            </div>
+          )}
 
           {/* Return required banner */}
           {order.status === 'awaiting_return' && (

@@ -28,7 +28,7 @@ const SELLER_STATUS_MAP = {
   auth_passed:      { label: 'Auth Passed',       color: 'var(--accent-blue)',  bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)', urgent: false },
   delivered:        { label: 'Delivered',         color: 'var(--accent-green)', bg: 'rgba(76,175,124,0.1)', border: 'rgba(76,175,124,0.3)', urgent: false },
   inspection_window:{ label: 'Auto-Releasing',   color: 'var(--accent-green)', bg: 'rgba(76,175,124,0.1)', border: 'rgba(76,175,124,0.3)', urgent: false },
-  disputed:         { label: 'Disputed',          color: 'var(--accent-red)',   bg: 'rgba(200,75,60,0.1)',  border: 'rgba(200,75,60,0.3)',  urgent: true  },
+  disputed:         { label: 'Dispute Filed',      color: 'var(--accent-red)',   bg: 'rgba(200,75,60,0.1)',  border: 'rgba(200,75,60,0.3)',  urgent: true  },
 }
 
 function fmtUSD(n) {
