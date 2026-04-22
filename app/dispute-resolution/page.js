@@ -108,6 +108,9 @@ export default function DisputeResolution() {
   const disputeStatus = (d) => {
     if (d.outcome === 'buyer_wins') return 'resolved_buyer'
     if (d.outcome === 'seller_wins') return 'resolved_seller'
+    // Owner decided buyer wins but awaiting card return (outcome still 'pending')
+    if (d.owner_decision === 'buyer_wins') return 'awaiting_return'
+    if (d.owner_decision === 'seller_wins') return 'resolved_seller'
     if (d.outcome === 'pending' && d.staff_recommendation) return 'pending_owner'
     return 'open'
   }
@@ -173,7 +176,8 @@ export default function DisputeResolution() {
   const statusColors = {
     open: { bg: 'rgba(232,168,56,0.1)', border: 'rgba(232,168,56,0.3)', color: 'var(--accent-amber)', label: 'Open' },
     pending_owner: { bg: 'rgba(60,125,200,0.1)', border: 'rgba(60,125,200,0.3)', color: 'var(--accent-blue)', label: 'Pending Owner' },
-    resolved_buyer: { bg: 'rgba(76,175,124,0.1)', border: 'rgba(76,175,124,0.3)', color: 'var(--accent-green)', label: 'Resolved — Buyer' },
+    resolved_buyer:  { bg: 'rgba(76,175,124,0.1)',  border: 'rgba(76,175,124,0.3)',  color: 'var(--accent-green)', label: 'Resolved — Buyer' },
+    awaiting_return: { bg: 'rgba(232,168,56,0.1)',  border: 'rgba(232,168,56,0.3)',  color: 'var(--accent-amber)', label: 'Decided — Awaiting Return' },
     resolved_seller: { bg: 'rgba(201,168,76,0.1)', border: 'rgba(201,168,76,0.28)', color: 'var(--gold)', label: 'Resolved — Seller' },
   }
 
@@ -185,7 +189,7 @@ export default function DisputeResolution() {
   })
 
   const openQueue = disputes.filter(d => !d.staff_recommendation)
-  const pendingQueue = disputes.filter(d => d.staff_recommendation && d.outcome === 'pending')
+  const pendingQueue = disputes.filter(d => d.staff_recommendation && d.outcome === 'pending' && !d.owner_decision)
 
   const EvidenceCard = ({ urls, label, color }) => {
     if (!urls || urls.length === 0) return (

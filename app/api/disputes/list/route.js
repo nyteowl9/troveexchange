@@ -29,9 +29,11 @@ export async function GET(request) {
     let query = supabaseAdmin.from('disputes').select(select).order('created_at', { ascending: false })
 
     if (status === 'resolved') {
-      query = query.neq('outcome', 'pending').limit(50)
+      // Include fully resolved AND cases where owner decided but return is still pending
+      query = query.or('outcome.neq.pending,owner_decision.not.is.null').limit(50)
     } else {
-      query = query.eq('outcome', 'pending')
+      // Open queue: outcome pending AND owner hasn't decided yet
+      query = query.eq('outcome', 'pending').is('owner_decision', null)
     }
 
     const { data: disputes, error } = await query
