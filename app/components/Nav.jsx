@@ -99,8 +99,16 @@ export default function Nav() {
             { href: '/authenticator',      label: 'Auth' },
             { href: '/dispute-resolution', label: 'Disputes' },
             { href: '/customer-support',   label: 'Support' },
+            { href: '/buyer-dashboard',    label: 'Buyer' },
+            { href: '/seller-dashboard',   label: 'Seller' },
           ]
-        : []
+        : profile?.role === 'authenticator'
+          ? [
+              { href: '/authenticator',   label: 'Auth' },
+              { href: '/buyer-dashboard', label: 'Buyer' },
+              { href: '/seller-dashboard',label: 'Seller' },
+            ]
+          : []
 
     return (
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, background: 'rgba(10,10,11,0.96)', backdropFilter: 'blur(24px)', borderBottom: '0.5px solid var(--border)', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px' }}>
@@ -155,33 +163,22 @@ export default function Nav() {
           {/* Auth buttons */}
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                 <Link href={profile?.role === 'owner' ? '/admin' : profile?.role === 'authenticator' ? '/authenticator' : profile?.role === 'staff' ? '/customer-support' : '/buyer-dashboard'} style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', textDecoration: 'none', fontFamily: 'DM Sans, sans-serif', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {profile?.username ? `@${profile.username}` : user.email}
                 </Link>
-                {(!profile?.role || profile.role === 'buyer') && (
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <Link href={pathname === '/buyer-dashboard' ? '/seller-dashboard' : pathname === '/seller-dashboard' ? '/buyer-dashboard' : '/seller-dashboard'} style={{ fontSize: '10px', color: 'var(--teal)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
-                      {pathname === '/buyer-dashboard' ? 'Seller Dashboard →' : pathname === '/seller-dashboard' ? 'Buyer Dashboard →' : 'Seller Dashboard →'}
-                    </Link>
-                    {isCreator && (
-                      <Link href="/creator-dashboard" style={{ fontSize: '10px', color: 'var(--gold)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
-                        Creator Dashboard →
-                      </Link>
-                    )}
-                  </div>
-                )}
-                {profile?.role === 'owner' && (
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    {[
-                      { href: '/buyer-dashboard',  label: 'Buyer' },
-                      { href: '/seller-dashboard', label: 'Seller' },
-                      { href: '/authenticator',    label: 'Auth' },
-                    ].map(({ href, label }) => (
-                      <Link key={href} href={href} style={{ fontSize: '9px', color: pathname === href ? 'var(--gold)' : 'var(--text-muted)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap', padding: '1px 5px', borderRadius: '4px', border: `1px solid ${pathname === href ? 'rgba(201,168,76,0.4)' : 'transparent'}` }}>{label}</Link>
-                    ))}
-                  </div>
-                )}
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {[
+                    { href: '/buyer-dashboard',    label: 'Buyer' },
+                    { href: '/seller-dashboard',   label: 'Seller' },
+                    ...(isCreator ? [{ href: '/creator-dashboard', label: 'Creator' }] : []),
+                    ...(profile?.role === 'authenticator' ? [{ href: '/authenticator', label: 'Auth' }] : []),
+                    ...(profile?.role === 'staff'         ? [{ href: '/authenticator', label: 'Auth' }, { href: '/dispute-resolution', label: 'Disputes' }] : []),
+                    ...(profile?.role === 'owner'         ? [{ href: '/authenticator', label: 'Auth' }, { href: '/admin', label: 'Admin' }] : []),
+                  ].map(({ href, label }) => (
+                    <Link key={href} href={href} style={{ fontSize: '9px', color: pathname === href ? 'var(--gold)' : 'var(--text-muted)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap', padding: '2px 6px', borderRadius: '4px', border: `1px solid ${pathname === href ? 'rgba(201,168,76,0.4)' : 'rgba(255,255,255,0.07)'}`, background: pathname === href ? 'rgba(201,168,76,0.08)' : 'transparent' }}>{label}</Link>
+                  ))}
+                </div>
               </div>
               <button onClick={async () => { await signOut(); router.push('/') }} style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '6px 14px', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 Sign Out

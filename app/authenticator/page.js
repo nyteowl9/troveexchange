@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 
 // Maps a real order row (with joined listing/seller/buyer) to the queue item shape
 function orderToQueueItem(order) {
@@ -100,50 +99,10 @@ export default function AuthenticatorPortal() {
   const fetchCompleted = useCallback(async () => {
     setCompletedLoading(true)
     try {
-      const todayStart = new Date()
-      todayStart.setHours(0, 0, 0, 0)
-      // Fetch inspections first — flat query, no nested joins
-      const { data: inspections, error: inspErr } = await supabase
-        .from('auth_inspections')
-        .select('id, decision, notes, created_at, authenticator_id, order_id')
-        .gte('created_at', todayStart.toISOString())
-        .in('decision', ['pass', 'fail'])
-        .order('created_at', { ascending: false })
-      if (inspErr) { console.error('[fetchCompleted] inspections:', inspErr); setCompleted([]); setCompletedLoading(false); return }
-      if (!inspections?.length) { setCompleted([]); setCompletedLoading(false); return }
-
-      // Fetch the related orders separately
-      const orderIds = inspections.map(i => i.order_id)
-      const { data: orders, error: ordErr } = await supabase
-        .from('orders')
-        .select('id, status, label_b_url, tracking_b, listing_id, buyer_id')
-        .in('id', orderIds)
-      if (ordErr) console.error('[fetchCompleted] orders:', ordErr)
-
-      // Fetch listings
-      const listingIds = (orders || []).map(o => o.listing_id).filter(Boolean)
-      const { data: listings } = listingIds.length
-        ? await supabase.from('listings').select('id, card_name, grade, grader, price').in('id', listingIds)
-        : { data: [] }
-
-      // Fetch buyers
-      const buyerIds = (orders || []).map(o => o.buyer_id).filter(Boolean)
-      const { data: buyers } = buyerIds.length
-        ? await supabase.from('users').select('id, username, full_name').in('id', buyerIds)
-        : { data: [] }
-
-      // Stitch together
-      const ordersMap   = Object.fromEntries((orders   || []).map(o => [o.id, o]))
-      const listingsMap = Object.fromEntries((listings || []).map(l => [l.id, l]))
-      const buyersMap   = Object.fromEntries((buyers   || []).map(b => [b.id, b]))
-
-      const stitched = inspections.map(insp => {
-        const order   = ordersMap[insp.order_id] || {}
-        const listing = listingsMap[order.listing_id] || {}
-        const buyer   = buyersMap[order.buyer_id]   || {}
-        return { ...insp, order: { ...order, listing, buyer } }
-      })
-      setCompleted(stitched)
+      const res = await fetch('/api/auth-inspection/completed')
+      const json = await res.json()
+      if (!res.ok) { console.error('[fetchCompleted]', json.error); setCompleted([]); return }
+      setCompleted(json.inspections || [])
     } catch (err) {
       console.error('[fetchCompleted] unexpected:', err)
       setCompleted([])
