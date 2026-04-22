@@ -94,21 +94,30 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     //
     // Multiple guardians provide redundancy:
     //   - If G1 is compromised and proposes a malicious change, G2 can cancel it
-    //     within the 48hr timelock window.
+    //     within the 72hr timelock window.
     //   - G2 then removes G1 and adds a replacement.
-    //   - Owner cannot interfere — closing the "replace guardian first" attack.
+    //   - Owner cannot add guardians — closing the "replace guardian first" attack.
+    //   - If G1 and G2 deadlock, owner can remove one via ownerRemoveGuardian()
+    //     (cannot add — surviving guardian adds the replacement).
     //
     // At least one guardian must always exist (enforced on removal).
     mapping(address => bool) public isGuardian;
     uint256 public guardianCount;
     address public pendingFeeRecipient;
     uint256 public feeRecipientChangeAt;
-    uint256 public constant FEE_RECIPIENT_DELAY = 48 hours;
+    uint256 public constant FEE_RECIPIENT_DELAY = 72 hours;
 
     // ── Guardian change timelock ──────────────────────────────
-    // Adding or removing a guardian requires a 48hr timelock.
+    // Adding or removing a guardian requires a 72hr timelock.
     // Either existing guardian can cancel a pending proposal during the window.
     // This prevents a compromised G1 from instantly removing G2 and adding their own wallet.
+    //
+    // Deadlock tiebreaker (Option 2):
+    //   If G1 and G2 are deadlocked (each cancelling the other's proposals),
+    //   the owner Safe can call ownerRemoveGuardian() to break the deadlock.
+    //   ownerRemoveGuardian() can ONLY remove — it cannot add a guardian.
+    //   After removal, the surviving guardian adds a new one via the normal timelock.
+    //   This preserves the owner's inability to directly install a guardian of their choice.
     struct GuardianProposal {
         address target;
         bool    isAdd;        // true = addGuardian, false = removeGuardian
@@ -116,7 +125,7 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         address proposedBy;
     }
     GuardianProposal public pendingGuardianChange;
-    uint256 public constant GUARDIAN_CHANGE_DELAY = 48 hours;
+    uint256 public constant GUARDIAN_CHANGE_DELAY = 72 hours;
 
     uint256 public platformFeeBps = 300;     // 3%
     uint256 public creatorFeeBps  = 50;      // 0.5%
@@ -154,6 +163,7 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     event GuardianRemoved(address indexed guardian);
     event GuardianChangeProposed(address indexed target, bool isAdd, address indexed proposedBy, uint256 executeAfter);
     event GuardianChangeCancelled(address indexed target, bool isAdd, address indexed cancelledBy);
+    event GuardianRemovedByOwner(address indexed guardian);
     // sweepStuckFunds — emitted with full detail so off-chain can reconstruct redistribution
     event FundsSwept(address indexed recipient, uint256 amount, uint256 timestamp);
 
@@ -686,14 +696,17 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     }
 
     // ── Guardian self-management (timelocked) ───────────────────
-    // Guardians manage themselves — owner cannot add or remove guardians.
-    // All changes require a 48hr timelock. Either guardian can cancel during the window.
+    // Guardians manage themselves — owner cannot add guardians.
+    // All guardian-initiated changes require a 72hr timelock.
+    // Either guardian can cancel a pending proposal during the window.
     //
     // Compromise scenario: G1 is compromised and proposes to remove G2.
-    //   → G2 sees the on-chain event within 48hrs and calls cancelGuardianChange().
-    //   → G2 then proposes to remove G1, waits 48hrs, executes.
-    // If G2 is also unavailable: owner can pause() to freeze the contract
-    //   during the timelock window, buying time to respond.
+    //   → G2 sees the on-chain event within 72hrs and calls cancelGuardianChange().
+    //   → G2 then proposes to remove G1, waits 72hrs, executes.
+    // Deadlock scenario: G1 and G2 keep cancelling each other's proposals.
+    //   → Owner calls ownerRemoveGuardian(compromisedGuardian) to break the tie.
+    //   → Surviving guardian then adds a new guardian via normal timelock.
+    // If both guardians are unavailable: owner can pause() to freeze the contract.
 
     function proposeGuardianChange(address _target, bool _isAdd) external onlyGuardian {
         require(_target != address(0), "Invalid address");
@@ -736,6 +749,18 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         require(p.proposedAt != 0, "No pending change");
         delete pendingGuardianChange;
         emit GuardianChangeCancelled(p.target, p.isAdd, msg.sender);
+    }
+
+    // ── Deadlock tiebreaker — owner can remove a guardian but NOT add one ──
+    // Used only when G1 and G2 are deadlocked (each cancelling the other's proposals).
+    // After this call, the surviving guardian uses the normal timelock to add a replacement.
+    // Owner cannot use this to install a guardian of their choosing — add is guardian-only.
+    function ownerRemoveGuardian(address _guardian) external onlyOwner {
+        require(isGuardian[_guardian], "Not a guardian");
+        require(guardianCount > 1, "Cannot remove last guardian");
+        isGuardian[_guardian] = false;
+        guardianCount--;
+        emit GuardianRemovedByOwner(_guardian);
     }
 
     // ── Safety Valve ─────────────────────────────────────────

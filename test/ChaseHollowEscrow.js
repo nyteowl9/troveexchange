@@ -893,7 +893,7 @@ describe("ChaseHollowEscrow", function () {
         // Still old before delay
         expect(await escrow.feeRecipient()).to.equal(feeRecipient.address);
 
-        await time.increase(48 * 3600 + 1);
+        await time.increase(72 * 3600 + 1);
 
         await expect(escrow.connect(guardian).executeFeeRecipientChange())
           .to.emit(escrow, "FeeRecipientChanged")
@@ -938,7 +938,7 @@ describe("ChaseHollowEscrow", function () {
     });
 
     describe("guardian self-management (timelocked)", function () {
-      const GUARDIAN_DELAY = 48 * 60 * 60; // 48 hours in seconds
+      const GUARDIAN_DELAY = 72 * 60 * 60; // 72 hours in seconds
 
       it("guardian can propose + execute adding a second guardian after timelock", async function () {
         await expect(escrow.connect(guardian).proposeGuardianChange(stranger.address, true))
@@ -1025,6 +1025,49 @@ describe("ChaseHollowEscrow", function () {
         await expect(escrow.connect(stranger).cancelFeeRecipientChange())
           .to.emit(escrow, "FeeRecipientChangeCancelled");
         expect(await escrow.pendingFeeRecipient()).to.equal(ethers.ZeroAddress);
+      });
+    });
+
+    describe("ownerRemoveGuardian (deadlock tiebreaker)", function () {
+      const GUARDIAN_DELAY = 72 * 60 * 60;
+
+      it("owner can remove a guardian when 2 exist", async function () {
+        // Add G2 first
+        await escrow.connect(guardian).proposeGuardianChange(stranger.address, true);
+        await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
+        await ethers.provider.send("evm_mine");
+        await escrow.connect(guardian).executeGuardianChange();
+        expect(await escrow.guardianCount()).to.equal(2n);
+
+        // Owner removes G1 (deadlock scenario)
+        await expect(escrow.connect(owner).ownerRemoveGuardian(guardian.address))
+          .to.emit(escrow, "GuardianRemovedByOwner").withArgs(guardian.address);
+        expect(await escrow.isGuardian(guardian.address)).to.be.false;
+        expect(await escrow.isGuardian(stranger.address)).to.be.true;
+        expect(await escrow.guardianCount()).to.equal(1n);
+      });
+
+      it("owner cannot remove the last guardian", async function () {
+        await expect(escrow.connect(owner).ownerRemoveGuardian(guardian.address))
+          .to.be.revertedWith("Cannot remove last guardian");
+      });
+
+      it("owner cannot remove a non-guardian address", async function () {
+        await expect(escrow.connect(owner).ownerRemoveGuardian(stranger.address))
+          .to.be.revertedWith("Not a guardian");
+      });
+
+      it("non-owner cannot call ownerRemoveGuardian", async function () {
+        await expect(escrow.connect(guardian).ownerRemoveGuardian(guardian.address))
+          .to.be.reverted;
+        await expect(escrow.connect(stranger).ownerRemoveGuardian(guardian.address))
+          .to.be.reverted;
+      });
+
+      it("owner cannot ADD a guardian — proposeGuardianChange still guardian-only", async function () {
+        await expect(
+          escrow.connect(owner).proposeGuardianChange(stranger.address, true)
+        ).to.be.revertedWith("Not guardian");
       });
     });
 
@@ -1496,7 +1539,7 @@ describe("ChaseHollowEscrow", function () {
         await escrow.connect(guardian).proposeFeeRecipient(addrB);
         expect(await escrow.pendingFeeRecipient()).to.equal(addrB);
         // Execute after delay — gets addrB, not addrA
-        await time.increase(48 * 3600 + 1);
+        await time.increase(72 * 3600 + 1);
         await escrow.connect(guardian).executeFeeRecipientChange();
         expect(await escrow.feeRecipient()).to.equal(addrB);
       });
@@ -1542,7 +1585,7 @@ describe("ChaseHollowEscrow", function () {
     // ── Guardian removes themselves ──────────────────────────────
     describe("Guardian self-removal", function () {
       it("guardian can remove themselves if another guardian exists", async function () {
-        const GUARDIAN_DELAY = 48 * 60 * 60;
+        const GUARDIAN_DELAY = 72 * 60 * 60;
         // Add G2 first
         await escrow.connect(guardian).proposeGuardianChange(stranger.address, true);
         await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);

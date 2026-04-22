@@ -83,11 +83,12 @@ You deploy with **Guardian 1**. After deployment, Guardian 1 calls `addGuardian(
 | **G2** | Backup guardian | Separate secure key — can replace G1 if G1 is compromised |
 
 **What Guardians can do (either one acting alone):**
-- `proposeFeeRecipient(address)` — propose a new fee recipient address (starts 48hr timelock)
-- `executeFeeRecipientChange()` — execute the change after 48hrs
+- `proposeFeeRecipient(address)` — propose a new fee recipient address (starts **72hr timelock**)
+- `executeFeeRecipientChange()` — execute the change after 72hrs
 - `cancelFeeRecipientChange()` — cancel a pending proposal
-- `addGuardian(address)` — add a new guardian (use this if G1 is compromised — G2 adds a new G1, then removes old)
-- `removeGuardian(address)` — remove a guardian (cannot remove last one — always minimum 1)
+- `proposeGuardianChange(address, bool)` — propose adding or removing a guardian (starts **72hr timelock**)
+- `executeGuardianChange()` — execute the guardian change after 72hrs
+- `cancelGuardianChange()` — cancel a pending guardian change
 
 **What Guardians cannot do:**
 - Pause the contract (owner only)
@@ -95,8 +96,13 @@ You deploy with **Guardian 1**. After deployment, Guardian 1 calls `addGuardian(
 - Add/remove operators or dispute resolvers
 
 **Guardian compromise scenario:**
-If G1 is compromised: G2 calls `addGuardian(newG1)` then `removeGuardian(oldG1)`.
-If both are compromised: Owner can `pause()` to freeze the 48hr timelock window — this is the only owner interaction with the guardian system.
+If G1 is compromised: G2 calls `proposeGuardianChange(oldG1, false)`, waits 72hrs, executes removal. Then proposes to add a new G1.
+If G1 and G2 are deadlocked (each cancelling the other's proposals): Owner calls `ownerRemoveGuardian(compromisedGuardian)` — this is the tiebreaker. Owner can remove but **cannot add** — the surviving guardian still controls who gets added.
+If both are compromised: Owner calls `pause()` to freeze the 72hr timelock window, then coordinates off-chain to recover.
+
+**Owner's limited guardian power (Option 2 tiebreaker):**
+- `ownerRemoveGuardian(address)` — Safe can remove a guardian to break a deadlock
+- Safe **cannot add** a guardian — adding remains guardian-only, so owner cannot install their own choice
 
 ---
 
