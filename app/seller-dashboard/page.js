@@ -230,7 +230,9 @@ function SellerDashboard() {
   const bondRate   = BOND_RATE[profile?.seller_tier] || BOND_RATE.new
   const bondAmount = price ? (BOND_FLOOR + parseFloat(price) * bondRate).toFixed(2) : null
 
-  const ordersNeedingShip = activeOrders.filter(o => o.status === 'awaiting_shipment')
+  const ordersNeedLabel   = activeOrders.filter(o => o.status === 'awaiting_shipment' && !o.label_a_url)
+  const ordersLabelReady  = activeOrders.filter(o => o.status === 'awaiting_shipment' && o.label_a_url)
+  const ordersNeedingShip = [...ordersNeedLabel, ...ordersLabelReady]
   const totalActiveSalesValue = myListings.reduce((sum, l) => sum + Number(l.price || 0), 0)
   const releasedSales        = completedSales.filter(s => s.status === 'released')
   const totalCompletedRevenue = releasedSales.reduce((sum, s) => sum + Number(s.listing?.price || 0), 0)
@@ -1228,21 +1230,32 @@ function SellerDashboard() {
                 </div>
               )}
 
-              {/* Ship-now alert */}
-              {ordersNeedingShip.length > 0 && (
-                <div style={{ background: 'rgba(200,75,60,0.06)', border: '1.5px solid rgba(200,75,60,0.3)', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+              {/* Ship-now alert — label not yet generated */}
+              {ordersNeedLabel.length > 0 && (
+                <div style={{ background: 'rgba(200,75,60,0.06)', border: '1.5px solid rgba(200,75,60,0.3)', borderRadius: '12px', padding: '16px 20px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>⚡ Action required — {ordersNeedingShip.length} order{ordersNeedingShip.length > 1 ? 's' : ''} waiting to ship</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{ordersNeedingShip[0].listing?.card_name || '—'} ({shortId(ordersNeedingShip[0].id)}). {hoursUntil(shipDeadline(ordersNeedingShip[0].created_at))}hrs remaining. Miss deadline = auto-refund + Strike 1.</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>⚡ Action required — {ordersNeedLabel.length} order{ordersNeedLabel.length > 1 ? 's' : ''} need{ordersNeedLabel.length === 1 ? 's' : ''} a label</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{ordersNeedLabel[0].listing?.card_name || '—'} ({shortId(ordersNeedLabel[0].id)}). {hoursUntil(shipDeadline(ordersNeedLabel[0].created_at))}hrs remaining. Miss deadline = auto-refund + Strike 1.</div>
                   </div>
-                  <button onClick={() => { setActiveSection('orders'); }} style={{ background: 'var(--accent-red)', border: 'none', color: '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>Ship Now →</button>
+                  <button onClick={() => setActiveSection('orders')} style={{ background: 'var(--accent-red)', border: 'none', color: '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>Get Label →</button>
+                </div>
+              )}
+
+              {/* Label ready — just needs drop-off */}
+              {ordersLabelReady.length > 0 && (
+                <div style={{ background: 'rgba(232,168,56,0.06)', border: '1.5px solid rgba(232,168,56,0.3)', borderRadius: '12px', padding: '16px 20px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>📦 Label ready — drop off your package</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{ordersLabelReady[0].listing?.card_name || '—'} ({shortId(ordersLabelReady[0].id)}) · {hoursUntil(shipDeadline(ordersLabelReady[0].created_at))}hrs until deadline · Take to any FedEx location.</div>
+                  </div>
+                  <button onClick={() => setActiveSection('orders')} style={{ background: 'rgba(232,168,56,0.15)', border: '1px solid rgba(232,168,56,0.4)', color: 'var(--accent-amber)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>View Orders →</button>
                 </div>
               )}
 
               {/* Metrics */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
                 {[
-                  { label: 'Active Orders',    val: String(activeOrders.length),           sub: ordersNeedingShip.length ? `${ordersNeedingShip.length} need shipping` : 'All on track',  color: ordersNeedingShip.length ? 'var(--accent-red)' : 'var(--text-primary)' },
+                  { label: 'Active Orders',    val: String(activeOrders.length),           sub: ordersNeedLabel.length ? `${ordersNeedLabel.length} need a label` : ordersLabelReady.length ? `${ordersLabelReady.length} ready to drop off` : 'All on track',  color: ordersNeedLabel.length ? 'var(--accent-red)' : ordersLabelReady.length ? 'var(--accent-amber)' : 'var(--text-primary)' },
                   { label: 'Active Listings',  val: String(myListings.length),              sub: fmtUSD(totalActiveSalesValue) + ' total value',                                            color: 'var(--text-primary)' },
                   { label: 'Completed Sales',  val: String(releasedSales.length),           sub: fmtUSD(totalCompletedRevenue) + ' gross',                                                  color: 'var(--accent-green)' },
                   { label: 'Bond In-Flight',   val: fmtUSD(bondInFlight),                   sub: 'Returns within 5–7 days',                                                                 color: 'var(--gold)' },

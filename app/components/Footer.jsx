@@ -99,8 +99,8 @@ export default function Footer() {
                 { href: '/#wallets', label: 'Get a Wallet' },
                 { href: '/#usdc', label: 'Get USDC on Base' },
                 { href: '/#faq', label: 'FAQ' },
-                { href: '/customer-support', label: 'Contact Support' },
                 { href: '/#disputes', label: 'Dispute Process' },
+                { href: '/roadmap', label: 'Roadmap' },
                 { href: '/#terms', label: 'Terms of Service' },
               ].map((link, i) => (
                 <Link key={i} href={link.href} style={{ fontSize: '13px', color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s' }}
@@ -110,6 +110,10 @@ export default function Footer() {
                   {link.label}
                 </Link>
               ))}
+              <a href="mailto:support@chasehollow.com" style={{ fontSize: '13px', color: 'var(--teal)', textDecoration: 'none', transition: 'color 0.15s' }}
+                onMouseEnter={e => e.target.style.opacity = '0.75'}
+                onMouseLeave={e => e.target.style.opacity = '1'}
+              >support@chasehollow.com</a>
             </div>
           </div>
 
@@ -136,7 +140,7 @@ export default function Footer() {
         {/* Bottom row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', fontSize: '10px' }}>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>
-            © 2025 Chase Hollow · All transactions on Base (Ethereum L2) · Contract: <a href="https://basescan.org" target="_blank" rel="noreferrer" style={{ color: 'var(--teal)', textDecoration: 'none' }}>View on Basescan →</a>
+            © 2026 Chase Hollow · All transactions on Base (Ethereum L2) · Contract: <a href="https://basescan.org" target="_blank" rel="noreferrer" style={{ color: 'var(--teal)', textDecoration: 'none' }}>View on Basescan →</a>
           </div>
           <div style={{ display: 'flex', gap: '20px' }}>
             {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((link, i) => (
