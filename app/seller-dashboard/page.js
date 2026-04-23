@@ -1030,7 +1030,6 @@ function SellerDashboard() {
                   <div key={p.preview} style={{ position: 'relative', width: '80px', height: '110px', borderRadius: '6px', overflow: 'hidden', border: '1.5px solid var(--border)' }}>
                     <img src={p.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <button onClick={() => { URL.revokeObjectURL(p.preview); setAuthPhotoFiles(f => f.filter((_, j) => j !== i)) }} style={{ position: 'absolute', top: '3px', right: '3px', width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: 'none', color: '#fff', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-                    <div style={{ position: 'absolute', bottom: '2px', left: '4px', fontFamily: 'DM Mono, monospace', fontSize: '8px', color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>{['Front','Back','Package'][i]}</div>
                   </div>
                 ))}
               </div>
