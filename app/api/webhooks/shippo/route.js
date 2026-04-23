@@ -236,9 +236,11 @@ async function callResolveDispute(onchainOrderId, buyerWins) {
 
 // ── Which label does this tracking number belong to? ──────────
 function resolveLabel(order, trackingNumber) {
-  if (order.tracking_a === trackingNumber) return 'A'
-  if (order.tracking_b === trackingNumber) return 'B'
+  // Check return labels first — if Shippo sandbox reuses a tracking number,
+  // order status distinguishes which leg is active.
   if (order.tracking_c === trackingNumber) return 'C'
   if (order.tracking_d === trackingNumber) return 'D'
+  if (order.tracking_a === trackingNumber) return 'A'
+  if (order.tracking_b === trackingNumber) return 'B'
   return null
 }
