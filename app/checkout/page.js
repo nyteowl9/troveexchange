@@ -644,7 +644,7 @@ function Checkout() {
                     <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', background: authChoice === 'authenticate' ? 'rgba(13,110,110,0.08)' : 'var(--bg-3)', border: `1.5px solid ${authChoice === 'authenticate' ? 'var(--teal-border)' : 'var(--border)'}`, borderRadius: '10px', padding: '14px 16px' }}>
                       <input type="radio" name="authChoice" value="authenticate" checked={authChoice === 'authenticate'} onChange={() => setAuthChoice('authenticate')} style={{ marginTop: '3px', accentColor: 'var(--teal)', flexShrink: 0 }} />
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Authenticate — ${tierConfig?.remote_auth_fee ?? 10} <span style={{ background: 'rgba(76,175,124,0.15)', color: 'var(--accent-green)', fontSize: '10px', fontFamily: 'DM Mono, monospace', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>Recommended</span></div>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Authenticate — ${authFee} <span style={{ background: 'rgba(76,175,124,0.15)', color: 'var(--accent-green)', fontSize: '10px', fontFamily: 'DM Mono, monospace', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>Recommended</span></div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>Chase Hollow staff review photos of your card in transit to verify authenticity before it reaches you.</div>
                       </div>
                     </label>

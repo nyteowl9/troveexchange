@@ -32,6 +32,11 @@ export default function ListingPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [currentUserId, setCurrentUserId] = useState(null)
   const [showTierInfo, setShowTierInfo] = useState(false)
+  const [tierConfig, setTierConfig] = useState(null)
+
+  useEffect(() => {
+    fetch('/api/checkout/config').then(r => r.ok ? r.json() : null).then(d => d && setTierConfig(d)).catch(() => {})
+  }, [])
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768)
@@ -391,6 +396,11 @@ export default function ListingPage() {
                   <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
                 </div>
               ))}
+              {tierConfig?.optional_auth_enabled && parseFloat(price) <= (tierConfig?.optional_auth_max_price ?? 300) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', marginTop: '6px', background: 'rgba(232,168,56,0.07)', border: '1px solid rgba(232,168,56,0.25)', borderRadius: '7px', fontSize: '11px', color: 'var(--accent-amber)', fontFamily: 'DM Mono, monospace' }}>
+                  <span>⚡</span> You can skip authentication at checkout — auth fee optional for this card
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', marginTop: '4px' }}>
                 <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Subtotal</span>
                 <div style={{ textAlign: 'right' }}>
