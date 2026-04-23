@@ -252,6 +252,8 @@ async function main() {
   const releaseTx = await buyerEscrow.releaseEscrow(orderId);
   await releaseTx.wait();
   console.log(`releaseEscrow tx: ${releaseTx.hash}`);
+  // Wait for Alchemy RPC state to propagate
+  await new Promise(r => setTimeout(r, 3000));
 
   // ── Step 7: Verify final balances ────────────────────────
   sep("Step 7 — Final Balance Check");

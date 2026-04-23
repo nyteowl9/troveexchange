@@ -408,7 +408,7 @@ export default function AdminPanel() {
                       { label: 'Delivered',    val: fmtDate(order.delivered_at) },
                     ].map(({ label, val }) => (
                       <div key={label} style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '10px 14px' }}>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '3px' }}>{label}</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '3px' }}>{label}</div>
                         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-primary)' }}>{val}</div>
                       </div>
                     ))}
@@ -417,7 +417,7 @@ export default function AdminPanel() {
                   {/* Tracking / Labels */}
                   {(order.label_a_url || order.label_b_url) && (
                     <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px', marginBottom: '20px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Shipping Labels</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Shipping Labels</div>
                       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         {order.label_a_url && <a href={order.label_a_url} target="_blank" rel="noreferrer" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--teal-border)', borderRadius: '6px', background: 'var(--teal-bg)' }}>Label A ↗{order.tracking_a ? ` · ${order.tracking_a}` : ''}</a>}
                         {order.label_b_url && <a href={order.label_b_url} target="_blank" rel="noreferrer" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--teal-border)', borderRadius: '6px', background: 'var(--teal-bg)' }}>Label B ↗{order.tracking_b ? ` · ${order.tracking_b}` : ''}</a>}
@@ -442,7 +442,7 @@ export default function AdminPanel() {
                         {/* Notes */}
                         {inspection.notes && (
                           <div style={{ background: passed ? 'rgba(76,175,124,0.06)' : 'rgba(200,75,60,0.06)', border: `1px solid ${passed ? 'rgba(76,175,124,0.2)' : 'rgba(200,75,60,0.2)'}`, borderRadius: '8px', padding: '12px 14px', marginBottom: '14px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Authenticator Notes</div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Authenticator Notes</div>
                             {inspection.notes}
                           </div>
                         )}
@@ -450,7 +450,7 @@ export default function AdminPanel() {
                         {/* Checklist */}
                         {inspection.checklist && Object.keys(inspection.checklist).length > 0 && (
                           <div style={{ marginBottom: '14px' }}>
-                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Checklist</div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Checklist</div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                               {Object.entries(inspection.checklist).map(([key, checked]) => (
                                 <span key={key} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: checked ? 'rgba(76,175,124,0.1)' : 'rgba(200,75,60,0.1)', border: `1px solid ${checked ? 'rgba(76,175,124,0.3)' : 'rgba(200,75,60,0.3)'}`, color: checked ? 'var(--accent-green)' : 'var(--accent-red)' }}>{checked ? '✓' : '✕'} {key.replace(/_/g, ' ')}</span>
@@ -462,7 +462,7 @@ export default function AdminPanel() {
                         {/* Auth Photos */}
                         {inspection.photos?.length > 0 && (
                           <div>
-                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Auth Photos ({inspection.photos.length})</div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Auth Photos ({inspection.photos.length})</div>
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                               {inspection.photos.map((url, i) => (
                                 <a key={i} href={url} target="_blank" rel="noreferrer">
@@ -491,7 +491,7 @@ export default function AdminPanel() {
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>{showActionModal.description}</div>
             {showActionModal.note && (
               <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                <div style={{ color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '9px', fontWeight: 500 }}>Staff Note</div>
+                <div style={{ color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '11px', fontWeight: 500 }}>Staff Note</div>
                 {showActionModal.note}
               </div>
             )}
@@ -618,13 +618,13 @@ export default function AdminPanel() {
             <button key={item.id} onClick={() => setActiveSection(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px', cursor: 'pointer', background: activeSection === item.id ? 'var(--teal-bg)' : 'transparent', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `2px solid ${activeSection === item.id ? 'var(--teal)' : 'transparent'}`, color: activeSection === item.id ? 'var(--teal)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', textAlign: 'left', width: '100%' }}>
               <span style={{ fontSize: '14px', width: '16px', textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-              {item.badge > 0 && <span style={{ marginLeft: '6px', flexShrink: 0, fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor || 'var(--teal)', color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
+              {item.badge > 0 && <span style={{ marginLeft: '6px', flexShrink: 0, fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '2px 6px', borderRadius: '10px', background: item.badgeColor || 'var(--teal)', color: '#fff', fontWeight: 600 }}>{item.badge}</span>}
             </button>
           ))}
 
           {/* Safe multisig status */}
           <div style={{ margin: '12px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px', marginTop: 'auto' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Safe Multisig</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Safe Multisig</div>
             {[
               { label: 'W1 Operational', status: 'online', color: 'var(--accent-green)' },
               { label: 'W2 Co-signer A', status: 'online', color: 'var(--accent-green)' },
@@ -681,7 +681,7 @@ export default function AdminPanel() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '28px' }}>
                 {metrics.map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '10px 14px' }}>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 500 }}>{m.label}</div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 500 }}>{m.label}</div>
                     <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 600, lineHeight: 1, color: m.color }}>{m.val}</div>
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
                   </div>
@@ -698,7 +698,7 @@ export default function AdminPanel() {
                   <thead>
                     <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
                       {['Order', 'Card', 'Buyer', 'Seller', 'Value', 'Status'].map((h, i) => (
-                        <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
+                        <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -723,7 +723,7 @@ export default function AdminPanel() {
                           <td style={{ padding: '7px 14px', fontSize: '12px', color: 'var(--text-secondary)' }}>{sellerName}</td>
                           <td style={{ padding: '7px 14px', fontFamily: 'DM Mono, monospace', fontSize: '12px', fontWeight: 600, color: 'var(--gold)' }}>{fmtUSD(order.escrow_amount)}</td>
                           <td style={{ padding: '7px 14px' }}>
-                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18`, fontWeight: 500 }}>{(order.status || '').replace(/_/g, ' ')}</span>
+                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18`, fontWeight: 500 }}>{(order.status || '').replace(/_/g, ' ')}</span>
                           </td>
                         </tr>
                       )
@@ -735,7 +735,7 @@ export default function AdminPanel() {
               {/* Platform health */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>System Status</div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>System Status</div>
                   {[
                     { label: 'Smart Contract (Base)', status: 'Operational', green: true },
                     { label: 'Supabase Database', status: 'Operational', green: true },
@@ -746,7 +746,7 @@ export default function AdminPanel() {
                   ].map((item, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: i < 5 ? '0.5px solid var(--border)' : 'none' }}>
                       <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{item.label}</span>
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--accent-green)', display: 'inline-block' }} />
                         {item.status}
                       </span>
@@ -754,7 +754,7 @@ export default function AdminPanel() {
                   ))}
                 </div>
                 <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Escrow Summary</div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Escrow Summary</div>
                   {[
                     { label: 'Total in escrow', val: '$312,400', gold: true },
                     { label: 'Active orders', val: '47' },
@@ -784,7 +784,7 @@ export default function AdminPanel() {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                         <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', color: 'var(--text-primary)' }}>{d.description}</div>
-                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 8px', borderRadius: '10px', background: d.type === 'dispute' ? 'rgba(200,75,60,0.1)' : 'rgba(232,168,56,0.1)', border: d.type === 'dispute' ? '1px solid rgba(200,75,60,0.3)' : '1px solid rgba(232,168,56,0.3)', color: d.type === 'dispute' ? 'var(--accent-red)' : 'var(--accent-amber)', fontWeight: 500 }}>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: d.type === 'dispute' ? 'rgba(200,75,60,0.1)' : 'rgba(232,168,56,0.1)', border: d.type === 'dispute' ? '1px solid rgba(200,75,60,0.3)' : '1px solid rgba(232,168,56,0.3)', color: d.type === 'dispute' ? 'var(--accent-red)' : 'var(--accent-amber)', fontWeight: 500 }}>
                           {d.type === 'dispute' ? 'Dispute' : 'Strike Appeal'}
                         </span>
                       </div>
@@ -856,7 +856,7 @@ export default function AdminPanel() {
                   <thead>
                     <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
                       {['Order ID', 'Card', 'Buyer', 'Seller', 'Value', 'Tier', 'Status', 'Date', ''].map((h, i) => (
-                        <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
+                        <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -889,9 +889,9 @@ export default function AdminPanel() {
                           <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-blue)' }}>{buyer}</td>
                           <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--gold)' }}>{seller}</td>
                           <td style={{ padding: '11px 14px', fontFamily: 'Playfair Display, serif', fontSize: '15px', fontWeight: 600, color: 'var(--gold)' }}>{val}</td>
-                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{order.auth_tier || '—'}</td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{order.auth_tier || '—'}</td>
                           <td style={{ padding: '11px 14px' }}>
-                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18`, fontWeight: 500, whiteSpace: 'nowrap' }}>{order.status?.replace(/_/g, ' ')}</span>
+                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18`, fontWeight: 500, whiteSpace: 'nowrap' }}>{order.status?.replace(/_/g, ' ')}</span>
                           </td>
                           <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{dateStr}</td>
                           <td style={{ padding: '8px 10px' }} onClick={e => e.stopPropagation()}>
@@ -945,7 +945,7 @@ export default function AdminPanel() {
                     <thead>
                       <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
                         {['User', 'Email', 'Seller Tier', 'Sales', 'Strikes', 'Status', 'Portal Role', ''].map((h, i) => (
-                          <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
+                          <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -961,16 +961,16 @@ export default function AdminPanel() {
                           <tr key={u.id} style={{ borderBottom: i < userResults.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
                             <td style={{ padding: '10px 14px' }}>
                               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{u.username || '—'}</div>
-                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{u.full_name || ''}</div>
+                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>{u.full_name || ''}</div>
                             </td>
                             <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-secondary)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</td>
                             <td style={{ padding: '10px 14px' }}>
-                              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color, fontWeight: 500 }}>{u.seller_tier || 'new'}</span>
+                              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color, fontWeight: 500 }}>{u.seller_tier || 'new'}</span>
                             </td>
                             <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{u.total_sales || 0}</td>
                             <td style={{ padding: '10px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: (u.strike_count || 0) > 0 ? 'var(--accent-red)' : 'var(--text-muted)', fontWeight: 600 }}>{u.strike_count || 0}</td>
                             <td style={{ padding: '10px 14px' }}>
-                              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: isActive ? 'rgba(76,175,124,0.1)' : 'rgba(200,75,60,0.1)', border: isActive ? '1px solid rgba(76,175,124,0.3)' : '1px solid rgba(200,75,60,0.3)', color: isActive ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: isActive ? 'rgba(76,175,124,0.1)' : 'rgba(200,75,60,0.1)', border: isActive ? '1px solid rgba(76,175,124,0.3)' : '1px solid rgba(200,75,60,0.3)', color: isActive ? 'var(--accent-green)' : 'var(--accent-red)' }}>
                                 {u.banned ? 'banned' : u.suspended_until && new Date(u.suspended_until) > new Date() ? 'suspended' : 'active'}
                               </span>
                             </td>
@@ -998,7 +998,7 @@ export default function AdminPanel() {
                                     {userRoleSaving[u.id] ? '…' : 'Save'}
                                   </button>
                                 )}
-                                {msg && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: msg.type === 'ok' ? 'var(--accent-green)' : 'var(--accent-red)' }}>{msg.text}</span>}
+                                {msg && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: msg.type === 'ok' ? 'var(--accent-green)' : 'var(--accent-red)' }}>{msg.text}</span>}
                               </div>
                             </td>
                           </tr>
@@ -1021,7 +1021,7 @@ export default function AdminPanel() {
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>{adminStrikes.length} strikes on record</div>
 
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '20px' }}>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Strike System Reference</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Strike System Reference</div>
                 {[
                   { strike: 'Strike 1', action: '7-day suspension from selling', color: 'var(--accent-amber)' },
                   { strike: 'Strike 2', action: '30-day suspension + elevated bond (4% regardless of tier)', color: 'var(--accent-red)' },
@@ -1040,7 +1040,7 @@ export default function AdminPanel() {
                   <thead>
                     <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
                       {['User', 'Strike #', 'Reason', 'Date', 'Action Taken', 'Appeal', ''].map((h, i) => (
-                        <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
+                        <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 14px', fontWeight: 500 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1058,13 +1058,13 @@ export default function AdminPanel() {
                         <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{s.created_at ? new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
                         <td style={{ padding: '11px 14px', fontSize: '12px', color: s.strike_number >= 3 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>{s.action_taken}</td>
                         <td style={{ padding: '11px 14px' }}>
-                          {s.appealed ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-amber)' }}>Appealed{s.appeal_outcome ? ` · ${s.appeal_outcome}` : ''}</span> : s.strike_number < 3 ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>Eligible</span> : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>No appeal</span>}
+                          {s.appealed ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-amber)' }}>Appealed{s.appeal_outcome ? ` · ${s.appeal_outcome}` : ''}</span> : s.strike_number < 3 ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Eligible</span> : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>No appeal</span>}
                         </td>
                         <td style={{ padding: '11px 14px' }}>
                           <button
                             onClick={() => { if (window.confirm(`Remove this strike from @${s.user?.username}? This will recalculate their suspension status.`)) removeStrike(s.id, s.user_id) }}
                             disabled={strikeRemoving[s.id]}
-                            style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(200,75,60,0.4)', background: 'rgba(200,75,60,0.08)', color: 'var(--accent-red)', cursor: 'pointer', opacity: strikeRemoving[s.id] ? 0.5 : 1 }}>
+                            style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(200,75,60,0.4)', background: 'rgba(200,75,60,0.08)', color: 'var(--accent-red)', cursor: 'pointer', opacity: strikeRemoving[s.id] ? 0.5 : 1 }}>
                             {strikeRemoving[s.id] ? '…' : 'Remove'}
                           </button>
                         </td>
@@ -1091,7 +1091,7 @@ export default function AdminPanel() {
                   { label: 'Auth Revenue', val: '$4,200', sub: '168 auth fees · $25 each', color: 'var(--accent-green)' },
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
                     <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: m.color }}>{m.val}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
                   </div>
@@ -1116,13 +1116,13 @@ export default function AdminPanel() {
                   { label: 'Contract Address', val: '0x8f2a...d91c', color: 'var(--teal)' },
                 ].map((m, i) => (
                   <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
                     <div style={{ fontFamily: i === 3 ? 'DM Mono, monospace' : 'Playfair Display, serif', fontSize: i === 3 ? '13px' : '26px', fontWeight: 300, color: m.color }}>{m.val}</div>
                   </div>
                 ))}
               </div>
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Emergency Controls — Owner Only</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Emergency Controls — Owner Only</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
                   These controls exist for emergencies only — smart contract exploits, critical bugs, or legal requirements. All actions require 4-of-4 multisig approval and are permanently recorded on-chain.
                 </div>
@@ -1181,13 +1181,13 @@ export default function AdminPanel() {
                     <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '12px 18px', borderBottom: i < section.items.length - 1 ? '0.5px solid var(--border)' : 'none', flexWrap: 'wrap', gap: '8px' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '2px' }}>{item.label}</div>
-                        {item.note && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>{item.note}</div>}
+                        {item.note && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>{item.note}</div>}
                       </div>
                       <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', color: 'var(--gold)', fontWeight: 300, marginRight: '12px' }}>{item.val}</div>
                       {item.editable ? (
                         <button style={btn({ fontSize: '10px', padding: '5px 10px' })}>Edit</button>
                       ) : (
-                        <a href="https://app.safe.global" target="_blank" rel="noreferrer" style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--teal)', padding: '4px 8px', border: '1px solid var(--teal-border)', borderRadius: '6px', textDecoration: 'none', background: 'var(--teal-bg)' }}>Edit via Safe →</a>
+                        <a href="https://app.safe.global" target="_blank" rel="noreferrer" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', padding: '4px 8px', border: '1px solid var(--teal-border)', borderRadius: '6px', textDecoration: 'none', background: 'var(--teal-bg)' }}>Edit via Safe →</a>
                       )}
                     </div>
                   ))}
@@ -1198,7 +1198,7 @@ export default function AdminPanel() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
                 <div style={{ padding: '12px 18px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.06em' }}>Seller Tier Thresholds</span>
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>Stored in Supabase · No redeployment needed</span>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Stored in Supabase · No redeployment needed</span>
                 </div>
 
                 {!tierConfigEdit ? (
@@ -1215,7 +1215,7 @@ export default function AdminPanel() {
                         { key: 'legend_min_sales',  label: 'Legend min sales' },
                       ].map(({ key, label }) => (
                         <div key={key}>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
                           <input type="number" min="1" value={tierConfigEdit[key] ?? ''}
                             onChange={e => setTierConfigEdit(p => ({ ...p, [key]: parseInt(e.target.value) || 0 }))}
                             style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
@@ -1227,7 +1227,7 @@ export default function AdminPanel() {
                     {/* Elite/Legend gates */}
                     <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
                       <div>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Max dispute rate (%)</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Max dispute rate (%)</div>
                         <input type="number" min="0" max="100" step="0.5"
                           value={tierConfigEdit.elite_max_dispute_rate != null ? (parseFloat(tierConfigEdit.elite_max_dispute_rate) * 100).toFixed(1) : ''}
                           onChange={e => setTierConfigEdit(p => ({ ...p, elite_max_dispute_rate: parseFloat(e.target.value) / 100 || 0 }))}
@@ -1235,7 +1235,7 @@ export default function AdminPanel() {
                         />
                       </div>
                       <div>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Min account age (days)</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Min account age (days)</div>
                         <input type="number" min="0"
                           value={tierConfigEdit.elite_min_account_age_days ?? ''}
                           onChange={e => setTierConfigEdit(p => ({ ...p, elite_min_account_age_days: parseInt(e.target.value) || 0 }))}
@@ -1243,7 +1243,7 @@ export default function AdminPanel() {
                         />
                       </div>
                       <div>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>No dispute loss (days)</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>No dispute loss (days)</div>
                         <input type="number" min="0"
                           value={tierConfigEdit.elite_no_dispute_loss_days ?? ''}
                           onChange={e => setTierConfigEdit(p => ({ ...p, elite_no_dispute_loss_days: parseInt(e.target.value) || 0 }))}
@@ -1254,7 +1254,7 @@ export default function AdminPanel() {
 
                     {/* Trust Tier unlock */}
                     <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Trust Tier (photo-only auth) unlocks at</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Trust Tier (photo-only auth) unlocks at</div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         {['elite', 'legend'].map(t => (
                           <button key={t} onClick={() => setTierConfigEdit(p => ({ ...p, trust_tier_unlocks_at: t }))}
@@ -1267,25 +1267,25 @@ export default function AdminPanel() {
 
                     {/* Bond floor */}
                     <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Seller Bond Floor</div>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.6 }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Seller Bond Floor</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.6 }}>
                         Bond = floor + (price × bond%). Floor covers worst-case return shipping exposure (Labels B + C + D ≈ $35).
                       </div>
                       <div style={{ maxWidth: '200px' }}>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Min bond floor ($)</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Min bond floor ($)</div>
                         <input type="number" min="0" value={tierConfigEdit?.min_bond_floor_usd ?? ''}
                           onChange={e => setTierConfigEdit(p => ({ ...p, min_bond_floor_usd: parseInt(e.target.value) || 0 }))}
                           style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
                         />
                       </div>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.6 }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.6 }}>
                         Example at $20 floor — $400 card, new seller (4%): $20 + $16 = $36 bond
                       </div>
                     </div>
 
                     {/* Auth tier thresholds */}
                     <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Authentication Tier Thresholds</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Authentication Tier Thresholds</div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
                         {[
                           { key: 'remote_auth_max_value',   label: 'Tier 1 max value ($)',  note: 'Cards ≤ this → remote photo auth' },
@@ -1294,8 +1294,8 @@ export default function AdminPanel() {
                           { key: 'physical_auth_fee',       label: 'Tier 2 auth fee ($)',   note: 'Buyer pays (physical)' },
                         ].map(({ key, label, note }) => (
                           <div key={key}>
-                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
-                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '4px', opacity: 0.7 }}>{note}</div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', opacity: 0.7 }}>{note}</div>
                             <input type="number" min="0" value={tierConfigEdit?.[key] ?? ''}
                               onChange={e => setTierConfigEdit(p => ({ ...p, [key]: parseInt(e.target.value) || 0 }))}
                               style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
@@ -1303,19 +1303,50 @@ export default function AdminPanel() {
                           </div>
                         ))}
                       </div>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.6 }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.6 }}>
                         ⚠ Auth fee changes here are for checkout logic only. Also update the contract via Safe multisig to keep them in sync.
+                      </div>
+                    </div>
+
+                    {/* Optional Auth Bypass */}
+                    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Optional Authentication Bypass</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.6 }}>
+                        When enabled, buyers purchasing cards at or below the threshold can choose to skip authentication at checkout. Auth is still available — this just adds a &quot;Skip — Free&quot; option. Disable instantly to force auth on all orders.
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={tierConfigEdit?.optional_auth_enabled ?? false}
+                            onChange={e => setTierConfigEdit(p => ({ ...p, optional_auth_enabled: e.target.checked }))}
+                            style={{ width: '16px', height: '16px', accentColor: 'var(--teal)', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-primary)' }}>
+                            Enable optional auth bypass
+                          </span>
+                        </label>
+                        <div style={{ maxWidth: '220px' }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Max card price for bypass ($)</div>
+                          <input type="number" min="0" value={tierConfigEdit?.optional_auth_max_price ?? ''}
+                            onChange={e => setTierConfigEdit(p => ({ ...p, optional_auth_max_price: parseInt(e.target.value) || 0 }))}
+                            style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', opacity: 0.8 }}>
+                            Only applies when bypass is enabled above. Cards above this price always require auth.
+                          </div>
+                        </div>
                       </div>
                     </div>
 
                     {/* Strike auto-clear */}
                     <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Strike Auto-Clear</div>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.6 }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Strike Auto-Clear</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.6 }}>
                         After this many clean completed sales since their last strike, the oldest strike is automatically removed. Set to 0 to disable.
                       </div>
                       <div style={{ maxWidth: '200px' }}>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Clean sales required</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Clean sales required</div>
                         <input type="number" min="0" value={tierConfigEdit?.strike_auto_clear_sales ?? ''}
                           onChange={e => setTierConfigEdit(p => ({ ...p, strike_auto_clear_sales: parseInt(e.target.value) || 0 }))}
                           style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}

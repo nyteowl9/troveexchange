@@ -66,8 +66,8 @@ export async function POST(request) {
           .update({ status: 'auth_review' })
           .eq('id', order.id)
 
-      } else if (label === 'A' && order.auth_tier === 'remote') {
-        // Tier 1 delivered to buyer — open 72hr inspection window
+      } else if (label === 'A' && (order.auth_tier === 'remote' || order.auth_tier === 'none')) {
+        // Tier 1 or no-auth — Label A delivers directly to buyer — open 72hr inspection window
         const autoReleaseAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
         await supabaseAdmin
           .from('orders')
@@ -107,8 +107,8 @@ export async function POST(request) {
         }
 
       } else if (label === 'C') {
-        if (order.auth_tier === 'remote') {
-          // Tier 1: Label C delivers to SELLER directly — open seller review window (72hrs)
+        if (order.auth_tier === 'remote' || order.auth_tier === 'none') {
+          // Tier 1 / no-auth: Label C delivers to SELLER directly — open seller review window (72hrs)
           // Seller must confirm correct card received OR dispute with photos.
           // On-chain resolve deferred until seller acts (or review deadline passes via cron).
           const reviewDeadline = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()

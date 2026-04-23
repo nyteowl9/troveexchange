@@ -180,6 +180,8 @@ async function main() {
   const resolveTx = await escrow.resolveDispute(orderId, true); // true = buyer wins
   await resolveTx.wait();
   console.log(`resolveDispute tx: ${resolveTx.hash}`);
+  // Wait for Alchemy RPC state to propagate after the mined block
+  await new Promise(r => setTimeout(r, 3000));
 
   // ── Step 8: Verify final balances ────────────────────────
   sep("Step 8 — Final Balance Check");
