@@ -75,7 +75,8 @@ function SellerDashboard() {
   const [bondLoading, setBondLoading]       = useState({}) // { [orderId]: true }
   const [bondError, setBondError]           = useState({}) // { [orderId]: message }
   const [bondStatus, setBondStatus]         = useState({}) // { [orderId]: status string }
-  const [photoOrderId, setPhotoOrderId]     = useState(null) // which order has upload modal open
+  const [photoOrderId, setPhotoOrderId]         = useState(null) // which order has upload modal open
+  const [photoOrderAuthTier, setPhotoOrderAuthTier] = useState(null)
   const [authPhotoFiles, setAuthPhotoFiles] = useState([])   // { file, preview }[]
   const [authPhotoUploading, setAuthPhotoUploading] = useState(false)
   const [authPhotoError, setAuthPhotoError] = useState('')
@@ -688,28 +689,30 @@ function SellerDashboard() {
     if (authPhotoFiles.length < 3) { setAuthPhotoError('Please upload all 3 photos'); return }
     setAuthPhotoUploading(true)
     setAuthPhotoError('')
+    const isWaived = photoOrderAuthTier === 'none'
     try {
       const urls = []
       for (const { file } of authPhotoFiles) {
         const ext = file.name.split('.').pop()
-        const path = `${user.id}/${orderId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-        const { error } = await supabase.storage.from('listing-photos').upload(path, file, { upsert: false, contentType: file.type })
+        const path = `${orderId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error } = await supabase.storage.from('auth-photos').upload(path, file, { upsert: false, contentType: file.type })
         if (error) throw new Error(`Upload failed: ${error.message}`)
-        const { data: { publicUrl } } = supabase.storage.from('listing-photos').getPublicUrl(path)
-        urls.push(publicUrl)
+        // auth-photos is private — store path, not public URL
+        urls.push(path)
       }
-      // Store in auth_inspections so authenticator can review
+      // Store in auth_inspections — decision='waived' skips the authenticator queue
       const { error: inspErr } = await supabase.from('auth_inspections').insert({
         order_id:         orderId,
         authenticator_id: user.id,
         type:             'remote',
         photos:           urls,
-        decision:         'pending',
-        notes:            'Seller-submitted auth photos',
+        decision:         isWaived ? 'waived' : 'pending',
+        notes:            isWaived ? 'Seller-submitted evidence photos — buyer waived authentication' : 'Seller-submitted auth photos',
       })
       if (inspErr) throw new Error(inspErr.message)
       setAuthPhotosDone(prev => ({ ...prev, [orderId]: true }))
       setPhotoOrderId(null)
+      setPhotoOrderAuthTier(null)
       setAuthPhotoFiles([])
     } catch (err) {
       setAuthPhotoError(err.message)
@@ -770,14 +773,14 @@ function SellerDashboard() {
 
               <div style={{ color: 'var(--text-muted)', fontSize: '14px', paddingBottom: '9px' }}>→</div>
 
-              {/* STEP 2 — Upload 3 Auth Photos (remote tier only) */}
-              {order.listing?.auth_tier === 'remote' && (
+              {/* STEP 2 — Upload 3 Auth Photos (remote or none tier — dispute evidence) */}
+              {(order.auth_tier === 'remote' || order.auth_tier === 'none') && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: 600 }}>Step 2</span>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: 600 }}>{order.auth_tier === 'none' ? 'Step 2 · Evidence' : 'Step 2'}</span>
                   {authPhotosDone[order.id] ? (
                     <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)', padding: '8px 14px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', whiteSpace: 'nowrap' }}>✓ 3 Photos Uploaded</span>
                   ) : (
-                    <button onClick={() => { if (order.bond_tx_hash) { setPhotoOrderId(order.id); setAuthPhotoFiles([]); setAuthPhotoError('') } }} disabled={!order.bond_tx_hash} style={{ background: order.bond_tx_hash ? 'rgba(60,125,200,0.15)' : 'var(--bg-3)', border: `1.5px solid ${order.bond_tx_hash ? 'rgba(60,125,200,0.4)' : 'var(--border)'}`, color: order.bond_tx_hash ? 'var(--accent-blue)' : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: order.bond_tx_hash ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
+                    <button onClick={() => { if (order.bond_tx_hash) { setPhotoOrderId(order.id); setPhotoOrderAuthTier(order.auth_tier); setAuthPhotoFiles([]); setAuthPhotoError('') } }} disabled={!order.bond_tx_hash} style={{ background: order.bond_tx_hash ? 'rgba(60,125,200,0.15)' : 'var(--bg-3)', border: `1.5px solid ${order.bond_tx_hash ? 'rgba(60,125,200,0.4)' : 'var(--border)'}`, color: order.bond_tx_hash ? 'var(--accent-blue)' : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: order.bond_tx_hash ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
                       📷 Upload 3 Photos
                     </button>
                   )}
@@ -785,9 +788,9 @@ function SellerDashboard() {
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--teal)' : 'var(--text-muted)', fontWeight: 600 }}>{order.listing?.auth_tier === 'remote' ? 'Step 3' : 'Step 2'}</span>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--teal)' : 'var(--text-muted)', fontWeight: 600 }}>{(order.auth_tier === 'remote' || order.auth_tier === 'none') ? 'Step 3' : 'Step 2'}</span>
                 {(() => {
-                  const photosRequired = order.listing?.auth_tier === 'remote' && !authPhotosDone[order.id]
+                  const photosRequired = (order.auth_tier === 'remote' || order.auth_tier === 'none') && !authPhotosDone[order.id]
                   const canLabel = order.bond_tx_hash && !labelLoading[order.id] && !photosRequired
                   return (
                     <button onClick={() => canLabel && handlePrintLabel(order)} disabled={!canLabel} title={photosRequired ? 'Upload 3 auth photos first' : ''} style={{ background: canLabel ? 'var(--teal)' : 'var(--bg-3)', border: `1.5px solid ${canLabel ? 'transparent' : 'var(--border)'}`, color: canLabel ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: canLabel ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: labelLoading[order.id] ? 0.7 : 1, whiteSpace: 'nowrap' }}>
