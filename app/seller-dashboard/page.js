@@ -689,27 +689,15 @@ function SellerDashboard() {
     if (authPhotoFiles.length < 3) { setAuthPhotoError('Please upload all 3 photos'); return }
     setAuthPhotoUploading(true)
     setAuthPhotoError('')
-    const isWaived = photoOrderAuthTier === 'none'
     try {
-      const urls = []
-      for (const { file } of authPhotoFiles) {
-        const ext = file.name.split('.').pop()
-        const path = `${orderId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-        const { error } = await supabase.storage.from('auth-photos').upload(path, file, { upsert: false, contentType: file.type })
-        if (error) throw new Error(`Upload failed: ${error.message}`)
-        // auth-photos is private — store path, not public URL
-        urls.push(path)
-      }
-      // Store in auth_inspections — decision='waived' skips the authenticator queue
-      const { error: inspErr } = await supabase.from('auth_inspections').insert({
-        order_id:         orderId,
-        authenticator_id: user.id,
-        type:             'remote',
-        photos:           urls,
-        decision:         isWaived ? 'waived' : 'pending',
-        notes:            isWaived ? 'Seller-submitted evidence photos — buyer waived authentication' : 'Seller-submitted auth photos',
-      })
-      if (inspErr) throw new Error(inspErr.message)
+      const fd = new FormData()
+      fd.append('order_id', orderId)
+      for (const { file } of authPhotoFiles) fd.append('photos', file)
+
+      const res = await fetch('/api/orders/upload-auth-photos', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Upload failed')
+
       setAuthPhotosDone(prev => ({ ...prev, [orderId]: true }))
       setPhotoOrderId(null)
       setPhotoOrderAuthTier(null)
