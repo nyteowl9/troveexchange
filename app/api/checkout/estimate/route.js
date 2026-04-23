@@ -80,26 +80,31 @@ export async function POST(request) {
       distanceUnit: 'in', weight: '0.5', massUnit: 'lb',
     }
 
-    // Declared value = listing price — included in estimate so rate reflects insurance cost
+    // Fetch handling % from tier_config (default 15 if not set)
+    const { data: cfg } = await supabase.from('tier_config').select('shipping_handling_pct').eq('id', 1).single()
+    const handlingMult = 1 + ((cfg?.shipping_handling_pct ?? 15) / 100)
+
+    // Only add declared-value insurance for cards >= $100 — carriers include ~$100 liability anyway
     const declaredValue = parseFloat(listing.price || 0)
+    const insuranceExtra = declaredValue >= 100 ? {
+      insurance: {
+        amount:   declaredValue.toFixed(2),
+        currency: 'USD',
+        content:  'Trading Card',
+      },
+    } : undefined
 
     const cheapest = async (from, to) => {
       const shipment = await shippo.shipments.create({
         addressFrom: from,
         addressTo: to,
         parcels: [parcel],
-        extra: declaredValue > 0 ? {
-          insurance: {
-            amount:   declaredValue.toFixed(2),
-            currency: 'USD',
-            content:  'Trading Card',
-          },
-        } : undefined,
+        extra: insuranceExtra,
         async: false,
       })
       const best = shipment.rates.sort((a, b) => parseFloat(a.amount) - parseFloat(b.amount))[0]
       if (!best) throw new Error('No rates available')
-      return { fee: parseFloat((parseFloat(best.amount) * 1.15).toFixed(2)), days: best.estimated_days }
+      return { fee: parseFloat((parseFloat(best.amount) * handlingMult).toFixed(2)), days: best.estimated_days }
     }
 
     if (isTier2) {

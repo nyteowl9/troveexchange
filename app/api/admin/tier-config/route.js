@@ -42,6 +42,7 @@ export async function PATCH(req) {
     'remote_auth_fee', 'physical_auth_fee',
     'min_bond_floor_usd',
     'optional_auth_enabled', 'optional_auth_max_price',
+    'shipping_handling_pct',
   ]
   const updates = {}
   for (const key of allowed) {

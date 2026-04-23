@@ -1308,6 +1308,22 @@ export default function AdminPanel() {
                       </div>
                     </div>
 
+                    {/* Shipping Handling Markup */}
+                    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Shipping Handling Markup</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.6 }}>
+                        Percentage added on top of raw carrier rate. Cards under $100 skip declared-value insurance (carrier liability covers it).
+                      </div>
+                      <div style={{ maxWidth: '200px' }}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Handling % (e.g. 15 = 15%)</div>
+                        <input type="number" min="0" max="50" value={tierConfigEdit?.shipping_handling_pct ?? ''}
+                          onChange={e => setTierConfigEdit(p => ({ ...p, shipping_handling_pct: parseInt(e.target.value) || 0 }))}
+                          onWheel={e => e.target.blur()}
+                          style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+
                     {/* Optional Auth Bypass */}
                     <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Optional Authentication Bypass</div>
