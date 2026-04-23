@@ -1558,7 +1558,7 @@ function SellerDashboard() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Price & Fee Calculator</div>
                 <Label text="LISTING PRICE (USDC) *" />
-                <input type="number" placeholder="Minimum $1" value={price} onChange={e => setPrice(e.target.value)} style={{ ...inputStyle, marginBottom: parseFloat(price) > 50000 ? '8px' : '14px', fontSize: '18px', fontFamily: 'Playfair Display, serif', borderColor: parseFloat(price) > 50000 ? 'rgba(200,75,60,0.6)' : undefined }} />
+                <input type="number" placeholder="Minimum $1" value={price} onChange={e => setPrice(e.target.value)} onWheel={e => e.target.blur()} style={{ ...inputStyle, marginBottom: parseFloat(price) > 50000 ? '8px' : '14px', fontSize: '18px', fontFamily: 'Playfair Display, serif', borderColor: parseFloat(price) > 50000 ? 'rgba(200,75,60,0.6)' : undefined }} />
                 {parseFloat(price) > 50000 && (
                   <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontWeight: 700 }}>⚠</span> Maximum listing price is $50,000. Please lower your price to publish.
@@ -1769,11 +1769,25 @@ function SellerDashboard() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Price</div>
                 <Label text="LISTING PRICE (USDC) *" />
-                <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} style={{ ...inputStyle, fontSize: '18px', fontFamily: 'Playfair Display, serif', marginBottom: '4px' }} />
+                <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} onWheel={e => e.target.blur()} style={{ ...inputStyle, fontSize: '18px', fontFamily: 'Playfair Display, serif', marginBottom: parseFloat(editPrice) > 50000 ? '8px' : '14px', borderColor: parseFloat(editPrice) > 50000 ? 'rgba(200,75,60,0.6)' : undefined }} />
+                {parseFloat(editPrice) > 50000 && (
+                  <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 700 }}>⚠</span> Maximum listing price is $50,000.
+                  </div>
+                )}
                 {editPrice && parseFloat(editPrice) > 0 && parseFloat(editPrice) <= 50000 && (
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '6px' }}>
-                    Auth tier: {parseFloat(editPrice) <= 300 ? 'Remote Photo ($10 fee)' : 'Physical Auth ($25 fee)'}
-                    {parseFloat(editPrice) <= 300 !== (editPrice && parseFloat(editPrice) <= 300) && ' — tier changes on save'}
+                  <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px' }}>
+                    {[
+                      { label: 'Your listing price',           val: `$${parseFloat(editPrice).toLocaleString()}` },
+                      { label: 'Platform fee (3.5%)',          val: `-$${calcFees(editPrice).platform}` },
+                      { label: 'Shipping & insurance (est.)',  val: `~$${calcFees(editPrice).shipCost}` },
+                      { label: 'You receive on settlement',    val: `~$${calcFees(editPrice).net}`, green: true, total: true },
+                    ].map((row, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
+                        <span style={{ color: row.total ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row.total ? 600 : 400 }}>{row.label}</span>
+                        <span style={{ fontFamily: row.total ? 'Playfair Display, serif' : 'DM Mono, monospace', fontSize: row.total ? '20px' : '12px', color: row.green ? 'var(--accent-green)' : 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
