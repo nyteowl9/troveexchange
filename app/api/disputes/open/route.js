@@ -90,15 +90,19 @@ export async function POST(request) {
 
     const fullReason = description ? `${reason}: ${description.trim()}` : reason
 
+    // Seller has 48hrs from dispute open to submit counter-evidence
+    const sellerDeadline = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+
     // Insert dispute record
     const { data: dispute, error: disputeError } = await supabaseAdmin
       .from('disputes')
       .insert({
         order_id,
-        raised_by:      user.id,
-        reason:         fullReason,
-        buyer_evidence: Array.isArray(buyer_evidence) ? buyer_evidence : [],
-        seller_evidence: [],
+        raised_by:                user.id,
+        reason:                   fullReason,
+        buyer_evidence:           Array.isArray(buyer_evidence) ? buyer_evidence : [],
+        seller_evidence:          [],
+        seller_evidence_deadline: sellerDeadline,
       })
       .select()
       .single()
@@ -118,7 +122,7 @@ export async function POST(request) {
     try {
       const { emailBuyerDisputeUpdate, emailSellerDisputeUpdate } = await import('@/lib/emails')
       if (order.buyer?.email)  await emailBuyerDisputeUpdate({ to: order.buyer.email,   order, opened: true })
-      if (order.seller?.email) await emailSellerDisputeUpdate({ to: order.seller.email, order, opened: true })
+      if (order.seller?.email) await emailSellerDisputeUpdate({ to: order.seller.email, order, opened: true, sellerDeadline })
     } catch (err) {
       console.error('[disputes/open] email failed:', err)
     }

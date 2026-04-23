@@ -497,11 +497,17 @@ export default function DisputeResolution() {
 
                   {/* Tabs */}
                   <div style={{ display: 'flex', gap: '4px', marginBottom: '14px', borderBottom: '0.5px solid var(--border)', paddingBottom: '0' }}>
-                    {['timeline', 'evidence', 'auth-photos'].map(tab => (
-                      <button key={tab} onClick={() => setActiveTab(tab)} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '8px 14px', border: 'none', background: 'transparent', color: activeTab === tab ? 'var(--teal)' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize', letterSpacing: '0.06em', borderBottom: `2px solid ${activeTab === tab ? 'var(--teal)' : 'transparent'}`, marginBottom: '-0.5px' }}>
-                        {tab === 'auth-photos' ? 'Auth Photos' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                      </button>
-                    ))}
+                    {['timeline', 'evidence', 'auth-photos'].map(tab => {
+                      const isWaivedOrder = authInspections.length > 0 && authInspections.every(i => i.decision === 'waived')
+                      const tabLabel = tab === 'auth-photos'
+                        ? (isWaivedOrder ? 'Pre-Ship Photos' : 'Auth Photos')
+                        : tab.charAt(0).toUpperCase() + tab.slice(1)
+                      return (
+                        <button key={tab} onClick={() => setActiveTab(tab)} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '8px 14px', border: 'none', background: 'transparent', color: activeTab === tab ? 'var(--teal)' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize', letterSpacing: '0.06em', borderBottom: `2px solid ${activeTab === tab ? 'var(--teal)' : 'transparent'}`, marginBottom: '-0.5px' }}>
+                          {tabLabel}
+                        </button>
+                      )
+                    })}
                   </div>
 
                   {/* Timeline */}
@@ -543,6 +549,23 @@ export default function DisputeResolution() {
                   {activeTab === 'evidence' && (
                     <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
 
+                      {/* Seller evidence deadline — only show if pending and deadline not passed */}
+                      {dispute.seller_evidence_deadline && (!dispute.outcome || dispute.outcome === 'pending') && !dispute.staff_recommendation && (() => {
+                        const deadline = new Date(dispute.seller_evidence_deadline)
+                        const now = new Date()
+                        const passed = now > deadline
+                        const hoursLeft = Math.max(0, Math.round((deadline - now) / 3600000))
+                        const sellerResponded = dispute.seller_evidence?.length > 0 || dispute.seller_notes
+                        if (sellerResponded) return null
+                        return (
+                          <div style={{ background: passed ? 'rgba(200,75,60,0.06)' : 'rgba(232,168,56,0.06)', border: `1px solid ${passed ? 'rgba(200,75,60,0.25)' : 'rgba(232,168,56,0.25)'}`, borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                            {passed
+                              ? <><strong style={{ color: 'var(--accent-red)' }}>Seller deadline passed</strong> — The seller did not submit counter-evidence. You may proceed with your recommendation.</>
+                              : <><strong style={{ color: 'var(--accent-amber)' }}>Awaiting seller response</strong> — The seller has until <strong style={{ color: 'var(--text-primary)' }}>{deadline.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</strong> ({hoursLeft}h remaining) to submit their counter-evidence. Consider waiting before recommending.</>}
+                          </div>
+                        )
+                      })()}
+
                       {/* Return dispute banner — seller contested the returned card */}
                       {dispute.orders?.status === 'return_disputed_seller' && (
                         <div style={{ background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.25)', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
@@ -582,25 +605,30 @@ export default function DisputeResolution() {
                     </div>
                   )}
 
-                  {/* Auth Photos */}
-                  {activeTab === 'auth-photos' && (
-                    <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '14px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', borderRadius: '8px', padding: '10px 12px' }}>
-                        These photos were taken by our authenticator at Chase Hollow HQ at time of inspection — before the card was shipped to the buyer. They are the most reliable evidence in the dispute.
-                      </div>
-                      {authInspections.length === 0 ? (
-                        <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No authentication inspection on record for this order.</div>
-                      ) : authInspections.map((insp, idx) => (
-                        <div key={insp.id} style={{ marginBottom: '16px' }}>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '8px', fontWeight: 500 }}>
-                            Inspection {idx + 1} · {insp.decision?.toUpperCase() || '—'} · {fmtDate(insp.timestamp)}
-                          </div>
-                          {insp.notes && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{insp.notes}</div>}
-                          <EvidenceCard urls={insp.photos} label="Auth Photos (Official)" color="var(--teal)" />
+                  {/* Auth Photos / Pre-Ship Photos */}
+                  {activeTab === 'auth-photos' && (() => {
+                    const isWaived = authInspections.length > 0 && authInspections.every(i => i.decision === 'waived')
+                    return (
+                      <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '14px', background: isWaived ? 'rgba(232,168,56,0.05)' : 'var(--teal-bg)', border: `1px solid ${isWaived ? 'rgba(232,168,56,0.2)' : 'var(--teal-border)'}`, borderRadius: '8px', padding: '10px 12px' }}>
+                          {isWaived
+                            ? 'The buyer waived authentication on this order. These photos were submitted by the seller before shipping as evidence of the card\'s condition at time of dispatch.'
+                            : 'These photos were taken by our authenticator at Chase Hollow HQ at time of inspection — before the card was shipped to the buyer. They are the most reliable evidence in the dispute.'}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        {authInspections.length === 0 ? (
+                          <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No authentication inspection on record for this order.</div>
+                        ) : authInspections.map((insp, idx) => (
+                          <div key={insp.id} style={{ marginBottom: '16px' }}>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: isWaived ? 'var(--accent-amber)' : 'var(--teal)', marginBottom: '8px', fontWeight: 500 }}>
+                              {isWaived ? 'Pre-Ship Seller Photos' : `Inspection ${idx + 1}`} · {isWaived ? 'AUTH WAIVED' : (insp.decision?.toUpperCase() || '—')} · {fmtDate(insp.timestamp)}
+                            </div>
+                            {insp.notes && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{insp.notes}</div>}
+                            <EvidenceCard urls={insp.photos} label={isWaived ? 'Seller Pre-Ship Photos' : 'Auth Photos (Official)'} color={isWaived ? 'var(--accent-amber)' : 'var(--teal)'} />
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {/* RIGHT — Recommendation Panel */}
