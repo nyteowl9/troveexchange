@@ -867,9 +867,9 @@ function Checkout() {
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '20px' }}>Live tracking · Updates automatically</div>
                 {[
                   { title: 'Escrow Funded', desc: `$${total} USDC locked in smart contract on Base. Transaction confirmed.`, done: true, active: false },
-                  { title: 'Awaiting Seller Photos & Shipment', desc: `${sellerName} has been notified. They have 48hrs to${authTier === 'remote' ? ' upload 3 photos and' : ''} ship${authTier === 'physical' ? ' to our authentication center' : ' directly to your address'}.`, done: false, active: true, time: '⏱ Ship deadline: 48hrs from now' },
-                  { title: authTier === 'remote' ? 'In Transit · Photo Review' : 'In Transit to Auth Center', desc: authTier === 'remote' ? 'Card en route to you. Staff reviews photos in transit.' : 'Card en route to Chase Hollow authentication center.', done: false, active: false },
-                  { title: 'Authentication', desc: 'Expert verifies grade, condition, and cert number match listing exactly.', done: false, active: false },
+                  { title: 'Awaiting Shipment', desc: `${sellerName} has been notified. They have 48hrs to${authTier === 'remote' ? ' upload 3 photos and' : ''} ship${authTier === 'physical' ? ' to our authentication center' : ' directly to your address'}.`, done: false, active: true, time: '⏱ Ship deadline: 48hrs from now' },
+                  ...(authTier !== 'none' ? [{ title: authTier === 'remote' ? 'In Transit · Photo Review' : 'In Transit to Auth Center', desc: authTier === 'remote' ? 'Card en route to you. Staff reviews photos in transit.' : 'Card en route to Chase Hollow authentication center.', done: false, active: false }] : [{ title: 'In Transit', desc: 'Card en route to your address.', done: false, active: false }]),
+                  ...(authTier !== 'none' ? [{ title: 'Authentication', desc: 'Expert verifies grade, condition, and cert number match listing exactly.', done: false, active: false }] : []),
                   { title: 'Shipped to You', desc: `Card${authTier === 'physical' ? ' ships from auth center' : ' already en route'} to ${buyerAddress?.city ? `${buyerAddress.city}, ${buyerAddress.state}` : 'your address'}.`, done: false, active: false },
                   { title: 'Delivered · Auto-Release', desc: 'Delivery confirmed. 72hr window opens. USDC auto-releases to seller at window close unless you dispute.', done: false, active: false },
                 ].map((s, i) => (
@@ -919,7 +919,7 @@ function Checkout() {
             <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--border)' }}>
               {[
                 { label: 'Card price', val: `$${cardPrice}` },
-                { label: `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: `$${authFee}` },
+                { label: authTier === 'none' ? 'Authentication' : `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: authTier === 'none' ? 'Skipped — Free' : `$${authFee}` },
                 { label: 'Shipping & insurance', val: shippingKnown ? `~$${shippingFeeVal.toFixed(2)}` : 'Est. at checkout' },
               ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '0.5px solid var(--border)' }}>
@@ -938,7 +938,7 @@ function Checkout() {
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
                 { icon: '🔒', text: 'Escrow protected — not held by us' },
-                { icon: '✓', text: authTier === 'remote' ? 'Photo authenticated in transit' : 'Human authenticated before delivery' },
+                { icon: authTier === 'none' ? '⚠' : '✓', text: authTier === 'none' ? 'No authentication — buyer waived' : authTier === 'remote' ? 'Photo authenticated in transit' : 'Human authenticated before delivery' },
                 { icon: '↩', text: 'Auto-refund if seller misses 48hr deadline (1 extension allowed)' },
                 { icon: '⏱', text: '72hr inspection window after delivery' },
                 { icon: '⬡', text: 'Permanent on-chain record on Base' },
