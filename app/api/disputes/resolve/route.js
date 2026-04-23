@@ -131,6 +131,12 @@ export async function POST(request) {
         email:   order.seller.email,
       }
 
+      // Validate buyer address before calling Shippo
+      const missingBuyer  = !buyerAddr.street1 || !buyerAddr.city || !buyerAddr.state || !buyerAddr.zip
+      const missingSeller = !isTier2 && (!sellerAddr.street1 || !sellerAddr.city || !sellerAddr.state || !sellerAddr.zip)
+      if (missingBuyer)  return NextResponse.json({ error: 'Buyer address is incomplete — ask them to update their account before generating a return label.' }, { status: 400 })
+      if (missingSeller) return NextResponse.json({ error: 'Seller address is incomplete — ask them to update their account before generating a return label.' }, { status: 400 })
+
       // T2: buyer → auth center (prevent "return a rock" fraud at auth center)
       // T1: buyer → seller directly (low value, no auth center verification needed)
       const addressTo = isTier2 ? { ...AUTH_CENTER_ADDRESS } : sellerAddr
