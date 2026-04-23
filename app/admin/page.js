@@ -1152,8 +1152,10 @@ export default function AdminPanel() {
                 {
                   title: 'Fee Structure', items: [
                     { label: 'Platform fee', val: '3%', editable: false, note: 'Smart contract state variable · Change via 3-of-4 Safe multisig transaction · ~$0.04 gas · No redeployment needed' },
-                    { label: 'Auth fee (buyer)', val: '$25 per card', editable: true },
-                    { label: 'Shipping fee (split)', val: '$15 seller / $10 buyer', editable: true },
+                    { label: 'Auth fee — Remote Photo (≤$300)', val: tierConfig ? `$${tierConfig.remote_auth_fee} per card` : '—', editable: true },
+                    { label: 'Auth fee — Physical (>$300)', val: tierConfig ? `$${tierConfig.physical_auth_fee} per card` : '—', editable: true },
+                    { label: 'Shipping — Tier 1 (buyer pays)', val: 'Live Shippo rate + handling%', editable: false, note: 'Seller ships direct to buyer · 1 label · buyer pays' },
+                    { label: 'Shipping — Tier 2 (split)', val: 'Live Shippo rate + handling%', editable: false, note: 'Label A: seller → auth center (deducted from seller payout) · Label B: auth center → buyer (buyer pays)' },
                     { label: 'Dispute bond', val: '0.5% of order value', editable: false, note: 'Smart contract state variable · Change via 3-of-4 Safe multisig transaction' },
                   ]
                 },
