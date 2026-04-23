@@ -423,7 +423,7 @@ export default function ListingPage() {
               ) : (
                 <>
                   <button onClick={() => setShowBuyModal(true)} style={{ width: '100%', background: 'var(--teal)', border: 'none', color: 'var(--bg)', padding: '16px', fontSize: '15px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    🔒 Buy Now — ${parseFloat(price).toLocaleString()} USDC
+                    🔒 Buy Now — ${parseFloat(buyTotal).toLocaleString()} USDC
                   </button>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px', lineHeight: 1.6 }}>
                     Auto-refund if seller misses 48hr deadline · 72hr inspection window
