@@ -981,17 +981,17 @@ export default function BuyerDashboard() {
               <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Raise a <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Dispute</em></div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>Only open a dispute if there is a genuine issue with your order</div>
 
-              {/* Existing disputes */}
-              {disputes.length > 0 && (
+              {/* Active disputes — pending/under review */}
+              {disputes.filter(d => !d.outcome || d.outcome === 'pending').length > 0 && (
                 <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '12px' }}>Your Disputes</div>
-                  {disputes.map((d) => (
-                    <div key={d.id} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '14px 18px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '12px' }}>Active Disputes</div>
+                  {disputes.filter(d => !d.outcome || d.outcome === 'pending').map((d) => (
+                    <div key={d.id} style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(232,168,56,0.3)', borderRadius: '10px', padding: '14px 18px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                       <div>
                         <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{d.order?.listing?.card_name || '—'}</div>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '2px' }}>{d.reason} · Opened {fmtDate(d.created_at)}</div>
                       </div>
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: d.outcome ? 'rgba(76,175,124,0.1)' : 'rgba(232,168,56,0.1)', border: `1px solid ${d.outcome ? 'rgba(76,175,124,0.3)' : 'rgba(232,168,56,0.3)'}`, color: d.outcome ? 'var(--accent-green)' : 'var(--accent-amber)', fontWeight: 500 }}>{d.outcome ? d.outcome : 'Under Review'}</span>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: 'rgba(232,168,56,0.1)', border: '1px solid rgba(232,168,56,0.3)', color: 'var(--accent-amber)', fontWeight: 500 }}>Under Review</span>
                     </div>
                   ))}
                 </div>
@@ -1130,6 +1130,25 @@ export default function BuyerDashboard() {
                 </div>
               ) : (
                 <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '13px' }}>No orders currently eligible for dispute. Orders can be disputed during the 72-hour inspection window after delivery.</div>
+              )}
+
+              {/* Resolved disputes — shown at the bottom */}
+              {disputes.filter(d => d.outcome && d.outcome !== 'pending').length > 0 && (
+                <div style={{ marginTop: '32px' }}>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', fontWeight: 300, color: 'var(--text-muted)', marginBottom: '12px' }}>Past Disputes</div>
+                  {disputes.filter(d => d.outcome && d.outcome !== 'pending').map((d) => {
+                    const won = d.outcome === 'buyer_wins'
+                    return (
+                      <div key={d.id} style={{ background: 'var(--bg-2)', border: `1.5px solid ${won ? 'rgba(76,175,124,0.2)' : 'rgba(200,75,60,0.2)'}`, borderRadius: '10px', padding: '14px 18px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '15px', color: 'var(--text-primary)' }}>{d.order?.listing?.card_name || '—'}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '2px' }}>{d.reason} · {fmtDate(d.created_at)}</div>
+                        </div>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: won ? 'rgba(76,175,124,0.1)' : 'rgba(200,75,60,0.1)', border: `1px solid ${won ? 'rgba(76,175,124,0.3)' : 'rgba(200,75,60,0.3)'}`, color: won ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: 500 }}>{won ? 'Refunded' : 'Closed'}</span>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
           )}
