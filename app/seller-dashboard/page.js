@@ -588,7 +588,7 @@ function SellerDashboard() {
     { id: 'listings',     icon: '◆', label: 'My Listings',    badgeColor: 'var(--accent-green)' },
     { id: 'new-listing',  icon: '+', label: 'New Listing' },
     { id: 'earnings',     icon: '$', label: 'Earnings' },
-    { id: 'bond',         icon: '🔒', label: 'Bond Wallet' },
+    { id: 'bond',         icon: '🔒', label: 'Bond & Strikes' },
     { id: 'profile',      icon: '◑', label: 'Profile' },
   ]
 
