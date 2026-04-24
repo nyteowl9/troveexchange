@@ -88,7 +88,7 @@ export default function AdminPanel() {
       // Use supabase directly for strikes — admin-level read
       const { data } = await supabase
         .from('strikes')
-        .select('id, user_id, strike_number, reason, action_taken, created_at, user:user_id(username), order:order_id(id)')
+        .select('id, user_id, strike_number, reason, action_taken, created_at, appealed, appeal_reason, appeal_outcome, appeal_submitted_at, user:user_id(username), order:order_id(id)')
         .order('created_at', { ascending: false })
         .limit(50)
       setAdminStrikes(data || [])
@@ -1057,8 +1057,30 @@ export default function AdminPanel() {
                         <td style={{ padding: '11px 14px', fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '200px' }}>{s.reason}</td>
                         <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{s.created_at ? new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
                         <td style={{ padding: '11px 14px', fontSize: '12px', color: s.strike_number >= 3 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>{s.action_taken}</td>
-                        <td style={{ padding: '11px 14px' }}>
-                          {s.appealed ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-amber)' }}>Appealed{s.appeal_outcome ? ` · ${s.appeal_outcome}` : ''}</span> : s.strike_number < 3 ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Eligible</span> : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>No appeal</span>}
+                        <td style={{ padding: '11px 14px', maxWidth: '220px' }}>
+                          {s.appeal_outcome === 'approved' && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)' }}>Approved</span>}
+                          {s.appeal_outcome === 'denied'   && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>Denied</span>}
+                          {s.appealed && !s.appeal_outcome && (
+                            <div>
+                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-amber)', marginBottom: '6px' }}>Pending Review</div>
+                              {s.appeal_reason && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '8px', fontStyle: 'italic' }}>"{s.appeal_reason}"</div>}
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                <button onClick={async () => {
+                                  if (!window.confirm('Approve appeal — remove this strike?')) return
+                                  const session = await getSession()
+                                  const res = await fetch('/api/admin/strikes/resolve-appeal', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` }, body: JSON.stringify({ strike_id: s.id, decision: 'approved' }) })
+                                  if (res.ok) loadStrikes()
+                                }} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(76,175,124,0.4)', background: 'rgba(76,175,124,0.08)', color: 'var(--accent-green)', cursor: 'pointer' }}>Approve</button>
+                                <button onClick={async () => {
+                                  if (!window.confirm('Deny appeal — strike remains?')) return
+                                  const session = await getSession()
+                                  const res = await fetch('/api/admin/strikes/resolve-appeal', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` }, body: JSON.stringify({ strike_id: s.id, decision: 'denied' }) })
+                                  if (res.ok) loadStrikes()
+                                }} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(200,75,60,0.4)', background: 'rgba(200,75,60,0.08)', color: 'var(--accent-red)', cursor: 'pointer' }}>Deny</button>
+                              </div>
+                            </div>
+                          )}
+                          {!s.appealed && (s.strike_number < 3 ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Eligible</span> : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>No appeal</span>)}
                         </td>
                         <td style={{ padding: '11px 14px' }}>
                           <button

@@ -107,6 +107,14 @@ function SellerDashboard() {
   const [reviewSuccess, setReviewSuccess]       = useState(false)
   const [reviewError, setReviewError]           = useState(null)
 
+  // Strikes + appeal
+  const [myStrikes, setMyStrikes]           = useState([])
+  const [appealModal, setAppealModal]       = useState(null) // strike object
+  const [appealReason, setAppealReason]     = useState('')
+  const [appealSubmitting, setAppealSubmitting] = useState(false)
+  const [appealError, setAppealError]       = useState('')
+  const [appealDone, setAppealDone]         = useState({}) // { [strikeId]: true }
+
   // Account standing (live check on mount)
   const [accountStanding, setAccountStanding] = useState(null) // { banned, suspended_until }
 
@@ -176,6 +184,14 @@ function SellerDashboard() {
       setActiveOrders(ordersRes.data || [])
       setMyListings(listingsRes.data || [])
       setCompletedSales(salesRes.data || [])
+
+      // Fetch strikes for appeal UI
+      const { data: strikesData } = await supabase
+        .from('strikes')
+        .select('id, strike_number, reason, action_taken, created_at, appealed, appeal_reason, appeal_outcome, appeal_submitted_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+      setMyStrikes(strikesData || [])
     } catch (err) {
       console.error('[seller-dashboard] fetchData error:', err)
     } finally {
@@ -840,6 +856,55 @@ function SellerDashboard() {
           orderLabel={chatOrder.label}
           onClose={() => setChatOrder(null)}
         />
+      )}
+
+      {/* Strike Appeal Modal */}
+      {appealModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.35)', borderRadius: '16px', padding: '28px', maxWidth: '500px', width: '100%' }}>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Appeal Strike <em style={{ color: 'var(--accent-red)' }}>#{appealModal.strike_number}</em></div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>Explain why this strike should be removed. The owner will review your appeal within 48 hours and notify you by email.</div>
+            <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', fontSize: '12px', color: 'var(--text-muted)' }}>
+              <strong style={{ color: 'var(--text-secondary)' }}>Strike reason on file:</strong> {appealModal.reason}
+            </div>
+            <textarea
+              value={appealReason}
+              onChange={e => setAppealReason(e.target.value)}
+              placeholder="Explain your situation — what happened, why the strike was undeserved, any supporting context..."
+              rows={5}
+              style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: 'var(--text-primary)', fontFamily: 'DM Sans, sans-serif', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '12px' }}
+            />
+            {appealError && <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: 'var(--accent-red)', marginBottom: '12px' }}>{appealError}</div>}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                disabled={appealSubmitting || !appealReason.trim()}
+                onClick={async () => {
+                  setAppealSubmitting(true); setAppealError('')
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession()
+                    const res = await fetch('/api/strikes/appeal', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+                      body: JSON.stringify({ strike_id: appealModal.id, reason: appealReason }),
+                    })
+                    const json = await res.json()
+                    if (!res.ok) { setAppealError(json.error || 'Failed to submit appeal'); return }
+                    setAppealDone(p => ({ ...p, [appealModal.id]: true }))
+                    setAppealModal(null)
+                    await fetchData()
+                  } catch (err) {
+                    setAppealError(err.message || 'Failed to submit appeal')
+                  } finally {
+                    setAppealSubmitting(false)
+                  }
+                }}
+                style={{ flex: 1, background: appealSubmitting || !appealReason.trim() ? 'var(--bg-4)' : 'var(--accent-red)', border: 'none', color: '#fff', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: appealSubmitting || !appealReason.trim() ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: appealSubmitting || !appealReason.trim() ? 0.6 : 1 }}>
+                {appealSubmitting ? 'Submitting…' : 'Submit Appeal'}
+              </button>
+              <button onClick={() => setAppealModal(null)} style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-muted)', padding: '12px 20px', fontSize: '13px', borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Dispute Evidence Modal */}
@@ -1929,6 +1994,46 @@ function SellerDashboard() {
                   </div>
                 ))}
               </div>
+
+              {/* Strikes detail + appeal */}
+              {myStrikes.length > 0 && (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.25)', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-red)', marginBottom: '14px', fontWeight: 500 }}>Strike Record</div>
+                  {myStrikes.map(s => {
+                    const daysSince = (Date.now() - new Date(s.created_at).getTime()) / (1000 * 60 * 60 * 24)
+                    const canAppeal = !s.appealed && s.strike_number < 3 && daysSince <= 7
+                    const submitted = appealDone[s.id] || s.appealed
+                    return (
+                      <div key={s.id} style={{ background: 'var(--bg-3)', border: '1px solid rgba(200,75,60,0.2)', borderRadius: '10px', padding: '14px 16px', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                          <div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)', fontWeight: 600, marginBottom: '4px' }}>Strike #{s.strike_number}</div>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{s.reason}</div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>{s.action_taken} · {new Date(s.created_at).toLocaleDateString()}</div>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            {s.appeal_outcome === 'approved' && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-green)', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '20px', padding: '3px 10px' }}>Appeal Approved</span>}
+                            {s.appeal_outcome === 'denied'   && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-red)',   background: 'rgba(200,75,60,0.1)',  border: '1px solid rgba(200,75,60,0.3)',  borderRadius: '20px', padding: '3px 10px' }}>Appeal Denied</span>}
+                            {submitted && !s.appeal_outcome  && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-amber)', background: 'rgba(232,168,56,0.1)', border: '1px solid rgba(232,168,56,0.3)', borderRadius: '20px', padding: '3px 10px' }}>Appeal Under Review</span>}
+                            {canAppeal && (
+                              <button onClick={() => { setAppealModal(s); setAppealReason(''); setAppealError('') }}
+                                style={{ background: 'transparent', border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '6px 14px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                                Appeal ({Math.max(0, Math.ceil(7 - daysSince))}d left)
+                              </button>
+                            )}
+                            {!canAppeal && !submitted && s.strike_number < 3 && daysSince > 7 && (
+                              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>Appeal window closed</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.6 }}>
+                    Strikes 1 and 2 can be appealed within 7 days. Owner reviews within 48 hours. Strike 3 (permanent ban) cannot be appealed.
+                  </div>
+                </div>
+              )}
 
               {/* Why does the bond exist — full explanation */}
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '22px', marginBottom: '16px' }}>
