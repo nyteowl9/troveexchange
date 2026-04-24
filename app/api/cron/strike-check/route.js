@@ -68,23 +68,32 @@ export async function GET(request) {
 
   for (const order of missedOrders || []) {
     try {
-      // Count ALL prior strikes for this seller (warnings + actual strikes)
-      const { count: priorCount } = await supabaseAdmin
+      // Count real strikes (excludes warnings) to determine true strike number
+      const { count: realStrikeCount } = await supabaseAdmin
         .from('strikes')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', order.seller_id)
+        .neq('action_taken', 'warning')
 
-      const prior = priorCount || 0
+      const { count: warningCount } = await supabaseAdmin
+        .from('strikes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', order.seller_id)
+        .eq('action_taken', 'warning')
+
+      const realStrikes = realStrikeCount || 0
+      const hasWarning  = (warningCount || 0) > 0
+
       let strikeNumber, actionTaken, reason, userUpdate
 
-      if (prior === 0) {
-        // First offense — warning only, no suspension
-        strikeNumber = 1
+      if (realStrikes === 0 && !hasWarning) {
+        // First offense ever — warning only, no suspension
+        strikeNumber = null
         actionTaken = 'warning'
         reason = 'No carrier scan by 48hr ship deadline (first offense — warning)'
         userUpdate = null
-      } else if (prior === 1) {
-        // Strike 1: 7-day suspension
+      } else if (realStrikes === 0) {
+        // Had a warning before — this is Strike 1
         strikeNumber = 1
         actionTaken = '7_day_suspension'
         reason = 'No carrier scan by 48hr ship deadline (Strike 1)'
@@ -92,7 +101,7 @@ export async function GET(request) {
           strike_count: (order.seller.strike_count || 0) + 1,
           suspended_until: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         }
-      } else if (prior === 2) {
+      } else if (realStrikes === 1) {
         // Strike 2: 30-day suspension + bond bumps to 4%
         strikeNumber = 2
         actionTaken = '30_day_suspension'
