@@ -217,6 +217,9 @@ export async function POST(request) {
 
     await supabaseAdmin.from('orders').update({ status: 'released' }).eq('id', order.id)
 
+    // Track buyer dispute loss
+    await incrementBuyerDisputeLoss(order.buyer_id)
+
     // Buyer committed fraud (sent wrong card back) — apply buyer strike
     if (order.status === 'return_disputed_seller') {
       await applyBuyerStrike(order)
@@ -285,4 +288,16 @@ async function applyStrike(order) {
     .update({ status: 'suspended_pause' })
     .eq('seller_id', order.seller_id)
     .eq('status', 'active')
+}
+
+async function incrementBuyerDisputeLoss(buyerId) {
+  const { data: buyer } = await supabaseAdmin
+    .from('users')
+    .select('dispute_losses')
+    .eq('id', buyerId)
+    .single()
+  await supabaseAdmin.from('users').update({
+    dispute_losses:      (buyer?.dispute_losses || 0) + 1,
+    last_dispute_loss_at: new Date().toISOString(),
+  }).eq('id', buyerId)
 }

@@ -35,6 +35,7 @@ export default function AdminPanel() {
   // Live dispute + strike data
   const [pendingDisputes, setPendingDisputes] = useState([])
   const [adminStrikes, setAdminStrikes]       = useState([])
+  const [flaggedBuyers, setFlaggedBuyers]     = useState([])
   const [strikeRemoving, setStrikeRemoving]   = useState({})
   const [recentOrders, setRecentOrders]       = useState([])
   const [overviewStats, setOverviewStats]     = useState(null)
@@ -50,6 +51,7 @@ export default function AdminPanel() {
     if (activeSection === 'users') searchUsers('')
     if (activeSection === 'orders') fetchAdminOrders()
     if (activeSection === 'strikes') loadStrikes()
+    if (activeSection === 'flagged-buyers') loadFlaggedBuyers()
   }, [activeSection])
 
   useEffect(() => {
@@ -81,17 +83,25 @@ export default function AdminPanel() {
     if (adminStrikes.length > 0) return
     try {
       const { supabase } = await import('@/lib/supabase')
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/admin/users/search?q=&limit=1', {
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      })
-      // Use supabase directly for strikes — admin-level read
       const { data } = await supabase
         .from('strikes')
         .select('id, user_id, strike_number, reason, action_taken, created_at, appealed, appeal_reason, appeal_outcome, appeal_submitted_at, user:user_id(username), order:order_id(id)')
         .order('created_at', { ascending: false })
         .limit(50)
       setAdminStrikes(data || [])
+    } catch {}
+  }
+
+  async function loadFlaggedBuyers() {
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data } = await supabase
+        .from('users')
+        .select('id, username, full_name, email, dispute_losses, last_dispute_loss_at, buyer_rep_score, joined_at, banned, suspended_until')
+        .gte('dispute_losses', 2)
+        .order('dispute_losses', { ascending: false })
+        .limit(50)
+      setFlaggedBuyers(data || [])
     } catch {}
   }
 
@@ -333,6 +343,7 @@ export default function AdminPanel() {
     { id: 'orders', icon: '⇄', label: 'All Orders' },
     { id: 'users', icon: '👤', label: 'Users' },
     { id: 'strikes', icon: '⚠', label: 'Strikes' },
+    { id: 'flagged-buyers', icon: '🚩', label: 'Flagged Buyers' },
     { id: 'financials', icon: '$', label: 'Financials' },
     { id: 'escrow', icon: '🔒', label: 'Escrow Monitor' },
     { id: 'settings', icon: '⚙', label: 'Platform Settings' },
@@ -1095,6 +1106,71 @@ export default function AdminPanel() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {/* FLAGGED BUYERS */}
+          {activeSection === 'flagged-buyers' && (
+            <div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Flagged <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Buyers</em></div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Buyers with 2+ dispute losses — review for abuse patterns</div>
+              {flaggedBuyers.length === 0 ? (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)' }}>No flagged buyers</div>
+              ) : (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                        {['Buyer', 'Dispute Losses', 'Last Loss', 'Rep Score', 'Status', 'Actions'].map((h, i) => (
+                          <th key={i} style={{ padding: '11px 14px', textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.08em' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {flaggedBuyers.map(b => (
+                        <tr key={b.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '11px 14px' }}>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--teal)', fontWeight: 600 }}>@{b.username || '—'}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{b.email}</div>
+                          </td>
+                          <td style={{ padding: '11px 14px' }}>
+                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', fontWeight: 700, color: b.dispute_losses >= 5 ? 'var(--accent-red)' : 'var(--accent-amber)' }}>{b.dispute_losses}</span>
+                          </td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {b.last_dispute_loss_at ? new Date(b.last_dispute_loss_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                          </td>
+                          <td style={{ padding: '11px 14px', fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)' }}>
+                            {b.buyer_rep_score?.toFixed(2) ?? '—'}
+                          </td>
+                          <td style={{ padding: '11px 14px' }}>
+                            {b.banned
+                              ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-red)', background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '20px', padding: '3px 8px' }}>Banned</span>
+                              : b.suspended_until && new Date(b.suspended_until) > new Date()
+                              ? <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent-amber)', background: 'rgba(232,168,56,0.1)', border: '1px solid rgba(232,168,56,0.3)', borderRadius: '20px', padding: '3px 8px' }}>Suspended</span>
+                              : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>Active</span>}
+                          </td>
+                          <td style={{ padding: '11px 14px' }}>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button onClick={async () => {
+                                if (!window.confirm(`Suspend @${b.username} for 30 days?`)) return
+                                const session = await getSession()
+                                await fetch('/api/admin/users/suspend', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` }, body: JSON.stringify({ user_id: b.id, days: 30 }) })
+                                loadFlaggedBuyers()
+                              }} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(232,168,56,0.4)', background: 'rgba(232,168,56,0.08)', color: 'var(--accent-amber)', cursor: 'pointer' }}>Suspend 30d</button>
+                              <button onClick={async () => {
+                                if (!window.confirm(`Permanently ban @${b.username}?`)) return
+                                const session = await getSession()
+                                await fetch('/api/admin/users/ban', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` }, body: JSON.stringify({ user_id: b.id }) })
+                                loadFlaggedBuyers()
+                              }} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(200,75,60,0.4)', background: 'rgba(200,75,60,0.08)', color: 'var(--accent-red)', cursor: 'pointer' }}>Ban</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
