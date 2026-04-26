@@ -798,7 +798,7 @@ function SellerDashboard() {
                   const canLabel = order.bond_tx_hash && !labelLoading[order.id] && !photosRequired
                   return (
                     <button onClick={() => canLabel && handlePrintLabel(order)} disabled={!canLabel} title={photosRequired ? 'Upload 3 auth photos first' : ''} style={{ background: canLabel ? 'var(--teal)' : 'var(--bg-3)', border: `1.5px solid ${canLabel ? 'transparent' : 'var(--border)'}`, color: canLabel ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: canLabel ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: labelLoading[order.id] ? 0.7 : 1, whiteSpace: 'nowrap' }}>
-                      {labelLoading[order.id] ? '⏳ Generating…' : order.label_a_url ? (order.listing?.auth_tier === 'physical' ? '🖨 Print Label → Auth Center' : '🖨 Print Label') : (order.listing?.auth_tier === 'physical' ? '🖨 Get Label → Auth Center' : '🖨 Get Label')}
+                      {labelLoading[order.id] ? '⏳ Generating…' : order.label_a_url ? (order.auth_tier === 'physical' ? '🖨 Print Label → Auth Center' : '🖨 Print Label') : (order.auth_tier === 'physical' ? '🖨 Get Label → Auth Center' : '🖨 Get Label')}
                     </button>
                   )
                 })()}
