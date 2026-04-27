@@ -29,7 +29,7 @@ export async function GET() {
 <div class="nav"><a href="https://chasehollow.com">CHASE HOLLOW</a></div>
 
 <h1>Privacy Policy</h1>
-<div class="meta">Chase Hollow LLC &middot; Idaho, United States &middot; Effective Date: [DATE &mdash; TO BE CONFIRMED]</div>
+<div class="meta">Chase Hollow LLC &middot; Idaho, United States &middot; Effective Date: 2026</div>
 
 <p>This Privacy Policy describes how Chase Hollow LLC collects, uses, and shares information when you use our platform at chasehollow.com. By using Chase Hollow, you agree to the practices described here.</p>
 

@@ -85,7 +85,7 @@ export default function TermsOfService() {
               Terms of <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Service</em>
             </h1>
             <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Effective Date: <span style={{ color: 'var(--text-secondary)' }}>[DATE — TO BE CONFIRMED]</span></div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Effective Date: <span style={{ color: 'var(--text-secondary)' }}>2026</span></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Chase Hollow LLC · Idaho</div>
             </div>
           </div>
@@ -358,7 +358,7 @@ export default function TermsOfService() {
           </section>
 
           <div style={{ borderTop: '0.5px solid var(--border)', marginTop: '40px', paddingTop: '24px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.65 }}>
-            © Chase Hollow LLC · All rights reserved · Effective [DATE — TO BE CONFIRMED]
+            © Chase Hollow LLC · All rights reserved · Effective 2026
           </div>
         </div>
       </div>
