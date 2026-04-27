@@ -8,6 +8,7 @@ export default function Home() {
   const [theme, setTheme] = useState('dark')
   const [activeCategory, setActiveCategory] = useState('all')
   const [featuredListings, setFeaturedListings] = useState([])
+  const [tickerListings, setTickerListings]     = useState([])
 
   useEffect(() => {
     const saved = localStorage.getItem('ch-theme') || 'dark'
@@ -23,6 +24,14 @@ export default function Home() {
       .order('created_at', { ascending: false })
       .limit(6)
       .then(({ data }) => setFeaturedListings(data || []))
+
+    supabase
+      .from('listings')
+      .select('id, card_name, grader, grade, price')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then(({ data }) => setTickerListings(data || []))
   }, [])
 
   const toggleTheme = () => {
@@ -39,14 +48,6 @@ export default function Home() {
     { id: 'onepiece', label: 'One Piece', icon: '☠' },
     { id: 'yugioh', label: 'Yu-Gi-Oh', icon: '⊡' },
     { id: 'sports', label: 'Sports', icon: '⚾' },
-  ]
-
-  const recentSales = [
-    { name: 'Charizard Holo', set: 'Pokémon · Base Set 1999 Shadowless', grade: 'PSA 9', price: '$487', change: '▲ 2.4%', up: true, time: '2h ago', bg: 'linear-gradient(135deg,#1a3a5c,#0d2035)' },
-    { name: 'Ancestral Recall', set: 'MTG · Alpha · Power Nine', grade: 'BGS 9', price: '$9,200', change: '▲ 3.2%', up: true, time: '5h ago', bg: 'linear-gradient(135deg,#1c2a1c,#0d1a0d)' },
-    { name: 'Monkey D. Luffy', set: 'One Piece · OP-01 Alt Art SEC', grade: 'PSA 10', price: '$890', change: '▼ 0.8%', up: false, time: '8h ago', bg: 'linear-gradient(135deg,#2a1c1c,#1a0d0d)' },
-    { name: 'Blastoise Holo', set: 'Pokémon · Base Set 1999 · #2/102', grade: 'PSA 10', price: '$3,800', change: '▲ 6.1%', up: true, time: '12h ago', bg: 'linear-gradient(135deg,#1a2a3a,#0d1a2a)' },
-    { name: 'Mox Ruby', set: 'MTG · Unlimited · Power Nine', grade: 'BGS 8.5', price: '$4,100', change: '▼ 1.5%', up: false, time: 'Yesterday', bg: 'linear-gradient(135deg,#2a1c0d,#1a0d05)' },
   ]
 
   const wallets = [
@@ -98,31 +99,22 @@ export default function Home() {
         </div>
       </section>
 
-      {/* TICKER */}
-      <div style={{ background: 'var(--bg-3)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '10px 0', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', whiteSpace: 'nowrap', animation: 'ticker 35s linear infinite' }}>
-          {[
-            { name: 'Charizard Base Holo', grade: 'PSA 9', price: '$487', change: '▲ 2.4%', up: true },
-            { name: 'Black Lotus', grade: 'BGS 8.5', price: '$28,400', change: '▼ 1.2%', up: false },
-            { name: 'Pikachu Illustrator', grade: 'PSA 7', price: '$4,200', change: '▲ 5.1%', up: true },
-            { name: 'Mox Sapphire', grade: 'PSA 9', price: '$6,800', change: '▲ 0.8%', up: true },
-            { name: '1st Ed Shadowless Charizard', grade: 'PSA 10', price: '$36,000', change: '▼ 0.5%', up: false },
-            { name: 'Ancestral Recall', grade: 'BGS 9', price: '$9,200', change: '▲ 3.2%', up: true },
-            { name: 'Monkey D. Luffy Alt Art', grade: 'PSA 10', price: '$890', change: '▲ 1.8%', up: true },
-            { name: 'Charizard Base Holo', grade: 'PSA 9', price: '$487', change: '▲ 2.4%', up: true },
-            { name: 'Black Lotus', grade: 'BGS 8.5', price: '$28,400', change: '▼ 1.2%', up: false },
-            { name: 'Ancestral Recall', grade: 'BGS 9', price: '$9,200', change: '▲ 3.2%', up: true },
-          ].map((item, i) => (
-            <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '0 2rem', fontFamily: 'DM Mono, monospace', fontSize: '11px' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>{item.name}</span>
-              <span style={{ color: 'var(--text-muted)' }}>{item.grade}</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.price}</span>
-              <span style={{ color: item.up ? '#5DC98A' : '#E05A4A', fontWeight: 600 }}>{item.change}</span>
-              <span style={{ color: 'var(--border)' }}>·</span>
-            </span>
-          ))}
+      {/* TICKER — New Listings (hidden if marketplace is empty) */}
+      {tickerListings.length > 0 && (
+        <div style={{ background: 'var(--bg-3)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '10px 0', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', whiteSpace: 'nowrap', animation: 'ticker 35s linear infinite' }}>
+            {[...tickerListings, ...tickerListings].map((item, i) => (
+              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '0 2rem', fontFamily: 'DM Mono, monospace', fontSize: '11px' }}>
+                <span style={{ color: 'var(--teal)', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>NEW</span>
+                <span style={{ color: 'var(--text-secondary)' }}>{item.card_name}</span>
+                {item.grade && <span style={{ color: 'var(--text-muted)' }}>{item.grader ? `${item.grader} ${item.grade}` : item.grade}</span>}
+                <span style={{ color: 'var(--gold)', fontWeight: 500 }}>${Number(item.price).toLocaleString()}</span>
+                <span style={{ color: 'var(--border)' }}>·</span>
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* SEARCH + CATEGORIES */}
       <section style={{ padding: '32px 2.5rem 0', background: 'var(--bg)' }}>
@@ -391,49 +383,48 @@ export default function Home() {
         </div>
       </section>
 
-      {/* RECENT SALES */}
+      {/* EARLY ACCESS CTA */}
       <section style={{ padding: '80px 2.5rem', borderTop: '0.5px solid var(--border)' }}>
         <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '24px' }}>
             <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '34px', fontWeight: 300, color: 'var(--text-primary)' }}>
-              Recent <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Sales</em>
+              Be Among the <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>First</em>
             </h2>
-            <a href="#" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>Full price guide →</a>
           </div>
-          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-3)' }}>
-                  {['Card', 'Grade', 'Sale Price', '30d Change', 'Sold'].map((h, i) => (
-                    <th key={i} style={{ textAlign: 'left', fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '12px 16px', fontWeight: 500 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {recentSales.map((sale, i) => (
-                  <tr key={i} style={{ borderBottom: i < recentSales.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '30px', height: '42px', borderRadius: '4px', background: sale.bg, flexShrink: 0 }} />
-                        <div>
-                          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '17px', color: 'var(--text-primary)' }}>{sale.name}</div>
-                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '1px' }}>{sale.set}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 9px', borderRadius: '6px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>{sale.grade}</span>
-                    </td>
-                    <td style={{ padding: '14px 16px', fontFamily: 'Playfair Display, serif', fontSize: '20px', fontWeight: 600, color: 'var(--gold)' }}>{sale.price}</td>
-                    <td style={{ padding: '14px 16px', fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 500, color: sale.up ? 'var(--accent-green)' : 'var(--accent-red)' }}>{sale.change}</td>
-                    <td style={{ padding: '14px 16px', fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{sale.time}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '56px 48px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: '48px', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '14px', fontWeight: 500 }}>Early Access</div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 300, lineHeight: 1.15, color: 'var(--text-primary)', marginBottom: '16px' }}>
+                The marketplace is<br />just getting started.
+              </div>
+              <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: '28px', maxWidth: '440px' }}>
+                List your cards now and be part of the first wave of sellers on Chase Hollow. Every card authenticated, every USDC protected — the way trading cards should be sold.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <Link href="/seller-dashboard" style={{ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', padding: '13px 28px', fontSize: '14px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '10px', textDecoration: 'none', display: 'inline-block' }}>
+                  List Your First Card →
+                </Link>
+                <Link href="/marketplace" style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '13px 28px', fontSize: '14px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', borderRadius: '10px', textDecoration: 'none', display: 'inline-block' }}>
+                  Browse Marketplace
+                </Link>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[
+                { icon: '🔒', title: 'Seller Bond Protection', desc: 'Your reputation is on-chain. Buyers trust you before they meet you.' },
+                { icon: '✓', title: '3.5% — lowest in TCG', desc: 'Keep $965 on every $1,000 sale. eBay takes $158 for the same transaction.' },
+                { icon: '⬡', title: 'Authentication included', desc: 'We verify every card. Authenticated cards sell faster and command higher prices.' },
+                { icon: '⚡', title: 'Auto-settlement in 72hrs', desc: 'Funds release automatically after buyer inspection window. No chasing payments.' },
+              ].map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 18px' }}>
+                  <div style={{ fontSize: '20px', flexShrink: 0, marginTop: '2px' }}>{item.icon}</div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '3px' }}>{item.title}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.55 }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

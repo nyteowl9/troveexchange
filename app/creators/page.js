@@ -87,9 +87,9 @@ export default function Creators() {
   })
 
   const examples = [
-    { handle: '@CardGrader', platform: 'YouTube', audience: '128k', niche: 'PSA grading & pulls', earning: '$340/mo est.' },
-    { handle: '@MTGInvestor', platform: 'Twitter/X', audience: '45k', niche: 'MTG finance & Power 9', earning: '$180/mo est.' },
-    { handle: '@SlabLife', platform: 'TikTok', audience: '280k', niche: 'Pokémon openings', earning: '$620/mo est.' },
+    { label: 'Small Creator', platform: 'YouTube · TikTok · Instagram', audience: '~5k followers', niche: 'Pack openings, reviews, grading tips', earning: '$50–$150/mo' },
+    { label: 'Mid-Tier Creator', platform: 'Any platform', audience: '~25k followers', niche: 'Grading, investing, set breakdowns', earning: '$150–$500/mo' },
+    { label: 'Large Creator', platform: 'Any platform', audience: '100k+ followers', niche: 'High-value cards, big pulls, finance', earning: '$500–$2,000/mo' },
   ]
 
   return (
@@ -217,10 +217,11 @@ export default function Creators() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                   {examples.map((ex, i) => (
                     <div key={i} style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '12px', padding: '18px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', fontWeight: 600, color: 'var(--teal)', marginBottom: '4px' }}>{ex.handle}</div>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '10px' }}>{ex.platform} · {ex.audience} followers · {ex.niche}</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', fontWeight: 600, color: 'var(--teal)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{ex.label}</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>{ex.audience} · {ex.platform}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px', lineHeight: 1.4 }}>{ex.niche}</div>
                       <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: 'var(--gold)' }}>{ex.earning}</div>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>Based on typical conversion rates</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>Illustrative estimate · actual results vary</div>
                     </div>
                   ))}
                 </div>
