@@ -15,7 +15,7 @@ export default function SellerDashboardPage() {
   return <Suspense><SellerDashboard /></Suspense>
 }
 
-const ACTIVE_ORDER_STATUSES = ['awaiting_shipment', 'in_transit', 'auth_review', 'auth_passed', 'delivered', 'inspection_window', 'disputed', 'awaiting_return', 'return_received', 'return_verified', 'return_received_seller', 'return_disputed_seller']
+const ACTIVE_ORDER_STATUSES = ['awaiting_shipment', 'in_transit', 'auth_review', 'auth_passed', 'auth_failed', 'delivered', 'inspection_window', 'disputed', 'awaiting_return', 'return_received', 'return_verified', 'return_received_seller', 'return_disputed_seller']
 
 const BOND_RATE  = { new: 0.04, trusted: 0.03, pro: 0.02, elite: 0.01, legend: 0.01 }
 const TIER_LABEL = { new: 'New', trusted: 'Trusted', pro: 'Pro', elite: 'Elite', legend: 'Legend' }
@@ -29,6 +29,7 @@ const SELLER_STATUS_MAP = {
   delivered:        { label: 'Delivered',         color: 'var(--accent-green)', bg: 'rgba(76,175,124,0.1)', border: 'rgba(76,175,124,0.3)', urgent: false },
   inspection_window:{ label: 'Auto-Releasing',   color: 'var(--accent-green)', bg: 'rgba(76,175,124,0.1)', border: 'rgba(76,175,124,0.3)', urgent: false },
   disputed:         { label: 'Dispute Filed',      color: 'var(--accent-red)',   bg: 'rgba(200,75,60,0.1)',  border: 'rgba(200,75,60,0.3)',  urgent: true  },
+  auth_failed:      { label: 'Auth Failed',        color: 'var(--accent-red)',   bg: 'rgba(200,75,60,0.1)',  border: 'rgba(200,75,60,0.3)',  urgent: true  },
 }
 
 function fmtUSD(n) {
@@ -57,7 +58,7 @@ function hoursUntil(ts) {
 }
 
 function SellerDashboard() {
-  const { user, profile, loading: authLoading } = useAuth()
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth()
   const { walletAddress, ready: walletReady, connect: connectWallet, disconnect: disconnectWallet } = useWalletConnection()
   const { wallets } = useWallets()
   const router = useRouter()
@@ -117,6 +118,14 @@ function SellerDashboard() {
 
   // Account standing (live check on mount)
   const [accountStanding, setAccountStanding] = useState(null) // { banned, suspended_until }
+
+  // Profile edit
+  const [profileForm, setProfileForm]         = useState({ username: '', full_name: '', street1: '', street2: '', city: '', state: '', zip: '' })
+  const [profileSaving, setProfileSaving]     = useState(false)
+  const [profileSaved, setProfileSaved]       = useState(false)
+  const [profileError, setProfileError]       = useState('')
+  const [usernameChecking, setUsernameChecking] = useState(false)
+  const [usernameTaken, setUsernameTaken]     = useState(false)
 
   // New listing form
   const [listingType, setListingType] = useState('graded')
@@ -207,6 +216,20 @@ function SellerDashboard() {
     supabase.from('users').select('banned, suspended_until').eq('id', user.id).single()
       .then(({ data }) => setAccountStanding(data || {}))
   }, [user])
+
+  // Populate profile form when profile loads
+  useEffect(() => {
+    if (!profile) return
+    setProfileForm({
+      username:  profile.username  || '',
+      full_name: profile.full_name || '',
+      street1:   profile.street1   || '',
+      street2:   profile.street2   || '',
+      city:      profile.city      || '',
+      state:     profile.state     || '',
+      zip:       profile.zip       || '',
+    })
+  }, [profile])
 
   // Realtime — re-fetch when any of this seller's orders or listings change
   useEffect(() => {
@@ -754,6 +777,7 @@ function SellerDashboard() {
             {order.status === 'delivered'         && `Delivered · Buyer inspection window open`}
             {order.status === 'inspection_window' && (order.auto_release_at ? `Delivered · Auto-releases ${fmtDate(order.auto_release_at)}` : 'Delivered · Buyer inspection window open')}
             {order.status === 'disputed'          && `Buyer opened a dispute · Submit your evidence before staff review`}
+            {order.status === 'auth_failed'       && `Authentication failed · Card is in transit to buyer · A prepaid return label will be sent to them automatically`}
           </div>
           {(bondError[order.id] || labelError[order.id]) && (
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)', marginBottom: '8px' }}>{bondError[order.id] || labelError[order.id]}</div>
@@ -1053,8 +1077,15 @@ function SellerDashboard() {
       {photoOrderId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '480px' }}>
-            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '6px' }}>Upload Auth Photos</div>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>3 required: front, back, card in sealed package</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '6px' }}>
+              {photoOrderAuthTier === 'none' ? 'Upload Pre-Shipment Photos' : 'Upload Authentication Photos'}
+            </div>
+            <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px', lineHeight: '1.5' }}>
+              {photoOrderAuthTier === 'none'
+                ? 'These photos document the card\'s condition before it leaves your hands. They stay on file and are used as evidence if a dispute is ever opened on this order.'
+                : 'These photos are reviewed by our authentication staff while your card is in transit. Upload front, back, and the card in its sealed package.'}
+            </div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px' }}>3 required: front, back, card in sealed package</div>
 
             <input id="auth-photo-input" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => {
               const files = Array.from(e.target.files || [])
@@ -1093,7 +1124,7 @@ function SellerDashboard() {
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => { setPhotoOrderId(null); authPhotoFiles.forEach(p => URL.revokeObjectURL(p.preview)); setAuthPhotoFiles([]) }} style={{ flex: 1, background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: '13px' }}>Cancel</button>
               <button onClick={() => handleSubmitAuthPhotos(photoOrderId)} disabled={authPhotoFiles.length < 3 || authPhotoUploading} style={{ flex: 2, background: authPhotoFiles.length >= 3 && !authPhotoUploading ? 'var(--teal)' : 'var(--bg-3)', border: 'none', color: authPhotoFiles.length >= 3 && !authPhotoUploading ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '10px', borderRadius: '8px', cursor: authPhotoFiles.length >= 3 && !authPhotoUploading ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600 }}>
-                {authPhotoUploading ? 'Uploading…' : 'Submit Photos'}
+                {authPhotoUploading ? 'Uploading…' : photoOrderAuthTier === 'none' ? 'Save Photos' : 'Submit for Authentication'}
               </button>
             </div>
           </div>
@@ -2121,14 +2152,130 @@ function SellerDashboard() {
           {/* PROFILE */}
           {activeSection === 'profile' && (
             <div>
-              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '20px' }}>Your <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Profile</em></div>
-              <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <div style={{ fontSize: '48px', marginBottom: '12px' }}>◑</div>
-                <div>Profile settings — bio, specialties, shipping preferences, contact info.</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>Your <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Profile</em></div>
                 {profile?.username && (
-                  <Link href={`/profile/${profile.username}`} style={{ color: 'var(--teal)', textDecoration: 'none', fontSize: '13px', marginTop: '12px', display: 'block' }}>View public profile →</Link>
+                  <Link href={`/profile/${profile.username}`} target="_blank" rel="noreferrer" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    View public profile →
+                  </Link>
                 )}
               </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault()
+                if (usernameTaken) return
+                setProfileSaving(true)
+                setProfileError('')
+                setProfileSaved(false)
+                try {
+                  const res = await fetch('/api/profile/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(profileForm),
+                  })
+                  const data = await res.json()
+                  if (!res.ok) { setProfileError(data.error || 'Save failed'); return }
+                  await refreshProfile()
+                  setProfileSaved(true)
+                  setTimeout(() => setProfileSaved(false), 3000)
+                } catch (err) {
+                  setProfileError('Network error — please try again')
+                } finally {
+                  setProfileSaving(false)
+                }
+              }}>
+
+                {/* Username + Full Name */}
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', fontWeight: 500 }}>Account Info</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', letterSpacing: '0.06em' }}>USERNAME</label>
+                      <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-muted)' }}>@</span>
+                        <input
+                          value={profileForm.username}
+                          onChange={async (e) => {
+                            const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')
+                            setProfileForm(f => ({ ...f, username: val }))
+                            setUsernameTaken(false)
+                            if (val.length >= 3 && val !== profile?.username) {
+                              setUsernameChecking(true)
+                              try {
+                                const res = await fetch(`/api/onboarding/check-username?username=${val}`)
+                                const d = await res.json()
+                                setUsernameTaken(d.taken)
+                              } catch {}
+                              setUsernameChecking(false)
+                            }
+                          }}
+                          placeholder="yourhandle"
+                          maxLength={20}
+                          style={{ width: '100%', background: 'var(--bg-3)', border: `1.5px solid ${usernameTaken ? 'var(--accent-red)' : 'var(--border)'}`, borderRadius: '8px', padding: '9px 12px 9px 28px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      {usernameChecking && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>Checking…</div>}
+                      {usernameTaken && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-red)', marginTop: '4px' }}>Username already taken</div>}
+                      {!usernameTaken && profileForm.username.length >= 3 && profileForm.username !== profile?.username && !usernameChecking && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-green)', marginTop: '4px' }}>Available</div>}
+                    </div>
+                    <div>
+                      <label style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', letterSpacing: '0.06em' }}>FULL NAME</label>
+                      <input
+                        value={profileForm.full_name}
+                        onChange={e => setProfileForm(f => ({ ...f, full_name: e.target.value }))}
+                        placeholder="Your full name"
+                        maxLength={80}
+                        style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '9px 12px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '10px' }}>Username appears on your public profile and in chat. 3–20 characters: letters, numbers, underscores.</div>
+                </div>
+
+                {/* Shipping address */}
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', fontWeight: 500 }}>Shipping Address</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', letterSpacing: '0.06em' }}>STREET ADDRESS</label>
+                      <input value={profileForm.street1} onChange={e => setProfileForm(f => ({ ...f, street1: e.target.value }))} placeholder="123 Main St" style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '9px 12px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', letterSpacing: '0.06em' }}>APT / SUITE / UNIT <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
+                      <input value={profileForm.street2} onChange={e => setProfileForm(f => ({ ...f, street2: e.target.value }))} placeholder="Apt 4B" style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '9px 12px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', letterSpacing: '0.06em' }}>CITY</label>
+                        <input value={profileForm.city} onChange={e => setProfileForm(f => ({ ...f, city: e.target.value }))} placeholder="Boise" style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '9px 12px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', letterSpacing: '0.06em' }}>STATE</label>
+                        <input value={profileForm.state} onChange={e => setProfileForm(f => ({ ...f, state: e.target.value.toUpperCase().slice(0, 2) }))} placeholder="ID" maxLength={2} style={{ width: '64px', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '9px 12px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', textAlign: 'center', boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', letterSpacing: '0.06em' }}>ZIP</label>
+                        <input value={profileForm.zip} onChange={e => setProfileForm(f => ({ ...f, zip: e.target.value.replace(/\D/g, '').slice(0, 5) }))} placeholder="83702" maxLength={5} style={{ width: '80px', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '9px 12px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', textAlign: 'center', boxSizing: 'border-box' }} />
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginTop: '10px' }}>Used for shipping labels when you sell. Never shown publicly.</div>
+                </div>
+
+                {profileError && (
+                  <div style={{ background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)' }}>
+                    {profileError}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={profileSaving || usernameTaken || !profileForm.username || !profileForm.full_name}
+                  style={{ background: profileSaved ? 'rgba(76,175,124,0.15)' : 'var(--teal)', border: profileSaved ? '1.5px solid rgba(76,175,124,0.4)' : 'none', color: profileSaved ? 'var(--accent-green)' : '#fff', padding: '11px 28px', borderRadius: '8px', fontFamily: 'DM Mono, monospace', fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em', cursor: profileSaving || usernameTaken ? 'not-allowed' : 'pointer', opacity: profileSaving ? 0.7 : 1, transition: 'all 0.2s' }}
+                >
+                  {profileSaved ? '✓ Saved' : profileSaving ? 'Saving…' : 'Save Profile'}
+                </button>
+              </form>
             </div>
           )}
 

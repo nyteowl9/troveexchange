@@ -1,30 +1,24 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 // GET /api/profile/[username]
 // Returns: profile + reviews + completed sales (public data only)
-export async function GET(req, { params }) {
+export async function GET(_req, { params }) {
   const { username } = await params
 
-  // Load user
-  const { data: user, error: userErr } = await supabase
+  // Load user — select * to avoid column-not-found errors as schema evolves
+  const { data: user, error: userErr } = await supabaseAdmin
     .from('users')
-    .select(`
-      id, username, full_name, wallet_address, role,
-      seller_tier, total_sales, strike_count,
-      seller_rep_score, seller_review_count,
-      buyer_rep_score,  buyer_review_count,
-      joined_at
-    `)
+    .select('*')
     .eq('username', username.toLowerCase())
-    .single()
+    .maybeSingle()
 
-  if (userErr || !user) {
+  if (userErr) {
+    console.error('[profile/username] Supabase error:', userErr)
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+  }
+
+  if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
 
