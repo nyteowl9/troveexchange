@@ -101,19 +101,16 @@ export default function Footer() {
                 { href: '/#faq', label: 'FAQ' },
                 { href: '/#disputes', label: 'Dispute Process' },
                 { href: '/roadmap', label: 'Roadmap' },
-                { href: '/#terms', label: 'Terms of Service' },
+                { href: '/tos', label: 'Terms of Service' },
+              { href: '/support', label: 'Contact Support' },
               ].map((link, i) => (
-                <Link key={i} href={link.href} style={{ fontSize: '13px', color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s' }}
+                <Link key={i} href={link.href} style={{ fontSize: '13px', color: i === 5 ? 'var(--teal)' : 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s' }}
                   onMouseEnter={e => e.target.style.color = 'var(--teal)'}
-                  onMouseLeave={e => e.target.style.color = 'var(--text-secondary)'}
+                  onMouseLeave={e => e.target.style.color = i === 5 ? 'var(--teal)' : 'var(--text-secondary)'}
                 >
                   {link.label}
                 </Link>
               ))}
-              <a href="mailto:support@chasehollow.com" style={{ fontSize: '13px', color: 'var(--teal)', textDecoration: 'none', transition: 'color 0.15s' }}
-                onMouseEnter={e => e.target.style.opacity = '0.75'}
-                onMouseLeave={e => e.target.style.opacity = '1'}
-              >support@chasehollow.com</a>
             </div>
           </div>
 
@@ -143,9 +140,8 @@ export default function Footer() {
             © 2026 Chase Hollow · All transactions on Base (Ethereum L2) · Contract: <a href="https://basescan.org" target="_blank" rel="noreferrer" style={{ color: 'var(--teal)', textDecoration: 'none' }}>View on Basescan →</a>
           </div>
           <div style={{ display: 'flex', gap: '20px' }}>
-            {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((link, i) => (
-              <a key={i} href="#" style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textDecoration: 'none' }}>{link}</a>
-            ))}
+            <Link href="/tos" style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textDecoration: 'none' }}>Terms of Service</Link>
+            <Link href="/support" style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textDecoration: 'none' }}>Support</Link>
           </div>
         </div>
 
