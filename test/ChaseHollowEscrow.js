@@ -69,19 +69,19 @@ async function fundOrder(escrow, buyer, seller, creator, orderId, overrides = {}
 
 describe("ChaseHollowEscrow", function () {
   // Signers
-  let owner, operator, disputeResolver, buyer, seller, creator, feeRecipient, guardian, stranger;
+  let owner, operator, disputeResolver, buyer, seller, creator, feeRecipient, guardian, guardian2, stranger;
   // Contracts
   let usdc, escrow;
 
   beforeEach(async function () {
-    [owner, operator, disputeResolver, buyer, seller, creator, feeRecipient, guardian, stranger] =
+    [owner, operator, disputeResolver, buyer, seller, creator, feeRecipient, guardian, guardian2, stranger] =
       await ethers.getSigners();
 
     const USDC = await ethers.getContractFactory("MockUSDC");
     usdc = await USDC.deploy();
 
     const Escrow = await ethers.getContractFactory("ChaseHollowEscrow");
-    escrow = await Escrow.deploy(await usdc.getAddress(), feeRecipient.address, guardian.address);
+    escrow = await Escrow.deploy(await usdc.getAddress(), feeRecipient.address, guardian.address, guardian2.address);
 
     // Fund wallets and approve
     await usdc.mint(buyer.address,  u(100_000));
@@ -113,30 +113,45 @@ describe("ChaseHollowEscrow", function () {
       expect(await escrow.creatorFeeBps()).to.equal(50n);
     });
 
-    it("sets initial guardian correctly", async function () {
+    it("sets both initial guardians correctly (M-2)", async function () {
       expect(await escrow.isGuardian(guardian.address)).to.be.true;
-      expect(await escrow.guardianCount()).to.equal(1n);
+      expect(await escrow.isGuardian(guardian2.address)).to.be.true;
+      expect(await escrow.guardianCount()).to.equal(2n);
     });
 
     it("reverts with zero USDC address", async function () {
       const Escrow = await ethers.getContractFactory("ChaseHollowEscrow");
       await expect(
-        Escrow.deploy(ethers.ZeroAddress, feeRecipient.address, guardian.address)
+        Escrow.deploy(ethers.ZeroAddress, feeRecipient.address, guardian.address, guardian2.address)
       ).to.be.revertedWith("Invalid USDC address");
     });
 
     it("reverts with zero fee recipient", async function () {
       const Escrow = await ethers.getContractFactory("ChaseHollowEscrow");
       await expect(
-        Escrow.deploy(await usdc.getAddress(), ethers.ZeroAddress, guardian.address)
+        Escrow.deploy(await usdc.getAddress(), ethers.ZeroAddress, guardian.address, guardian2.address)
       ).to.be.revertedWith("Invalid fee recipient");
     });
 
-    it("reverts with zero guardian address", async function () {
+    it("reverts with zero guardian1 address", async function () {
       const Escrow = await ethers.getContractFactory("ChaseHollowEscrow");
       await expect(
-        Escrow.deploy(await usdc.getAddress(), feeRecipient.address, ethers.ZeroAddress)
-      ).to.be.revertedWith("Invalid guardian");
+        Escrow.deploy(await usdc.getAddress(), feeRecipient.address, ethers.ZeroAddress, guardian2.address)
+      ).to.be.revertedWith("Invalid guardian1");
+    });
+
+    it("reverts with zero guardian2 address", async function () {
+      const Escrow = await ethers.getContractFactory("ChaseHollowEscrow");
+      await expect(
+        Escrow.deploy(await usdc.getAddress(), feeRecipient.address, guardian.address, ethers.ZeroAddress)
+      ).to.be.revertedWith("Invalid guardian2");
+    });
+
+    it("reverts when guardian1 == guardian2 (must be distinct)", async function () {
+      const Escrow = await ethers.getContractFactory("ChaseHollowEscrow");
+      await expect(
+        Escrow.deploy(await usdc.getAddress(), feeRecipient.address, guardian.address, guardian.address)
+      ).to.be.revertedWith("Guardians must be distinct");
     });
   });
 
@@ -642,14 +657,14 @@ describe("ChaseHollowEscrow", function () {
       expect((await escrow.getOrder(orderId)).status).to.equal(5n); // RefundedToBuyer
     });
 
-    it("owner refunds on auth fail (Delivered)", async function () {
+    it("refundBuyer on Delivered order now reverts (H-1: must use dispute flow)", async function () {
       const orderId = makeId("authfail2");
       await fundOrder(escrow, buyer, seller, null, orderId);
       await escrow.connect(seller).confirmOrder(orderId);
       await escrow.connect(operator).markDelivered(orderId);
 
       await expect(escrow.connect(owner).refundBuyer(orderId))
-        .to.emit(escrow, "BuyerRefunded");
+        .to.be.revertedWith("Cannot refund at this stage");
     });
 
     it("operator can refund (auth fail is automated via webhook)", async function () {
@@ -684,9 +699,13 @@ describe("ChaseHollowEscrow", function () {
   // ═══════════════════════════════════════════════════════════════
 
   describe("cancelOrder", function () {
-    it("cancels AwaitingConfirmation — buyer refunded, no bond", async function () {
+    it("cancels AwaitingConfirmation after window — buyer refunded, no bond (M-4)", async function () {
       const orderId    = makeId("cancel_await");
       await fundOrder(escrow, buyer, seller, null, orderId);
+
+      // M-4: operator may only cancel AwaitingConfirmation after sellerConfirmWindow elapses
+      const confirmWindow = await escrow.sellerConfirmWindow();
+      await time.increase(Number(confirmWindow) + 1);
 
       const buyerBefore = await usdc.balanceOf(buyer.address);
       const feeBefore   = await usdc.balanceOf(feeRecipient.address);
@@ -714,6 +733,15 @@ describe("ChaseHollowEscrow", function () {
 
       expect(await usdc.balanceOf(buyer.address)).to.equal(buyerBefore + ESCROW);
       expect(await usdc.balanceOf(feeRecipient.address)).to.equal(feeBefore + SELLER_BOND);
+    });
+
+    it("cancelOrder AwaitingConfirmation reverts before confirm window elapses (M-4)", async function () {
+      const orderId = makeId("cancel_too_early");
+      await fundOrder(escrow, buyer, seller, null, orderId);
+      // No time advance — window has not elapsed
+      await expect(
+        escrow.connect(operator).cancelOrder(orderId)
+      ).to.be.revertedWith("Confirm window not yet expired");
     });
 
     it("stranger cannot cancel", async function () {
@@ -834,6 +862,10 @@ describe("ChaseHollowEscrow", function () {
         await fundOrder(escrow, buyer, seller, null, idActive);
         await escrow.connect(seller).confirmOrder(idActive);
 
+        // M-4: advance past sellerConfirmWindow so AwaitingConfirmation order is eligible
+        const confirmWindow = await escrow.sellerConfirmWindow();
+        await time.increase(Number(confirmWindow) + 1);
+
         const feeBefore = await usdc.balanceOf(feeRecipient.address);
         await escrow.connect(operator).batchCancelOrders([idAwait, idActive]);
 
@@ -952,23 +984,24 @@ describe("ChaseHollowEscrow", function () {
         await expect(escrow.connect(guardian).executeGuardianChange())
           .to.emit(escrow, "GuardianAdded").withArgs(stranger.address);
         expect(await escrow.isGuardian(stranger.address)).to.be.true;
-        expect(await escrow.guardianCount()).to.equal(2n);
+        // Started with 2 (guardian, guardian2), added stranger → 3
+        expect(await escrow.guardianCount()).to.equal(3n);
       });
 
       it("guardian can propose + execute removing another guardian after timelock", async function () {
-        // Add G2 first
+        // Start: guardian, guardian2 (count=2). Add stranger → count=3.
         await escrow.connect(guardian).proposeGuardianChange(stranger.address, true);
         await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
         await ethers.provider.send("evm_mine");
         await escrow.connect(guardian).executeGuardianChange();
-        // Now G2 removes G1
+        // Now stranger removes guardian → count=2
         await escrow.connect(stranger).proposeGuardianChange(guardian.address, false);
         await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
         await ethers.provider.send("evm_mine");
         await expect(escrow.connect(stranger).executeGuardianChange())
           .to.emit(escrow, "GuardianRemoved").withArgs(guardian.address);
         expect(await escrow.isGuardian(guardian.address)).to.be.false;
-        expect(await escrow.guardianCount()).to.equal(1n);
+        expect(await escrow.guardianCount()).to.equal(2n);
       });
 
       it("G2 can cancel a malicious guardian-removal proposed by compromised G1", async function () {
@@ -996,6 +1029,12 @@ describe("ChaseHollowEscrow", function () {
       });
 
       it("cannot remove the last guardian", async function () {
+        // Start with 2 guardians (guardian, guardian2). First reduce to 1 via timelock.
+        await escrow.connect(guardian).proposeGuardianChange(guardian2.address, false);
+        await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
+        await ethers.provider.send("evm_mine");
+        await escrow.connect(guardian).executeGuardianChange();
+        // Now guardian is the sole guardian — removing it must be blocked
         await expect(
           escrow.connect(guardian).proposeGuardianChange(guardian.address, false)
         ).to.be.revertedWith("Cannot remove last guardian");
@@ -1031,23 +1070,26 @@ describe("ChaseHollowEscrow", function () {
     describe("ownerRemoveGuardian (deadlock tiebreaker)", function () {
       const GUARDIAN_DELAY = 72 * 60 * 60;
 
-      it("owner can remove a guardian when 2 exist", async function () {
-        // Add G2 first
+      it("owner can remove a guardian when 2+ exist", async function () {
+        // Start: guardian, guardian2 (count=2). Add stranger → count=3.
         await escrow.connect(guardian).proposeGuardianChange(stranger.address, true);
         await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
         await ethers.provider.send("evm_mine");
         await escrow.connect(guardian).executeGuardianChange();
-        expect(await escrow.guardianCount()).to.equal(2n);
+        expect(await escrow.guardianCount()).to.equal(3n);
 
-        // Owner removes G1 (deadlock scenario)
+        // Owner removes guardian (deadlock scenario) → count=2
         await expect(escrow.connect(owner).ownerRemoveGuardian(guardian.address))
           .to.emit(escrow, "GuardianRemovedByOwner").withArgs(guardian.address);
         expect(await escrow.isGuardian(guardian.address)).to.be.false;
         expect(await escrow.isGuardian(stranger.address)).to.be.true;
-        expect(await escrow.guardianCount()).to.equal(1n);
+        expect(await escrow.guardianCount()).to.equal(2n);
       });
 
       it("owner cannot remove the last guardian", async function () {
+        // Reduce to 1 guardian first — owner removes guardian2 (count 2→1)
+        await escrow.connect(owner).ownerRemoveGuardian(guardian2.address);
+        // Now only guardian remains — must be blocked
         await expect(escrow.connect(owner).ownerRemoveGuardian(guardian.address))
           .to.be.revertedWith("Cannot remove last guardian");
       });
@@ -1139,12 +1181,11 @@ describe("ChaseHollowEscrow", function () {
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // SWEEP STUCK FUNDS (safety valve)
+  // SWEEP (propose / execute / cancel — L-1 timelock)
   // ═══════════════════════════════════════════════════════════════
 
-  describe("sweepStuckFunds", function () {
-    it("owner sweeps full balance to specified recipient when paused", async function () {
-      // Fund an order so contract holds USDC
+  describe("Emergency sweep (proposeSweep / executeSweep / cancelSweep)", function () {
+    it("owner proposes sweep, waits 48hrs, executes — full balance swept", async function () {
       const orderId = makeId("sweep1");
       await fundOrder(escrow, buyer, seller, null, orderId);
 
@@ -1153,45 +1194,65 @@ describe("ChaseHollowEscrow", function () {
       const recipientBefore = await usdc.balanceOf(stranger.address);
       const contractBalance = await usdc.balanceOf(await escrow.getAddress());
 
-      await expect(escrow.connect(owner).sweepStuckFunds(stranger.address))
-        .to.emit(escrow, "FundsSwept")
-        .withArgs(stranger.address, contractBalance, await ethers.provider.getBlock("latest").then(b => b.timestamp + 1));
+      await expect(escrow.connect(owner).proposeSweep(stranger.address))
+        .to.emit(escrow, "SweepProposed");
+
+      // Cannot execute before 48hr delay
+      await expect(escrow.connect(owner).executeSweep())
+        .to.be.revertedWith("Sweep delay not elapsed");
+
+      await time.increase(48 * 3600 + 1);
+
+      await expect(escrow.connect(owner).executeSweep())
+        .to.emit(escrow, "FundsSwept");
 
       expect(await usdc.balanceOf(await escrow.getAddress())).to.equal(0n);
       expect(await usdc.balanceOf(stranger.address)).to.equal(recipientBefore + contractBalance);
     });
 
-    it("reverts if not paused", async function () {
+    it("proposeSweep reverts if not paused", async function () {
       const orderId = makeId("sweep2");
       await fundOrder(escrow, buyer, seller, null, orderId);
       await expect(
-        escrow.connect(owner).sweepStuckFunds(stranger.address)
+        escrow.connect(owner).proposeSweep(stranger.address)
       ).to.be.reverted;
     });
 
-    it("reverts if nothing to sweep", async function () {
+    it("executeSweep reverts if nothing to sweep", async function () {
       await escrow.connect(owner).pause();
+      await escrow.connect(owner).proposeSweep(stranger.address);
+      await time.increase(48 * 3600 + 1);
       await expect(
-        escrow.connect(owner).sweepStuckFunds(stranger.address)
+        escrow.connect(owner).executeSweep()
       ).to.be.revertedWith("Nothing to sweep");
     });
 
-    it("non-owner cannot sweep", async function () {
+    it("non-owner cannot propose sweep", async function () {
       const orderId = makeId("sweep3");
       await fundOrder(escrow, buyer, seller, null, orderId);
       await escrow.connect(owner).pause();
       await expect(
-        escrow.connect(stranger).sweepStuckFunds(stranger.address)
+        escrow.connect(stranger).proposeSweep(stranger.address)
       ).to.be.reverted;
     });
 
-    it("reverts with zero recipient address", async function () {
+    it("proposeSweep reverts with zero recipient address", async function () {
       const orderId = makeId("sweep4");
       await fundOrder(escrow, buyer, seller, null, orderId);
       await escrow.connect(owner).pause();
       await expect(
-        escrow.connect(owner).sweepStuckFunds(ethers.ZeroAddress)
+        escrow.connect(owner).proposeSweep(ethers.ZeroAddress)
       ).to.be.revertedWith("Invalid recipient");
+    });
+
+    it("owner can cancel a pending sweep proposal", async function () {
+      const orderId = makeId("sweep5");
+      await fundOrder(escrow, buyer, seller, null, orderId);
+      await escrow.connect(owner).pause();
+      await escrow.connect(owner).proposeSweep(stranger.address);
+      await expect(escrow.connect(owner).cancelSweep())
+        .to.emit(escrow, "SweepCancelled").withArgs(stranger.address);
+      expect(await escrow.pendingSweepRecipient()).to.equal(ethers.ZeroAddress);
     });
   });
 
@@ -1342,6 +1403,8 @@ describe("ChaseHollowEscrow", function () {
       it("cannot reuse an order ID after cancellation", async function () {
         const orderId = makeId("reuse_cancelled");
         await fundOrder(escrow, buyer, seller, null, orderId);
+        const confirmWindow = await escrow.sellerConfirmWindow();
+        await time.increase(Number(confirmWindow) + 1);
         await escrow.connect(operator).cancelOrder(orderId);
         await expect(
           fundOrder(escrow, buyer, seller, null, orderId)
@@ -1428,6 +1491,8 @@ describe("ChaseHollowEscrow", function () {
       it("cannot markDelivered on a Cancelled order", async function () {
         const orderId = makeId("state4");
         await fundOrder(escrow, buyer, seller, null, orderId);
+        const confirmWindow = await escrow.sellerConfirmWindow();
+        await time.increase(Number(confirmWindow) + 1);
         await escrow.connect(operator).cancelOrder(orderId);
         await expect(
           escrow.connect(operator).markDelivered(orderId)
@@ -1437,8 +1502,9 @@ describe("ChaseHollowEscrow", function () {
       it("cannot confirmOrder on a Cancelled order", async function () {
         const orderId = makeId("state5");
         await fundOrder(escrow, buyer, seller, null, orderId);
+        const confirmWindow = await escrow.sellerConfirmWindow();
+        await time.increase(Number(confirmWindow) + 1);
         await escrow.connect(operator).cancelOrder(orderId);
-        // re-mint so seller has approval still valid
         await expect(
           escrow.connect(seller).confirmOrder(orderId)
         ).to.be.revertedWith("Order not awaiting confirmation");
@@ -1565,7 +1631,7 @@ describe("ChaseHollowEscrow", function () {
     });
 
     // ── Sweep includes seller bonds ──────────────────────────────
-    describe("sweepStuckFunds includes seller bonds", function () {
+    describe("Sweep includes seller bonds", function () {
       it("sweep captures both buyer escrow and seller bond", async function () {
         const orderId    = makeId("sweep_bonds");
         await fundOrder(escrow, buyer, seller, null, orderId);
@@ -1575,7 +1641,9 @@ describe("ChaseHollowEscrow", function () {
         expect(contractBalance).to.equal(ESCROW + SELLER_BOND);
 
         await escrow.connect(owner).pause();
-        await escrow.connect(owner).sweepStuckFunds(stranger.address);
+        await escrow.connect(owner).proposeSweep(stranger.address);
+        await time.increase(48 * 3600 + 1);
+        await escrow.connect(owner).executeSweep();
 
         expect(await usdc.balanceOf(await escrow.getAddress())).to.equal(0n);
         expect(await usdc.balanceOf(stranger.address)).to.equal(contractBalance);
@@ -1584,14 +1652,14 @@ describe("ChaseHollowEscrow", function () {
 
     // ── Guardian removes themselves ──────────────────────────────
     describe("Guardian self-removal", function () {
-      it("guardian can remove themselves if another guardian exists", async function () {
+      it("guardian can remove themselves if other guardians exist", async function () {
         const GUARDIAN_DELAY = 72 * 60 * 60;
-        // Add G2 first
+        // Start: guardian, guardian2 (count=2). Add stranger → count=3.
         await escrow.connect(guardian).proposeGuardianChange(stranger.address, true);
         await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
         await ethers.provider.send("evm_mine");
         await escrow.connect(guardian).executeGuardianChange();
-        // G1 proposes to remove themselves
+        // G1 proposes to remove themselves → count would be 2
         await escrow.connect(guardian).proposeGuardianChange(guardian.address, false);
         await ethers.provider.send("evm_increaseTime", [GUARDIAN_DELAY + 1]);
         await ethers.provider.send("evm_mine");
@@ -1599,7 +1667,7 @@ describe("ChaseHollowEscrow", function () {
           .to.emit(escrow, "GuardianRemoved").withArgs(guardian.address);
         expect(await escrow.isGuardian(guardian.address)).to.be.false;
         expect(await escrow.isGuardian(stranger.address)).to.be.true;
-        expect(await escrow.guardianCount()).to.equal(1n);
+        expect(await escrow.guardianCount()).to.equal(2n);
       });
     });
 

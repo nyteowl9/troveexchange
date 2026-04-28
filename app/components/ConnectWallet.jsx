@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useEffect, useRef } from 'react'
 
 export function useWalletConnection() {
-  const { ready, authenticated, linkWallet } = usePrivy()
+  const { ready, authenticated, login, linkWallet } = usePrivy()
   const { wallets } = useWallets()
   const { user, profile, refreshProfile } = useAuth()
 
@@ -38,7 +38,11 @@ export function useWalletConnection() {
 
   async function connect() {
     linkingRef.current = true
-    await linkWallet()
+    if (!authenticated) {
+      await login()
+    } else {
+      await linkWallet()
+    }
   }
 
   async function disconnect() {

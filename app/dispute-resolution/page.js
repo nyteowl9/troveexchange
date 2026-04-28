@@ -86,12 +86,11 @@ export default function DisputeResolution() {
 
   const fetchAuthInspections = useCallback(async (orderId) => {
     if (!orderId) return
-    const { data } = await supabase
-      .from('auth_inspections')
-      .select('id, photos, decision, notes, timestamp')
-      .eq('order_id', orderId)
-      .order('timestamp', { ascending: true })
-    setAuthInspections(data || [])
+    const res = await fetch(`/api/orders/auth-photos-signed?order_id=${orderId}`)
+    if (res.ok) {
+      const json = await res.json()
+      setAuthInspections(json.inspections || [])
+    }
   }, [])
 
   const openDetail = useCallback((d) => {
@@ -388,22 +387,33 @@ export default function DisputeResolution() {
                   const seller = d.orders?.seller
                   const card = d.orders?.listing?.card_name || 'Unknown card'
                   return (
-                    <div key={d.id} style={{ background: 'var(--bg-2)', border: `1.5px solid ${isHighValue ? 'rgba(201,168,76,0.3)' : 'var(--border)'}`, borderRadius: '12px', padding: '16px 20px', cursor: 'pointer', transition: 'all 0.15s' }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--teal-border)'}
-                      onMouseLeave={e => e.currentTarget.style.borderColor = isHighValue ? 'rgba(201,168,76,0.3)' : 'var(--border)'}
+                    <div key={d.id} style={{ background: 'var(--bg-2)', border: `1.5px solid ${d.orders?.status === 'return_disputed_seller' ? 'rgba(200,75,60,0.5)' : isHighValue ? 'rgba(201,168,76,0.3)' : 'var(--border)'}`, borderRadius: '12px', padding: '16px 20px', cursor: 'pointer', transition: 'all 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = d.orders?.status === 'return_disputed_seller' ? 'rgba(200,75,60,0.8)' : 'var(--teal-border)'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = d.orders?.status === 'return_disputed_seller' ? 'rgba(200,75,60,0.5)' : isHighValue ? 'rgba(201,168,76,0.3)' : 'var(--border)'}
                     >
+                      {d.orders?.status === 'return_disputed_seller' && (
+                        <div style={{ background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.25)', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '14px' }}>↩</span>
+                          <div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', fontWeight: 700, color: 'var(--accent-red)', letterSpacing: '0.06em' }}>WRONG CARD RECEIVED — Return Dispute</div>
+                            <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Seller claims the card returned by the buyer is not the original. No further shipping required — your decision executes immediately.</div>
+                          </div>
+                        </div>
+                      )}
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '10px', flexWrap: 'wrap' }}>
                         <div style={{ flex: 1, minWidth: '140px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
                             <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '17px', color: 'var(--text-primary)' }}>{card}</div>
                             {isHighValue && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '10px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.28)', color: 'var(--gold)', fontWeight: 500 }}>High Value</span>}
-                            {d.orders?.status === 'return_disputed_seller' && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '2px 7px', borderRadius: '10px', background: 'rgba(232,168,56,0.12)', border: '1px solid rgba(232,168,56,0.35)', color: 'var(--accent-amber)', fontWeight: 500 }}>↩ Return Dispute</span>}
                           </div>
                           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '6px' }}>
                             {d.orders?.listing?.set || ''} · #{d.id.slice(0, 8).toUpperCase()}
                           </div>
                           <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                            <strong style={{ color: 'var(--accent-red)' }}>Reason:</strong> {d.reason}
+                            {d.orders?.status === 'return_disputed_seller'
+                              ? <><strong style={{ color: 'var(--accent-red)' }}>Seller's claim:</strong> {d.seller_return_notes || d.reason}</>
+                              : <><strong style={{ color: 'var(--accent-red)' }}>Reason:</strong> {d.reason}</>
+                            }
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                             Buyer: <span style={{ color: 'var(--accent-blue)' }}>{buyer?.username || buyer?.full_name || buyer?.email || '—'}</span>

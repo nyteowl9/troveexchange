@@ -220,9 +220,11 @@ export async function POST(request) {
     // Track buyer dispute loss
     await incrementBuyerDisputeLoss(order.buyer_id)
 
-    // Buyer committed fraud (sent wrong card back) — apply buyer strike
     if (order.status === 'return_disputed_seller') {
+      // Buyer committed fraud — apply buyer strike
       await applyBuyerStrike(order)
+      // Seller was vindicated — reverse the strike applied when Label C was generated
+      await reverseSellerStrike(order)
     }
 
     try {
@@ -241,8 +243,8 @@ export async function POST(request) {
 }
 
 async function applyBuyerStrike(order) {
-  const { data: buyer } = await supabaseAdmin.from('users').select('strike_count').eq('id', order.buyer_id).single()
-  const newCount = (buyer?.strike_count || 0) + 1
+  const { data: buyer } = await supabaseAdmin.from('users').select('buyer_strike_count').eq('id', order.buyer_id).single()
+  const newCount = (buyer?.buyer_strike_count || 0) + 1
   const action = newCount === 1 ? '7-day suspension' : newCount === 2 ? '30-day suspension' : 'Permanent ban'
   const suspendedUntil = newCount === 1
     ? new Date(Date.now() + 7  * 24 * 60 * 60 * 1000).toISOString()
@@ -250,14 +252,15 @@ async function applyBuyerStrike(order) {
     ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     : null
   await supabaseAdmin.from('users').update({
-    strike_count:    newCount,
-    banned:          newCount >= 3,
-    suspended_until: suspendedUntil,
+    buyer_strike_count: newCount,
+    banned:             newCount >= 3,
+    suspended_until:    suspendedUntil,
   }).eq('id', order.buyer_id)
   await supabaseAdmin.from('strikes').insert({
     user_id:       order.buyer_id,
     order_id:      order.id,
     strike_number: newCount,
+    strike_role:   'buyer',
     reason:        'Fraudulent return — wrong card submitted',
     action_taken:  action,
   })
@@ -281,6 +284,7 @@ async function applyStrike(order) {
     user_id:       order.seller_id,
     order_id:      order.id,
     strike_number: newCount,
+    strike_role:   'seller',
     reason:        'Lost dispute',
     action_taken:  action,
   })
@@ -288,6 +292,48 @@ async function applyStrike(order) {
     .update({ status: 'suspended_pause' })
     .eq('seller_id', order.seller_id)
     .eq('status', 'active')
+}
+
+async function reverseSellerStrike(order) {
+  // Find the seller strike applied for this order (from the initial buyer_wins decision)
+  const { data: strike } = await supabaseAdmin
+    .from('strikes')
+    .select('id')
+    .eq('order_id', order.id)
+    .eq('user_id', order.seller_id)
+    .eq('strike_role', 'seller')
+    .maybeSingle()
+
+  if (!strike) return // No strike to reverse (e.g. new seller got a warning instead)
+
+  await supabaseAdmin.from('strikes').delete().eq('id', strike.id)
+
+  // Recount remaining seller strikes to recalculate standing
+  const { count: realCount } = await supabaseAdmin
+    .from('strikes')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', order.seller_id)
+    .eq('strike_role', 'seller')
+    .neq('action_taken', 'warning')
+
+  const remaining = realCount || 0
+  const suspendedUntil = remaining === 0 ? null
+    : remaining === 1 ? new Date(Date.now() + 7  * 24 * 60 * 60 * 1000).toISOString()
+    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  await supabaseAdmin.from('users').update({
+    strike_count:    remaining,
+    banned:          remaining >= 3,
+    suspended_until: suspendedUntil,
+  }).eq('id', order.seller_id)
+
+  // Restore suspended listings if seller is now clean
+  if (remaining === 0) {
+    await supabaseAdmin.from('listings')
+      .update({ status: 'active' })
+      .eq('seller_id', order.seller_id)
+      .eq('status', 'suspended_pause')
+  }
 }
 
 async function incrementBuyerDisputeLoss(buyerId) {

@@ -17,36 +17,52 @@ export async function POST(request) {
     const { user_id, strike_id } = await request.json()
     if (!user_id || !strike_id) return NextResponse.json({ error: 'Missing user_id or strike_id' }, { status: 400 })
 
-    // Delete the strike record
+    // Fetch role before deleting so we know which counter to update
+    const { data: strike } = await supabaseAdmin.from('strikes').select('strike_role').eq('id', strike_id).single()
+    if (!strike) return NextResponse.json({ error: 'Strike not found' }, { status: 404 })
+
     const { error: delErr } = await supabaseAdmin.from('strikes').delete().eq('id', strike_id).eq('user_id', user_id)
     if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 })
 
-    // Recount remaining strikes
-    const { count } = await supabaseAdmin.from('strikes').select('id', { count: 'exact', head: true }).eq('user_id', user_id)
-    const newCount = count || 0
+    // Recount each role independently
+    const [{ count: sellerCount }, { count: buyerCount }] = await Promise.all([
+      supabaseAdmin.from('strikes').select('id', { count: 'exact', head: true }).eq('user_id', user_id).eq('strike_role', 'seller'),
+      supabaseAdmin.from('strikes').select('id', { count: 'exact', head: true }).eq('user_id', user_id).eq('strike_role', 'buyer'),
+    ])
+    const newSellerCount = sellerCount || 0
+    const newBuyerCount  = buyerCount  || 0
 
-    // Recalculate suspension/ban based on new count
-    const banned = newCount >= 3
-    const suspendedUntil = newCount === 0 ? null
-      : newCount === 1 ? new Date(Date.now() + 7  * 24 * 60 * 60 * 1000).toISOString()
-      : newCount === 2 ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      : null
+    // Suspension is the later of what each role independently warrants
+    function suspendUntil(count) {
+      if (count === 0) return null
+      if (count === 1) return new Date(Date.now() + 7  * 24 * 60 * 60 * 1000).toISOString()
+      if (count === 2) return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      return null // banned
+    }
+    const sellerSuspend = suspendUntil(newSellerCount)
+    const buyerSuspend  = suspendUntil(newBuyerCount)
+    const suspended_until = sellerSuspend && buyerSuspend
+      ? (sellerSuspend > buyerSuspend ? sellerSuspend : buyerSuspend)
+      : sellerSuspend || buyerSuspend || null
+
+    const banned = newSellerCount >= 3 || newBuyerCount >= 3
 
     await supabaseAdmin.from('users').update({
-      strike_count: newCount,
+      strike_count:       newSellerCount,
+      buyer_strike_count: newBuyerCount,
       banned,
-      suspended_until: suspendedUntil,
+      suspended_until,
     }).eq('id', user_id)
 
-    // If suspension cleared, restore any listings that were paused due to suspension
-    if (newCount === 0) {
+    // Restore listings if seller is no longer suspended
+    if (newSellerCount === 0) {
       await supabaseAdmin.from('listings')
         .update({ status: 'active' })
         .eq('seller_id', user_id)
         .eq('status', 'suspended_pause')
     }
 
-    return NextResponse.json({ ok: true, new_strike_count: newCount })
+    return NextResponse.json({ ok: true, new_seller_strike_count: newSellerCount, new_buyer_strike_count: newBuyerCount })
   } catch (err) {
     console.error('[admin/users/remove-strike]', err)
     return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })

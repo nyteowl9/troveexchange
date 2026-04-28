@@ -8,13 +8,24 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 // ============================================================
-// Chase Hollow Escrow — v1.1
+// Chase Hollow Escrow — v1.2
 // Handles USDC escrow for TCG card transactions on Base L2.
+// v1.2: Post-audit security improvements (ReservedSnow, April 2026)
+//   H-1  refundBuyer restricted to Active only
+//   M-1  Ceiling division for BPS fee validation
+//   M-2  Two guardian addresses required at construction
+//   M-3  MAX_BATCH cap + BatchProcessed event on all batch functions
+//   M-4  cancelOrder time-gate for AwaitingConfirmation
+//   L-1  sweepStuckFunds replaced with propose/execute/cancel + 48hr delay
+//   L-2  BondForfeited event emitted on every bond forfeiture
+//   L-3  setMaxOrderValue lower-bound guard
+//   L-5  delete-before-require ordering fixed in executeGuardianChange
+//   L-6  releaseEscrow whenNotPaused omission documented
 //
 // Authority:
 //   Owner (Safe multisig) — fees, pause, add/remove operators,
 //                           add/remove dispute resolvers,
-//                           emergency sweep (when paused)
+//                           emergency sweep (when paused + 48hr delay)
 //   Operator (hot wallet) — markDelivered, releaseEscrow (auto),
 //                           cancelOrder, refundBuyer (auth fail),
 //                           batch operations.
@@ -127,6 +138,14 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     GuardianProposal public pendingGuardianChange;
     uint256 public constant GUARDIAN_CHANGE_DELAY = 72 hours;
 
+    // ── Emergency sweep timelock ─────────────────────────────
+    // sweepStuckFunds is split into propose/execute/cancel to prevent instant drain.
+    // A 48hr delay gives other Safe holders time to notice a malicious proposal
+    // and cancel it before execution. Only callable when paused.
+    address public pendingSweepRecipient;
+    uint256 public sweepReadyAt;
+    uint256 public constant SWEEP_DELAY = 48 hours;
+
     uint256 public platformFeeBps = 300;     // 3%
     uint256 public creatorFeeBps  = 50;      // 0.5%
     uint256 public buyerInspectWindow  = 72 hours;
@@ -136,6 +155,7 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
 
     uint256 public constant MAX_PLATFORM_FEE_BPS = 1000; // 10% hard cap
     uint256 public constant MAX_CREATOR_FEE_BPS  = 200;  // 2% hard cap
+    uint256 public constant MAX_BATCH            = 100;  // batch size cap (gas safety)
 
     mapping(bytes32 => Order)   public orders;
     mapping(address => bool)    public isOperator;
@@ -150,8 +170,10 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     event DisputeOpened(bytes32 indexed orderId, address indexed buyer);
     event DisputeResolved(bytes32 indexed orderId, bool buyerWon);
     event BuyerRefunded(bytes32 indexed orderId, address indexed buyer, uint256 amount);
+    event BondForfeited(bytes32 indexed orderId, address indexed seller, uint256 amount);
     event OrderCancelled(bytes32 indexed orderId);
     event BondReturned(bytes32 indexed orderId, address indexed seller, uint256 amount);
+    event BatchProcessed(string operation, uint256 processed);
     event OperatorAdded(address indexed operator);
     event OperatorRemoved(address indexed operator);
     event DisputeResolverAdded(address indexed resolver);
@@ -164,19 +186,32 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     event GuardianChangeProposed(address indexed target, bool isAdd, address indexed proposedBy, uint256 executeAfter);
     event GuardianChangeCancelled(address indexed target, bool isAdd, address indexed cancelledBy);
     event GuardianRemovedByOwner(address indexed guardian);
+    event SweepProposed(address indexed recipient, uint256 executeAt);
+    event SweepCancelled(address indexed recipient);
     // sweepStuckFunds — emitted with full detail so off-chain can reconstruct redistribution
     event FundsSwept(address indexed recipient, uint256 amount, uint256 timestamp);
 
     // ── Constructor ──────────────────────────────────────────
+    // Two distinct guardian addresses required at deployment to eliminate the
+    // single-guardian vulnerability window that exists when starting with one
+    // and adding a second via the 72hr timelock after the fact. (M-2)
 
-    constructor(address _usdc, address _feeRecipient, address _guardian) Ownable(msg.sender) {
-        require(_usdc != address(0), "Invalid USDC address");
+    constructor(
+        address _usdc,
+        address _feeRecipient,
+        address _guardian1,
+        address _guardian2
+    ) Ownable(msg.sender) {
+        require(_usdc         != address(0), "Invalid USDC address");
         require(_feeRecipient != address(0), "Invalid fee recipient");
-        require(_guardian != address(0), "Invalid guardian");
+        require(_guardian1    != address(0), "Invalid guardian1");
+        require(_guardian2    != address(0), "Invalid guardian2");
+        require(_guardian1    != _guardian2, "Guardians must be distinct");
         usdc = IERC20(_usdc);
-        feeRecipient = _feeRecipient;
-        isGuardian[_guardian] = true;
-        guardianCount = 1;
+        feeRecipient         = _feeRecipient;
+        isGuardian[_guardian1] = true;
+        isGuardian[_guardian2] = true;
+        guardianCount          = 2;
     }
 
     // ── Modifiers ────────────────────────────────────────────
@@ -260,6 +295,9 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     // against on-chain BPS values so no one can bypass fees
     // by calling the contract directly.
     //
+    // Ceiling division (M-1): prevents rounding down from letting
+    // a buyer underpay by a fraction of a token unit.
+    //
     // escrowAmount = sellerPayout + platformFee + creatorFee + authFee
     // cardValue    = escrowAmount - authFee (fee base)
 
@@ -289,13 +327,15 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
 
         // Validate platform/creator fees against on-chain BPS — prevents fee bypass.
         // Fee base is card value only (escrow minus pass-through costs).
+        // Ceiling division: (value * bps + 9999) / 10000 ensures we never allow
+        // a fee 1 token-unit below the true BPS minimum due to integer truncation.
         uint256 cardValue = escrowAmount - authFee - shippingFee - salesTax;
         require(
-            platformFee >= cardValue * platformFeeBps / 10000,
+            platformFee >= (cardValue * platformFeeBps + 9999) / 10000,
             "Platform fee below minimum"
         );
         require(
-            creatorFee >= cardValue * creatorFeeBps / 10000,
+            creatorFee >= (cardValue * creatorFeeBps + 9999) / 10000,
             "Creator fee below minimum"
         );
 
@@ -379,6 +419,10 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     //   b) Operator calls after autoReleaseAt — automated cron
     //   c) Owner calls after autoReleaseAt — fallback if operator down
     //
+    // Intentionally omits whenNotPaused: buyers must always be able to
+    // retrieve their funds regardless of contract pause state. A pause
+    // cannot be used to trap buyer money. (L-6)
+    //
     // Distributes:
     //   sellerPayout              → seller
     //   platformFee + authFee     → feeRecipient (Safe)
@@ -449,6 +493,9 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
             if (toSafe > 0) {
                 usdc.safeTransfer(feeRecipient, toSafe);
             }
+            if (order.sellerBond > 0) {
+                emit BondForfeited(orderId, order.seller, order.sellerBond);
+            }
             emit BuyerRefunded(orderId, order.buyer, buyerRefund);
         } else {
             _distribute(orderId);
@@ -461,6 +508,10 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     // Operator calls on auth fail (triggered via webhook when authenticator
     // marks a card as failed). Owner (Safe) can also call as fallback.
     // Full refund. Seller bond forfeited to Safe.
+    //
+    // Restricted to Active only (H-1): Delivered status means the card
+    // has been physically received; any refund at that stage must go through
+    // the dispute process so the buyer's evidence is on record.
 
     function refundBuyer(bytes32 orderId)
         external
@@ -470,14 +521,14 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     {
         Order storage order = orders[orderId];
         require(
-            order.status == OrderStatus.Active    ||
-            order.status == OrderStatus.Delivered,
+            order.status == OrderStatus.Active,
             "Cannot refund at this stage"
         );
         order.status = OrderStatus.RefundedToBuyer;
         usdc.safeTransfer(order.buyer, order.escrowAmount);
         if (order.sellerBond > 0) {
             usdc.safeTransfer(feeRecipient, order.sellerBond);
+            emit BondForfeited(orderId, order.seller, order.sellerBond);
         }
         emit BuyerRefunded(orderId, order.buyer, order.escrowAmount);
     }
@@ -485,7 +536,8 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     // ── 8. Cancel Order ──────────────────────────────────────
     // Operator or owner cancels when seller doesn't confirm or no-shows.
     //
-    // AwaitingConfirmation: buyer refunded, no bond posted yet
+    // AwaitingConfirmation: operator may only cancel after sellerConfirmWindow
+    //   has elapsed — prevents griefing a seller who still has time to confirm. (M-4)
     // Active: buyer refunded, seller bond forfeited to Safe (no-show strike)
 
     function cancelOrder(bytes32 orderId)
@@ -501,6 +553,13 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
             "Can only cancel before delivery"
         );
 
+        if (order.status == OrderStatus.AwaitingConfirmation) {
+            require(
+                block.timestamp >= order.fundedAt + sellerConfirmWindow,
+                "Confirm window not yet expired"
+            );
+        }
+
         bool bondForfeited = order.status == OrderStatus.Active && order.sellerBond > 0;
         order.status = OrderStatus.Cancelled;
 
@@ -511,6 +570,7 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         //       nothing to return if seller never confirmed (AwaitingConfirmation)
         if (bondForfeited) {
             usdc.safeTransfer(feeRecipient, order.sellerBond);
+            emit BondForfeited(orderId, order.seller, order.sellerBond);
         }
 
         emit OrderCancelled(orderId);
@@ -519,12 +579,15 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     // ============================================================
     // BATCH FUNCTIONS
     // Single Safe/operator signature processes many orders at once.
+    // MAX_BATCH enforced to prevent accidental block gas limit issues.
     // ============================================================
 
     function batchMarkDelivered(bytes32[] calldata orderIds)
         external
         onlyOperatorOrOwner
     {
+        require(orderIds.length <= MAX_BATCH, "Batch too large");
+        uint256 processed = 0;
         for (uint256 i = 0; i < orderIds.length; i++) {
             Order storage order = orders[orderIds[i]];
             if (order.buyer != address(0) && order.status == OrderStatus.Active) {
@@ -532,8 +595,10 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
                 order.deliveredAt   = block.timestamp;
                 order.autoReleaseAt = block.timestamp + buyerInspectWindow;
                 emit OrderDelivered(orderIds[i], order.autoReleaseAt);
+                processed++;
             }
         }
+        emit BatchProcessed("markDelivered", processed);
     }
 
     function batchReleaseEscrow(bytes32[] calldata orderIds)
@@ -541,6 +606,8 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         nonReentrant
         onlyOperatorOrOwner
     {
+        require(orderIds.length <= MAX_BATCH, "Batch too large");
+        uint256 processed = 0;
         for (uint256 i = 0; i < orderIds.length; i++) {
             Order storage order = orders[orderIds[i]];
             if (
@@ -549,8 +616,10 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
                 block.timestamp >= order.autoReleaseAt
             ) {
                 _distribute(orderIds[i]);
+                processed++;
             }
         }
+        emit BatchProcessed("releaseEscrow", processed);
     }
 
     function batchRefundBuyers(bytes32[] calldata orderIds)
@@ -558,21 +627,26 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         onlyOperatorOrOwner
         nonReentrant
     {
+        require(orderIds.length <= MAX_BATCH, "Batch too large");
+        uint256 processed = 0;
         for (uint256 i = 0; i < orderIds.length; i++) {
             Order storage order = orders[orderIds[i]];
+            // Restricted to Active only — mirrors single refundBuyer (H-1)
             if (
                 order.buyer != address(0) &&
-                (order.status == OrderStatus.Active ||
-                 order.status == OrderStatus.Delivered)
+                order.status == OrderStatus.Active
             ) {
                 order.status = OrderStatus.RefundedToBuyer;
                 usdc.safeTransfer(order.buyer, order.escrowAmount);
                 if (order.sellerBond > 0) {
                     usdc.safeTransfer(feeRecipient, order.sellerBond);
+                    emit BondForfeited(orderIds[i], order.seller, order.sellerBond);
                 }
                 emit BuyerRefunded(orderIds[i], order.buyer, order.escrowAmount);
+                processed++;
             }
         }
+        emit BatchProcessed("refundBuyers", processed);
     }
 
     function batchCancelOrders(bytes32[] calldata orderIds)
@@ -580,22 +654,30 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         onlyOperatorOrOwner
         nonReentrant
     {
+        require(orderIds.length <= MAX_BATCH, "Batch too large");
+        uint256 processed = 0;
         for (uint256 i = 0; i < orderIds.length; i++) {
             Order storage order = orders[orderIds[i]];
             if (
                 order.buyer != address(0) &&
                 (order.status == OrderStatus.AwaitingConfirmation ||
-                 order.status == OrderStatus.Active)
+                 order.status == OrderStatus.Active) &&
+                // Skip AwaitingConfirmation orders whose confirm window hasn't elapsed yet (M-4)
+                (order.status != OrderStatus.AwaitingConfirmation ||
+                 block.timestamp >= order.fundedAt + sellerConfirmWindow)
             ) {
                 bool bondForfeited = order.status == OrderStatus.Active && order.sellerBond > 0;
                 order.status = OrderStatus.Cancelled;
                 usdc.safeTransfer(order.buyer, order.escrowAmount);
                 if (bondForfeited) {
                     usdc.safeTransfer(feeRecipient, order.sellerBond);
+                    emit BondForfeited(orderIds[i], order.seller, order.sellerBond);
                 }
                 emit OrderCancelled(orderIds[i]);
+                processed++;
             }
         }
+        emit BatchProcessed("cancelOrders", processed);
     }
 
     function batchResolveDisputes(
@@ -603,6 +685,8 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         bool[]    calldata outcomes  // true = buyer wins
     ) external onlyDisputeResolverOrOwner nonReentrant {
         require(orderIds.length == outcomes.length, "Length mismatch");
+        require(orderIds.length <= MAX_BATCH, "Batch too large");
+        uint256 processed = 0;
         for (uint256 i = 0; i < orderIds.length; i++) {
             Order storage order = orders[orderIds[i]];
             if (order.buyer != address(0) && order.status == OrderStatus.Disputed) {
@@ -614,13 +698,18 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
                     if (toSafe > 0) {
                         usdc.safeTransfer(feeRecipient, toSafe);
                     }
+                    if (order.sellerBond > 0) {
+                        emit BondForfeited(orderIds[i], order.seller, order.sellerBond);
+                    }
                     emit BuyerRefunded(orderIds[i], order.buyer, buyerRefund);
                 } else {
                     _distribute(orderIds[i]);
                 }
                 emit DisputeResolved(orderIds[i], outcomes[i]);
+                processed++;
             }
         }
+        emit BatchProcessed("resolveDisputes", processed);
     }
 
     // ============================================================
@@ -725,19 +814,26 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         emit GuardianChangeProposed(_target, _isAdd, msg.sender, block.timestamp + GUARDIAN_CHANGE_DELAY);
     }
 
+    // Validates all conditions first, then deletes the proposal (L-5):
+    // avoids an inconsistent state if the inner validation were to fail
+    // after a partial state mutation.
     function executeGuardianChange() external onlyGuardian {
         GuardianProposal memory p = pendingGuardianChange;
         require(p.proposedAt != 0, "No pending change");
         require(block.timestamp >= p.proposedAt + GUARDIAN_CHANGE_DELAY, "Timelock not elapsed");
-        delete pendingGuardianChange;
+        // Validate before mutating state
         if (p.isAdd) {
             require(!isGuardian[p.target], "Already a guardian");
+        } else {
+            require(isGuardian[p.target],  "Not a guardian");
+            require(guardianCount > 1,     "Cannot remove last guardian");
+        }
+        delete pendingGuardianChange;
+        if (p.isAdd) {
             isGuardian[p.target] = true;
             guardianCount++;
             emit GuardianAdded(p.target);
         } else {
-            require(isGuardian[p.target],  "Not a guardian");
-            require(guardianCount > 1,     "Cannot remove last guardian");
             isGuardian[p.target] = false;
             guardianCount--;
             emit GuardianRemoved(p.target);
@@ -763,23 +859,38 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
         emit GuardianRemovedByOwner(_guardian);
     }
 
-    // ── Safety Valve ─────────────────────────────────────────
-    // Emergency sweep of all USDC in the contract.
-    // Only callable when paused — forces an explicit pause decision first.
-    // recipient is specified at call time, NOT feeRecipient, so a compromised
-    // Safe cannot silently drain funds through this path.
-    //
-    // ALL order data remains on-chain in the orders mapping.
-    // Off-chain (Supabase orders table) has every order breakdown.
-    // After sweep, redistribute manually to each party based on order records.
-    // Deploy a new contract for any in-flight orders that need to continue.
+    // ── Emergency sweep — propose / execute / cancel (L-1) ──────
+    // A 48hr timelock between proposeSweep and executeSweep gives the remaining
+    // Safe co-signers time to notice a malicious proposal and cancel it.
+    // Both propose and execute require the contract to be paused first.
 
-    function sweepStuckFunds(address recipient) external onlyOwner whenPaused {
+    function proposeSweep(address recipient) external onlyOwner whenPaused {
         require(recipient != address(0), "Invalid recipient");
+        pendingSweepRecipient = recipient;
+        sweepReadyAt = block.timestamp + SWEEP_DELAY;
+        emit SweepProposed(recipient, sweepReadyAt);
+    }
+
+    function executeSweep() external onlyOwner whenPaused {
+        require(pendingSweepRecipient != address(0), "No pending sweep");
+        require(block.timestamp >= sweepReadyAt, "Sweep delay not elapsed");
+        address recipient     = pendingSweepRecipient;
+        pendingSweepRecipient = address(0);
+        sweepReadyAt          = 0;
         uint256 balance = usdc.balanceOf(address(this));
         require(balance > 0, "Nothing to sweep");
         usdc.safeTransfer(recipient, balance);
         emit FundsSwept(recipient, balance, block.timestamp);
+    }
+
+    // cancelSweep does not require whenPaused so the Safe can cancel a
+    // pending proposal before unpausing the contract.
+    function cancelSweep() external onlyOwner {
+        require(pendingSweepRecipient != address(0), "No pending sweep");
+        address cancelled     = pendingSweepRecipient;
+        pendingSweepRecipient = address(0);
+        sweepReadyAt          = 0;
+        emit SweepCancelled(cancelled);
     }
 
     function setFeeBps(uint256 _platformFeeBps, uint256 _creatorFeeBps) external onlyOwner {
@@ -805,6 +916,7 @@ contract ChaseHollowEscrow is Ownable2Step, Pausable, ReentrancyGuard {
     }
 
     function setMaxOrderValue(uint256 _maxValue) external onlyOwner {
+        require(_maxValue >= 1e6, "Max value too low"); // minimum $1 USDC (L-3)
         maxOrderValue = _maxValue;
     }
 

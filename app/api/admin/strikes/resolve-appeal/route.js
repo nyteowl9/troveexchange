@@ -36,7 +36,8 @@ export async function POST(request) {
       await supabaseAdmin.from('strikes').delete().eq('id', strike_id)
 
       const { count } = await supabaseAdmin
-        .from('strikes').select('id', { count: 'exact', head: true }).eq('user_id', strike.user_id)
+        .from('strikes').select('id', { count: 'exact', head: true })
+        .eq('user_id', strike.user_id).eq('strike_role', 'seller')
       const newCount = count || 0
 
       const banned = newCount >= 3

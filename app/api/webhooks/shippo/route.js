@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ethers } from 'ethers'
 import { callMarkDelivered } from '@/lib/escrow'
+import { createShippoLabel } from '@/lib/shippo'
 
 // POST /api/webhooks/shippo
 // Handles carrier scan and delivery events from Shippo for all 4 label types.
@@ -67,23 +68,28 @@ export async function POST(request) {
           .eq('id', order.id)
 
       } else if (label === 'A' && (order.auth_tier === 'remote' || order.auth_tier === 'none')) {
-        // Tier 1 or no-auth — Label A delivers directly to buyer — open 72hr inspection window
-        const autoReleaseAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
-        await supabaseAdmin
-          .from('orders')
-          .update({
-            status: 'inspection_window',
-            delivered_at: new Date().toISOString(),
-            auto_release_at: autoReleaseAt,
-          })
-          .eq('id', order.id)
-        await callMarkDelivered(order.onchain_order_id)
-        try {
-          const { emailBuyerDelivered } = await import('@/lib/emails')
-          const { data: buyer } = await supabaseAdmin.from('users').select('email, full_name').eq('id', order.buyer_id).single()
-          if (buyer?.email) await emailBuyerDelivered({ to: buyer.email, order: { ...order, auto_release_at: autoReleaseAt } })
-        } catch (err) {
-          console.error('[webhooks/shippo] emailBuyerDelivered failed:', err)
+        if (order.status === 'auth_failed') {
+          // Auth fail — card is now with buyer; generate return label and await return
+          await handleAuthFailDelivery(order)
+        } else {
+          // Normal flow — open 72hr inspection window
+          const autoReleaseAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+          await supabaseAdmin
+            .from('orders')
+            .update({
+              status: 'inspection_window',
+              delivered_at: new Date().toISOString(),
+              auto_release_at: autoReleaseAt,
+            })
+            .eq('id', order.id)
+          await callMarkDelivered(order.onchain_order_id)
+          try {
+            const { emailBuyerDelivered } = await import('@/lib/emails')
+            const { data: buyer } = await supabaseAdmin.from('users').select('email, full_name').eq('id', order.buyer_id).single()
+            if (buyer?.email) await emailBuyerDelivered({ to: buyer.email, order: { ...order, auto_release_at: autoReleaseAt } })
+          } catch (err) {
+            console.error('[webhooks/shippo] emailBuyerDelivered failed:', err)
+          }
         }
 
       } else if (label === 'B' && order.auth_tier === 'physical') {
@@ -108,9 +114,9 @@ export async function POST(request) {
 
       } else if (label === 'C') {
         if (order.auth_tier === 'remote' || order.auth_tier === 'none') {
-          // Tier 1 / no-auth: Label C delivers to SELLER directly — open seller review window (72hrs)
-          // Seller must confirm correct card received OR dispute with photos.
-          // On-chain resolve deferred until seller acts (or review deadline passes via cron).
+          // Seller must always verify the return (dispute flow or auth fail) — they could get a rock.
+          // Seller confirms correct card → confirm-return route handles refund.
+          // Seller disputes wrong card → return_disputed_seller → admin override.
           const reviewDeadline = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
           await supabaseAdmin
             .from('orders')
@@ -232,6 +238,62 @@ async function callResolveDispute(onchainOrderId, buyerWins) {
   const tx = await escrow.resolveDispute(onchainOrderId, buyerWins)
   await tx.wait()
   return tx.hash
+}
+
+// ── Auth fail delivery: card reached buyer, generate return label ──────────────
+async function handleAuthFailDelivery(order) {
+  const [{ data: buyer }, { data: seller }] = await Promise.all([
+    supabaseAdmin.from('users').select('full_name, street1, street2, city, state, zip, country, email').eq('id', order.buyer_id).single(),
+    supabaseAdmin.from('users').select('full_name, street1, street2, city, state, zip, country').eq('id', order.seller_id).single(),
+  ])
+
+  const buyerAddr = {
+    name:    buyer.full_name,
+    street1: buyer.street1,
+    street2: buyer.street2 || '',
+    city:    buyer.city,
+    state:   buyer.state,
+    zip:     buyer.zip,
+    country: buyer.country || 'US',
+    email:   buyer.email,
+  }
+  const sellerAddr = {
+    name:    seller.full_name,
+    street1: seller.street1,
+    street2: seller.street2 || '',
+    city:    seller.city,
+    state:   seller.state,
+    zip:     seller.zip,
+    country: seller.country || 'US',
+  }
+
+  let labelCUrl, trackingC
+  try {
+    const result = await createShippoLabel(buyerAddr, sellerAddr, parseFloat(order.declared_value || 0))
+    labelCUrl = result.labelUrl
+    trackingC = result.trackingNumber
+  } catch (err) {
+    console.error('[webhooks/shippo] auth fail Label C generation failed:', err)
+    await supabaseAdmin.from('orders').update({ delivered_at: new Date().toISOString() }).eq('id', order.id)
+    return
+  }
+
+  const returnDeadlineAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+
+  await supabaseAdmin.from('orders').update({
+    status:             'awaiting_return',
+    delivered_at:       new Date().toISOString(),
+    return_deadline_at: returnDeadlineAt,
+    label_c_url:        labelCUrl,
+    tracking_c:         trackingC,
+  }).eq('id', order.id)
+
+  try {
+    const { emailBuyerAuthFailReturnLabel } = await import('@/lib/emails')
+    if (buyer?.email) await emailBuyerAuthFailReturnLabel({ to: buyer.email, order: { ...order, label_c_url: labelCUrl, return_deadline_at: returnDeadlineAt } })
+  } catch (err) {
+    console.error('[webhooks/shippo] auth fail return label email failed:', err)
+  }
 }
 
 // ── Which label does this tracking number belong to? ──────────

@@ -11,13 +11,14 @@ import { useWallets } from '@privy-io/react-auth'
 import { ethers } from 'ethers'
 import { ESCROW_ADDRESS, ESCROW_ABI } from '@/lib/escrow'
 
-const ACTIVE_STATUSES = ['awaiting_shipment', 'in_transit', 'auth_review', 'auth_passed', 'delivered', 'inspection_window', 'disputed', 'awaiting_return', 'return_received', 'return_verified', 'return_received_seller', 'return_disputed_seller']
+const ACTIVE_STATUSES = ['awaiting_shipment', 'in_transit', 'auth_review', 'auth_passed', 'auth_failed', 'delivered', 'inspection_window', 'disputed', 'awaiting_return', 'return_received', 'return_verified', 'return_received_seller', 'return_disputed_seller']
 
 const STATUS_MAP = {
   awaiting_shipment: { key: 'awaiting',        label: 'Awaiting Shipment',   steps: [true,  false, false, false, false], activeStep: 0 },
   in_transit:        { key: 'shipped',         label: 'In Transit',          steps: [true,  true,  false, false, false], activeStep: 1 },
   auth_review:       { key: 'auth',            label: 'Authenticating',      steps: [true,  true,  true,  false, false], activeStep: 2 },
   auth_passed:       { key: 'auth',            label: 'Auth Passed',         steps: [true,  true,  true,  false, false], activeStep: 2 },
+  auth_failed:       { key: 'disputed',       label: 'Auth Failed',         steps: [true,  true,  true,  false, false], activeStep: 2 },
   delivered:         { key: 'auto-release',    label: 'Delivered',           steps: [true,  true,  true,  true,  false], activeStep: 3 },
   inspection_window: { key: 'auto-release',    label: 'Auto-Release Window', steps: [true,  true,  true,  true,  false], activeStep: 3 },
   disputed:          { key: 'disputed',        label: 'Dispute Under Review', steps: [true,  true,  true,  true,  false], activeStep: 3 },
@@ -100,6 +101,15 @@ export default function BuyerDashboard() {
   const [disputeError, setDisputeError]               = useState(null)
   const [disputeSuccess, setDisputeSuccess]           = useState(false)
 
+  // Strikes + appeal (buyer and seller)
+  const [buyerStrikes, setBuyerStrikes]                       = useState([])
+  const [sellerStrikesForStanding, setSellerStrikesForStanding] = useState([])
+  const [buyerAppealModal, setBuyerAppealModal]               = useState(null)
+  const [buyerAppealReason, setBuyerAppealReason]             = useState('')
+  const [buyerAppealSubmitting, setBuyerAppealSubmitting]     = useState(false)
+  const [buyerAppealError, setBuyerAppealError]               = useState(null)
+  const [buyerAppealDone, setBuyerAppealDone]                 = useState({})
+
   // Countdown for the most urgent inspection_window order
   const [countdown, setCountdown] = useState({ h: 0, m: 0, s: 0 })
   const urgentOrder = activeOrders.find(o => o.status === 'inspection_window' && o.auto_release_at)
@@ -131,7 +141,7 @@ export default function BuyerDashboard() {
   const fetchData = useCallback(async () => {
     if (!user) { setDataLoading(false); return }
     try {
-      const [activeRes, histRes, dispRes] = await Promise.all([
+      const [activeRes, histRes, dispRes, strikesRes] = await Promise.all([
         supabase
           .from('orders')
           .select(`id, status, escrow_amount, auth_tier, tracking_a, tracking_b, tracking_c, shipped_at, delivered_at, auto_release_at, created_at, onchain_order_id, label_c_url, return_deadline_at, shipping_cost,
@@ -155,10 +165,17 @@ export default function BuyerDashboard() {
                    order:order_id (id, listing:listing_id (card_name, set))`)
           .eq('raised_by', user.id)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('strikes')
+          .select('id, strike_number, reason, action_taken, created_at, appealed, appeal_outcome, appeal_submitted_at, order_id, strike_role')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
       ])
       setActiveOrders(activeRes.data || [])
       setHistoryOrders(histRes.data || [])
       setDisputes(dispRes.data || [])
+      setBuyerStrikes((strikesRes.data || []).filter(s => s.strike_role === 'buyer'))
+      setSellerStrikesForStanding((strikesRes.data || []).filter(s => s.strike_role === 'seller'))
     } catch (err) {
       console.error('[fetchData]', err)
     } finally {
@@ -358,6 +375,7 @@ export default function BuyerDashboard() {
     if (key === 'inspection') return inspectionOrders.length || null
     if (key === 'history')    return null
     if (key === 'disputes')   return disputes.filter(d => !d.outcome).length || null
+    if (key === 'standing')   return (profile?.buyer_strike_count || 0) > 0 ? profile.buyer_strike_count : null
     return null
   }
 
@@ -370,6 +388,7 @@ export default function BuyerDashboard() {
     { id: 'offers',        icon: '◆', label: 'My Offers' },
     { id: 'history',       icon: '◎', label: 'Purchase History' },
     { id: 'disputes',      icon: '⚠', label: 'Disputes',           badgeColor: 'var(--accent-red)' },
+    { id: 'standing',      icon: '⚑', label: 'Account Standing',   badgeColor: 'var(--accent-red)' },
     { id: 'account',       icon: '⚙', label: 'Account' },
   ]
 
@@ -485,6 +504,7 @@ export default function BuyerDashboard() {
             {order.status === 'return_verified' && `Return verified · Refund processing`}
             {order.status === 'return_received_seller' && `Card delivered to seller · Seller reviewing return · You will be notified once they confirm or dispute`}
             {order.status === 'return_disputed_seller' && `Seller has disputed the returned card · Chase Hollow staff is reviewing evidence · No action required from you`}
+            {order.status === 'auth_failed' && `Authentication failed — our team found an issue with this card · Your funds will be refunded · You will be contacted with next steps`}
           </div>
 
           {/* Dispute filed — waiting for review */}
@@ -502,6 +522,13 @@ export default function BuyerDashboard() {
           {order.status === 'awaiting_return' && (
             <div style={{ background: 'rgba(232,168,56,0.08)', border: '1px solid rgba(232,168,56,0.35)', borderRadius: '8px', padding: '12px 14px', marginBottom: '12px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               <strong style={{ color: 'var(--accent-amber)' }}>Action required:</strong> You must ship the card back using the prepaid label below. Your refund will be released once the carrier confirms delivery. If you do not ship within the deadline, the dispute will be reversed.
+            </div>
+          )}
+
+          {/* Auth failed banner */}
+          {order.status === 'auth_failed' && (
+            <div style={{ background: 'rgba(200,75,60,0.06)', border: '1px solid rgba(200,75,60,0.25)', borderRadius: '8px', padding: '12px 14px', marginBottom: '12px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+              <strong style={{ color: 'var(--accent-red)' }}>Authentication failed</strong> · Our team was unable to verify this card's authenticity. Your funds are protected and a full refund will be issued. The seller has been penalized. If you have questions, contact Chase Hollow support.
             </div>
           )}
 
@@ -689,6 +716,30 @@ export default function BuyerDashboard() {
                   </Link>
                 </div>
               </div>
+
+              {/* Suspension / ban banner */}
+              {(profile?.banned || (profile?.suspended_until && new Date(profile.suspended_until) > new Date())) && (() => {
+                const isBanned = profile.banned
+                const until    = !isBanned && new Date(profile.suspended_until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                return (
+                  <div style={{ background: 'rgba(200,75,60,0.08)', border: '1.5px solid rgba(200,75,60,0.4)', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                    <span style={{ fontSize: '20px', flexShrink: 0 }}>⚑</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 700, color: 'var(--accent-red)', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                        {isBanned ? 'ACCOUNT BANNED' : 'ACCOUNT SUSPENDED'}
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                        {isBanned
+                          ? 'Your account has been permanently banned. You cannot purchase or sell on Chase Hollow.'
+                          : <>Your account is suspended until <strong style={{ color: 'var(--text-primary)' }}>{until}</strong>. You cannot purchase until this restriction is lifted.</>}
+                      </div>
+                      <button onClick={() => setActiveSection('standing')} style={{ marginTop: '10px', background: 'transparent', border: '1px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '6px 14px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500 }}>
+                        View Account Standing →
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Inspection Alert — only when there's an order in inspection_window */}
               {urgentOrder && (() => {
@@ -1152,6 +1203,139 @@ export default function BuyerDashboard() {
               )}
             </div>
           )}
+
+          {/* ACCOUNT STANDING */}
+          {activeSection === 'standing' && (() => {
+            const strikeCount    = profile?.buyer_strike_count || 0
+            const isBanned       = profile?.banned
+            const isSuspended    = profile?.suspended_until && new Date(profile.suspended_until) > new Date()
+            const suspendedUntil = isSuspended ? new Date(profile.suspended_until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : null
+            const statusColor    = isBanned ? 'var(--accent-red)' : isSuspended ? 'var(--accent-amber)' : 'var(--accent-green)'
+            const statusLabel    = isBanned ? 'Banned' : isSuspended ? 'Suspended' : 'Good Standing'
+            return (
+              <div>
+                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Account <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Standing</em></div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '24px', fontFamily: 'DM Mono, monospace' }}>Your buyer account status and violation history</div>
+
+                {/* Status card */}
+                <div style={{ background: 'var(--bg-2)', border: `1.5px solid ${isBanned || isSuspended ? statusColor + '55' : 'var(--border)'}`, borderRadius: '12px', padding: '20px 24px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: statusColor, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 700, color: statusColor, letterSpacing: '0.06em' }}>{statusLabel.toUpperCase()}</div>
+                    {isSuspended && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '3px' }}>Suspended until <strong style={{ color: 'var(--text-primary)' }}>{suspendedUntil}</strong>. You cannot purchase until this date.</div>}
+                    {isBanned && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '3px' }}>Your account has been permanently banned due to repeated violations.</div>}
+                    {!isBanned && !isSuspended && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>Your account is in good standing. No active restrictions.</div>}
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '28px', fontWeight: 300, color: strikeCount > 0 ? 'var(--accent-red)' : 'var(--text-muted)' }}>{strikeCount}</div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>BUYER STRIKE{strikeCount !== 1 ? 'S' : ''}</div>
+                  </div>
+                </div>
+
+                {/* Strike records — combine buyer + seller into one list, sorted by date */}
+                {[...buyerStrikes, ...sellerStrikesForStanding].length > 0 && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500 }}>STRIKE RECORD</div>
+                    {[...buyerStrikes, ...sellerStrikesForStanding].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(s => {
+                      const daysLeft = Math.max(0, 7 - Math.floor((Date.now() - new Date(s.created_at).getTime()) / (1000 * 60 * 60 * 24)))
+                      const canAppeal = !s.appealed && !s.appeal_outcome && s.strike_number < 3 && daysLeft > 0
+                      return (
+                        <div key={s.id} style={{ background: 'var(--bg-2)', border: '1.5px solid rgba(200,75,60,0.3)', borderRadius: '10px', padding: '14px 18px', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', fontWeight: 700, color: 'var(--accent-red)', marginBottom: '4px' }}>STRIKE {s.strike_number} · {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>{s.reason}</div>
+                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{s.action_taken}</div>
+                            </div>
+                            <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                              {s.appeal_outcome === 'approved' && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 8px', borderRadius: '10px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', color: 'var(--accent-green)', fontWeight: 600 }}>APPEAL APPROVED</span>}
+                              {s.appeal_outcome === 'denied'   && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 8px', borderRadius: '10px', background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)', fontWeight: 600 }}>APPEAL DENIED</span>}
+                              {s.appealed && !s.appeal_outcome && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 8px', borderRadius: '10px', background: 'rgba(60,125,200,0.1)', border: '1px solid rgba(60,125,200,0.3)', color: 'var(--accent-blue)', fontWeight: 600 }}>APPEAL PENDING</span>}
+                              {canAppeal && (
+                                <button onClick={() => { setBuyerAppealModal({ strikeId: s.id }); setBuyerAppealReason(''); setBuyerAppealError(null) }}
+                                  style={{ display: 'block', marginTop: s.appealed ? '6px' : '0', background: 'transparent', border: '1px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)', padding: '5px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500 }}>
+                                  Appeal · {daysLeft}d left
+                                </button>
+                              )}
+                              {buyerAppealDone[s.id] && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--accent-green)', marginTop: '4px' }}>Appeal submitted</div>}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Strike progression */}
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px 24px', marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>STRIKE THRESHOLDS</div>
+                  {[
+                    { n: 1, label: 'Strike 1', action: '7-day account suspension' },
+                    { n: 2, label: 'Strike 2', action: '30-day account suspension' },
+                    { n: 3, label: 'Strike 3', action: 'Permanent ban' },
+                  ].map(({ n, label, action }) => (
+                    <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: n < 3 ? '1px solid var(--border)' : 'none' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: strikeCount >= n ? 'rgba(200,75,60,0.15)' : 'var(--bg-3)', border: `1.5px solid ${strikeCount >= n ? 'rgba(200,75,60,0.5)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', fontWeight: 700, color: strikeCount >= n ? 'var(--accent-red)' : 'var(--text-muted)' }}>{n}</span>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', color: strikeCount >= n ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: strikeCount >= n ? 600 : 400 }}>{label}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', marginTop: '1px' }}>{action}</div>
+                      </div>
+                      {strikeCount >= n && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(200,75,60,0.1)', border: '1px solid rgba(200,75,60,0.3)', color: 'var(--accent-red)', fontWeight: 600 }}>APPLIED</span>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* What triggers buyer strikes */}
+                <div style={{ background: 'rgba(60,125,200,0.06)', border: '1px solid rgba(60,125,200,0.2)', borderRadius: '10px', padding: '14px 18px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', color: 'var(--accent-blue)', marginBottom: '8px', fontWeight: 600 }}>WHAT CAUSES BUYER STRIKES</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    Buyer strikes are issued when a dispute investigation confirms that a fraudulent card was returned — for example, returning a different card than the one received. Strikes are reviewed by our team and applied only after evidence is examined.
+                  </div>
+                </div>
+
+                {/* Appeal modal */}
+                {buyerAppealModal && (
+                  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '480px' }}>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '6px' }}>Appeal This Strike</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Sans, sans-serif' }}>Explain why you believe this strike was applied in error. Our team reviews all appeals within 48 hours.</div>
+                      <textarea
+                        value={buyerAppealReason}
+                        onChange={e => setBuyerAppealReason(e.target.value)}
+                        placeholder="Describe what happened and why this strike should be removed..."
+                        rows={5}
+                        style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '12px', fontSize: '13px', color: 'var(--text-primary)', fontFamily: 'DM Sans, sans-serif', resize: 'vertical', outline: 'none', boxSizing: 'border-box', marginBottom: '12px' }}
+                      />
+                      {buyerAppealError && <div style={{ color: 'var(--accent-red)', fontSize: '11px', fontFamily: 'DM Mono, monospace', marginBottom: '10px' }}>{buyerAppealError}</div>}
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={() => setBuyerAppealModal(null)} style={{ flex: 1, background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: '13px' }}>Cancel</button>
+                        <button disabled={!buyerAppealReason.trim() || buyerAppealSubmitting} onClick={async () => {
+                          setBuyerAppealSubmitting(true)
+                          setBuyerAppealError(null)
+                          try {
+                            const res = await fetch('/api/strikes/appeal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ strike_id: buyerAppealModal.strikeId, reason: buyerAppealReason }) })
+                            const data = await res.json()
+                            if (!res.ok) throw new Error(data.error || 'Failed')
+                            setBuyerAppealDone(p => ({ ...p, [buyerAppealModal.strikeId]: true }))
+                            setBuyerAppealModal(null)
+                            await fetchData()
+                          } catch (err) {
+                            setBuyerAppealError(err.message)
+                          } finally {
+                            setBuyerAppealSubmitting(false)
+                          }
+                        }} style={{ flex: 2, background: buyerAppealReason.trim() && !buyerAppealSubmitting ? 'var(--teal)' : 'var(--bg-3)', border: 'none', color: buyerAppealReason.trim() && !buyerAppealSubmitting ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '10px', borderRadius: '8px', cursor: buyerAppealReason.trim() && !buyerAppealSubmitting ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600 }}>
+                          {buyerAppealSubmitting ? 'Submitting…' : 'Submit Appeal'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {/* ACCOUNT */}
           {activeSection === 'account' && (

@@ -68,17 +68,19 @@ export async function GET(request) {
 
   for (const order of missedOrders || []) {
     try {
-      // Count real strikes (excludes warnings) to determine true strike number
+      // Count real seller strikes (excludes warnings and buyer strikes)
       const { count: realStrikeCount } = await supabaseAdmin
         .from('strikes')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', order.seller_id)
+        .eq('strike_role', 'seller')
         .neq('action_taken', 'warning')
 
       const { count: warningCount } = await supabaseAdmin
         .from('strikes')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', order.seller_id)
+        .eq('strike_role', 'seller')
         .eq('action_taken', 'warning')
 
       const realStrikes = realStrikeCount || 0
@@ -88,7 +90,7 @@ export async function GET(request) {
 
       if (realStrikes === 0 && !hasWarning) {
         // First offense ever — warning only, no suspension
-        strikeNumber = null
+        strikeNumber = 0
         actionTaken = 'warning'
         reason = 'No carrier scan by 48hr ship deadline (first offense — warning)'
         userUpdate = null
@@ -122,17 +124,19 @@ export async function GET(request) {
       }
 
       // Insert strike record
-      const { data: strikeRow } = await supabaseAdmin
+      const { data: strikeRow, error: strikeErr } = await supabaseAdmin
         .from('strikes')
         .insert({
-          user_id: order.seller_id,
-          order_id: order.id,
+          user_id:     order.seller_id,
+          order_id:    order.id,
           strike_number: strikeNumber,
+          strike_role: 'seller',
           reason,
           action_taken: actionTaken,
         })
         .select()
         .single()
+      if (strikeErr) throw new Error(`Strike insert failed: ${strikeErr.message}`)
 
       // Apply suspension/ban to user (if any)
       if (userUpdate) {

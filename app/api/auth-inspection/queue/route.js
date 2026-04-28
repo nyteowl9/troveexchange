@@ -38,7 +38,7 @@ export async function GET() {
       (o.status === 'in_transit' && o.auth_tier === 'remote')
     )
 
-    // Seller-submitted photos for Tier 1 in_transit orders
+    // Seller-submitted photos for Tier 1 in_transit orders — generate signed URLs
     const remoteIds = rows.filter(o => o.auth_tier === 'remote').map(o => o.id)
     let sellerPhotoMap = {}
     if (remoteIds.length) {
@@ -48,7 +48,15 @@ export async function GET() {
         .in('order_id', remoteIds)
         .eq('type', 'remote')
         .eq('decision', 'pending')
-      ;(inspData || []).forEach(i => { sellerPhotoMap[i.order_id] = i.photos || [] })
+      for (const insp of inspData || []) {
+        const signedPhotos = await Promise.all(
+          (insp.photos || []).map(async (path) => {
+            const { data } = await supabaseAdmin.storage.from('auth-photos').createSignedUrl(path, 3600)
+            return data?.signedUrl || null
+          })
+        )
+        sellerPhotoMap[insp.order_id] = signedPhotos.filter(Boolean)
+      }
     }
 
     // Original auth inspection + buyer dispute evidence for return_received orders
@@ -67,7 +75,16 @@ export async function GET() {
           .in('order_id', returnIds)
           .order('created_at', { ascending: false }),
       ])
-      ;(passInspData || []).forEach(i => { if (!authInspMap[i.order_id]) authInspMap[i.order_id] = i })
+      for (const insp of passInspData || []) {
+        if (authInspMap[insp.order_id]) continue
+        const signedPhotos = await Promise.all(
+          (insp.photos || []).map(async (path) => {
+            const { data } = await supabaseAdmin.storage.from('auth-photos').createSignedUrl(path, 3600)
+            return data?.signedUrl || null
+          })
+        )
+        authInspMap[insp.order_id] = { ...insp, photos: signedPhotos.filter(Boolean) }
+      }
       ;(dispData || []).forEach(d => { if (!returnDisputeMap[d.order_id]) returnDisputeMap[d.order_id] = d })
     }
 

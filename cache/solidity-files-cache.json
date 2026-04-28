@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "C:\\Users\\pdwat\\Desktop\\troveexchange\\contracts\\ChaseHollowEscrow.sol": {
-      "lastModificationDate": 1776487162518,
-      "contentHash": "2768a26bc61cac81eff2a4c66b708304",
+      "lastModificationDate": 1777326141834,
+      "contentHash": "4db64c2a7dc64339cb3a2f0c23803084",
       "sourceName": "contracts/ChaseHollowEscrow.sol",
       "solcConfig": {
         "version": "0.8.24",

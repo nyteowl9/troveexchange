@@ -30,24 +30,43 @@ export async function POST(request) {
       return NextResponse.json({ error: `Order must be in return_received_seller status (got: ${order.status})` }, { status: 400 })
     }
 
-    const { data: dispute } = await supabaseAdmin
+    let { data: dispute } = await supabaseAdmin
       .from('disputes')
       .select('id, outcome')
       .eq('order_id', order_id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (!dispute) return NextResponse.json({ error: 'No dispute found for this order' }, { status: 404 })
-    if (dispute.outcome && dispute.outcome !== 'pending') {
+    if (dispute?.outcome && dispute.outcome !== 'pending') {
       return NextResponse.json({ error: 'Dispute already resolved' }, { status: 409 })
     }
 
-    // Attach seller's return dispute evidence to the dispute record
-    await supabaseAdmin.from('disputes').update({
-      seller_return_notes:    notes.trim(),
-      seller_return_evidence: evidence,
-    }).eq('id', dispute.id)
+    if (!dispute) {
+      // Auth fail order — no prior dispute exists. Create one so admin can review.
+      const { data: newDispute, error: insertErr } = await supabaseAdmin
+        .from('disputes')
+        .insert({
+          order_id:            order_id,
+          raised_by:           order.seller_id,
+          reason:              'Wrong card returned — authentication failed order',
+          seller_return_notes: notes.trim(),
+          seller_return_evidence: evidence,
+          owner_decision:      null,
+          outcome:             'pending',
+        })
+        .select('id')
+        .single()
+      if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 })
+      dispute = newDispute
+    } else {
+      // Normal dispute return — attach seller's evidence and re-open for owner decision.
+      await supabaseAdmin.from('disputes').update({
+        seller_return_notes:    notes.trim(),
+        seller_return_evidence: evidence,
+        owner_decision:         null,
+      }).eq('id', dispute.id)
+    }
 
     // Order enters staff review queue
     await supabaseAdmin.from('orders').update({ status: 'return_disputed_seller' }).eq('id', order_id)

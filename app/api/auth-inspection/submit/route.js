@@ -66,7 +66,7 @@ export async function POST(request) {
     const { data: order } = await supabaseAdmin
       .from('orders')
       .select(`
-        id, status, auth_tier, escrow_amount,
+        id, status, auth_tier, escrow_amount, seller_id,
         buyer:buyer_id (email, full_name),
         seller:seller_id (email, full_name),
         listing:listing_id (card_name)
@@ -106,16 +106,60 @@ export async function POST(request) {
     }
 
     // Tier 1 pass: card is already in transit to buyer — no status change needed
-    // Tier 1 fail: buyer needs to know — set auth_failed so they can dispute on delivery
-    // Tier 2 pass/fail: normal flow
+    // Tier 1 fail: set auth_failed and wait — delivery webhook generates return label + refunds on return
+    // Tier 2 pass: status → auth_passed
+    // Tier 2 fail: refund buyer on-chain immediately (card is at auth center, never reached buyer)
     let newStatus
     if (isTier1) {
       newStatus = decision === 'pass' ? null : 'auth_failed'
     } else {
-      newStatus = decision === 'pass' ? 'auth_passed' : 'auth_failed'
+      newStatus = decision === 'pass' ? 'auth_passed' : 'refunded'
     }
     if (newStatus) {
       await supabaseAdmin.from('orders').update({ status: newStatus }).eq('id', order_id)
+    }
+
+    // Tier 2 fail — call refundBuyer on-chain immediately
+    if (isTier2 && decision === 'fail' && order.onchain_order_id) {
+      try {
+        const { ethers } = await import('ethers')
+        const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_RPC_URL)
+        const wallet   = new ethers.Wallet(process.env.OPERATOR_PRIVATE_KEY, provider)
+        const escrow   = new ethers.Contract(
+          process.env.NEXT_PUBLIC_ESCROW_ADDRESS,
+          ['function refundBuyer(bytes32) external'],
+          wallet
+        )
+        const tx = await escrow.refundBuyer(order.onchain_order_id)
+        await tx.wait()
+      } catch (chainErr) {
+        console.error('[auth-inspection] Tier 2 refundBuyer failed:', chainErr.message)
+      }
+    }
+
+    // Apply seller strike on any auth fail (Tier 1 or Tier 2)
+    if (decision === 'fail') {
+      const { data: seller } = await supabaseAdmin.from('users').select('strike_count').eq('id', order.seller_id).single()
+      const newCount = (seller?.strike_count || 0) + 1
+      const action = newCount === 1 ? '7-day suspension' : newCount === 2 ? '30-day suspension + bond → 4%' : 'Permanent ban'
+      const suspendedUntil = newCount < 3
+        ? new Date(Date.now() + (newCount === 1 ? 7 : 30) * 24 * 60 * 60 * 1000).toISOString()
+        : null
+      await supabaseAdmin.from('users').update({
+        strike_count:    newCount,
+        banned:          newCount >= 3,
+        suspended_until: suspendedUntil,
+      }).eq('id', order.seller_id)
+      await supabaseAdmin.from('strikes').insert({
+        user_id:       order.seller_id,
+        order_id:      order.id,
+        strike_number: newCount,
+        strike_role:   'seller',
+        reason:        'Authentication failed — inauthentic card submitted',
+        action_taken:  action,
+      })
+      await supabaseAdmin.from('listings').update({ status: 'paused' })
+        .eq('seller_id', order.seller_id).eq('status', 'active')
     }
 
     // Send emails (non-blocking)

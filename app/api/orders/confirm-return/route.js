@@ -35,42 +35,47 @@ export async function POST(request) {
       .eq('order_id', order_id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (!dispute) return NextResponse.json({ error: 'No dispute found for this order' }, { status: 404 })
-    if (dispute.outcome && dispute.outcome !== 'pending') {
+    if (dispute?.outcome && dispute.outcome !== 'pending') {
       return NextResponse.json({ error: 'Dispute already resolved' }, { status: 409 })
     }
 
-    // Execute on-chain resolveDispute(buyer wins)
+    // Auth fail orders have no dispute — call refundBuyer (order is Active on-chain).
+    // Normal dispute returns have a buyer_wins dispute — call resolveDispute.
+    const isAuthFail = !dispute
     let txHash = null
+
     if (order.onchain_order_id) {
-      const rpc         = process.env.ALCHEMY_RPC_URL
-      const escrowAddr  = process.env.NEXT_PUBLIC_ESCROW_ADDRESS
-      const resolverKey = process.env.DISPUTE_RESOLVER_PRIVATE_KEY
-      if (!rpc || !escrowAddr || !resolverKey) {
-        return NextResponse.json({ error: 'Missing on-chain env vars' }, { status: 500 })
-      }
       try {
-        const provider = new ethers.JsonRpcProvider(rpc)
-        const wallet   = new ethers.Wallet(resolverKey, provider)
-        const escrow   = new ethers.Contract(escrowAddr, ['function resolveDispute(bytes32,bool) external'], wallet)
-        const tx = await escrow.resolveDispute(order.onchain_order_id, true /* buyer wins */, { gasLimit: 300000n })
-        await tx.wait()
-        txHash = tx.hash
+        const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_RPC_URL)
+        if (isAuthFail) {
+          const wallet = new ethers.Wallet(process.env.OPERATOR_PRIVATE_KEY, provider)
+          const escrow = new ethers.Contract(process.env.NEXT_PUBLIC_ESCROW_ADDRESS, ['function refundBuyer(bytes32) external'], wallet)
+          const tx = await escrow.refundBuyer(order.onchain_order_id, { gasLimit: 300000n })
+          await tx.wait()
+          txHash = tx.hash
+        } else {
+          const wallet = new ethers.Wallet(process.env.DISPUTE_RESOLVER_PRIVATE_KEY, provider)
+          const escrow = new ethers.Contract(process.env.NEXT_PUBLIC_ESCROW_ADDRESS, ['function resolveDispute(bytes32,bool) external'], wallet)
+          const tx = await escrow.resolveDispute(order.onchain_order_id, true /* buyer wins */, { gasLimit: 300000n })
+          await tx.wait()
+          txHash = tx.hash
+        }
       } catch (chainErr) {
-        // Log but don't block DB update — contract may already be resolved
         console.error('[orders/confirm-return] on-chain call failed:', chainErr.message)
       }
     }
 
     const now = new Date().toISOString()
 
-    await supabaseAdmin.from('disputes').update({
-      outcome:         'buyer_wins',
-      resolved_at:     now,
-      onchain_tx_hash: txHash,
-    }).eq('id', dispute.id)
+    if (dispute) {
+      await supabaseAdmin.from('disputes').update({
+        outcome:         'buyer_wins',
+        resolved_at:     now,
+        onchain_tx_hash: txHash,
+      }).eq('id', dispute.id)
+    }
 
     await supabaseAdmin.from('orders').update({ status: 'refunded' }).eq('id', order_id)
 

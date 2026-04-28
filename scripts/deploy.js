@@ -5,7 +5,12 @@ const path = require("path");
 // ─── Deployment Parameters ───────────────────────────────────────────────────
 
 const FEE_RECIPIENT = "0xE39a2128b7CeA98992E59ae3a7Ab2669E5801983";
+// G1: primary guardian (cold hardware wallet)
 const GUARDIAN      = "0x14721FdFfBE152d7fAC3910870257e0B1b1078B3";
+// G2: second guardian — MUST be a different address from G1.
+// For testnet: the deployer key serves as G2 (set dynamically below).
+// For mainnet: replace with the real second cold hardware wallet address.
+const GUARDIAN2_MAINNET = null; // TODO: set real G2 address before mainnet deploy
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -35,11 +40,22 @@ async function main() {
   console.log("=".repeat(60));
   console.log("Chase Hollow — Testnet Deployment");
   console.log("=".repeat(60));
+  // Resolve GUARDIAN2: use mainnet address if set, otherwise fall back to deployer for testnet
+  const isTestnet = network.name !== "base" && network.name !== "homestead";
+  const GUARDIAN2 = GUARDIAN2_MAINNET || (isTestnet ? deployer.address : null);
+  if (!GUARDIAN2) {
+    throw new Error("GUARDIAN2_MAINNET must be set before mainnet deployment");
+  }
+  if (GUARDIAN2 === GUARDIAN) {
+    throw new Error("GUARDIAN2 must be a different address from GUARDIAN");
+  }
+
   console.log(`Network:   ${network.name}`);
   console.log(`Deployer:  ${deployer.address}`);
   console.log(`Balance:   ${ethers.formatEther(bal)} ETH`);
   console.log(`FeeRecip:  ${FEE_RECIPIENT}`);
   console.log(`Guardian:  ${GUARDIAN}`);
+  console.log(`Guardian2: ${GUARDIAN2}${isTestnet ? " (testnet: deployer)" : ""}`);
   console.log("=".repeat(60));
 
   // ── 1. Deploy MockUSDC ───────────────────────────────────────
@@ -53,7 +69,7 @@ async function main() {
   // ── 2. Deploy ChaseHollowEscrow ──────────────────────────────
   console.log("\n[2/2] Deploying ChaseHollowEscrow...");
   const Escrow = await ethers.getContractFactory("ChaseHollowEscrow");
-  const escrow = await Escrow.deploy(usdcAddress, FEE_RECIPIENT, GUARDIAN);
+  const escrow = await Escrow.deploy(usdcAddress, FEE_RECIPIENT, GUARDIAN, GUARDIAN2);
   await escrow.waitForDeployment();
   const escrowAddress = await escrow.getAddress();
   console.log(`ChaseHollowEscrow deployed: ${escrowAddress}`);
@@ -77,6 +93,7 @@ async function main() {
   console.log(`ChaseHollowEscrow: ${escrowAddress}`);
   console.log(`FeeRecipient:      ${FEE_RECIPIENT}`);
   console.log(`Guardian:          ${GUARDIAN}`);
+  console.log(`Guardian2:         ${GUARDIAN2}`);
   console.log("=".repeat(60));
 
   // ── Save addresses to file ───────────────────────────────────
@@ -88,6 +105,7 @@ async function main() {
     ChaseHollowEscrow: escrowAddress,
     feeRecipient:      FEE_RECIPIENT,
     guardian:          GUARDIAN,
+    guardian2:         GUARDIAN2,
   };
 
   const outDir  = path.join(__dirname, "../deployments");
@@ -102,7 +120,7 @@ async function main() {
     await new Promise(r => setTimeout(r, 15000));
 
     await verify(usdcAddress, []);
-    await verify(escrowAddress, [usdcAddress, FEE_RECIPIENT, GUARDIAN]);
+    await verify(escrowAddress, [usdcAddress, FEE_RECIPIENT, GUARDIAN, GUARDIAN2]);
   }
 
   console.log("\nDone.");

@@ -247,6 +247,11 @@ function Checkout() {
     setCheckoutError(null)
 
     try {
+      // Server-side check before touching the wallet — suspended/banned buyers blocked here
+      const statusRes = await fetch('/api/auth/buyer-status')
+      const statusData = await statusRes.json()
+      if (!statusData.allowed) throw new Error(statusData.reason || 'Your account is not eligible to purchase.')
+
       if (!wallet) throw new Error('No wallet connected')
       if (!listing?.seller?.wallet_address) throw new Error('Seller wallet address not found')
 
@@ -832,13 +837,24 @@ function Checkout() {
                 </div>
               )}
 
-              <button
-                onClick={handleSign}
-                disabled={!alreadyAcknowledged && (!ack1 || !ack2)}
-                style={{ width: '100%', background: (alreadyAcknowledged || (ack1 && ack2)) ? 'var(--teal)' : 'var(--bg-4)', border: 'none', color: (alreadyAcknowledged || (ack1 && ack2)) ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '18px', fontSize: '16px', fontWeight: 700, borderRadius: '12px', cursor: (alreadyAcknowledged || (ack1 && ack2)) ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px', opacity: (alreadyAcknowledged || (ack1 && ack2)) ? 1 : 0.5 }}
-              >
-                🔒 Sign &amp; Lock ${total} USDC in Escrow
-              </button>
+              {!wallet ? (
+                <div style={{ marginBottom: '10px' }}>
+                  <div style={{ background: 'rgba(232,168,56,0.08)', border: '1px solid rgba(232,168,56,0.35)', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                    Wallet disconnected — reconnect to continue.
+                  </div>
+                  <button onClick={connect} style={{ width: '100%', background: 'var(--gold)', color: '#0A0A0B', border: 'none', borderRadius: '12px', padding: '18px', fontSize: '16px', fontWeight: 700, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer' }}>
+                    Reconnect Wallet
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleSign}
+                  disabled={!alreadyAcknowledged && (!ack1 || !ack2)}
+                  style={{ width: '100%', background: (alreadyAcknowledged || (ack1 && ack2)) ? 'var(--teal)' : 'var(--bg-4)', border: 'none', color: (alreadyAcknowledged || (ack1 && ack2)) ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '18px', fontSize: '16px', fontWeight: 700, borderRadius: '12px', cursor: (alreadyAcknowledged || (ack1 && ack2)) ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px', opacity: (alreadyAcknowledged || (ack1 && ack2)) ? 1 : 0.5 }}
+                >
+                  🔒 Sign &amp; Lock ${total} USDC in Escrow
+                </button>
+              )}
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '16px', lineHeight: 1.6 }}>Your wallet will open for signature. Gas fee (~$0.04 ETH) paid separately from escrow amount.</div>
               <button onClick={() => goToStep(2)} style={btn()}>← Back</button>
             </div>
