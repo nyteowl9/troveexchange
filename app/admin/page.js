@@ -390,13 +390,17 @@ export default function AdminPanel() {
               const seller = order.seller || {}
               const passed = inspection?.decision === 'pass'
               const inspPending = inspection?.decision === 'pending'
+              const inspWaived = inspection?.decision === 'waived'
               const statusColors = { awaiting_shipment: 'var(--accent-amber)', in_transit: 'var(--accent-blue)', auth_review: 'var(--gold)', auth_passed: 'var(--accent-green)', inspection_window: 'var(--accent-amber)', disputed: 'var(--accent-red)', released: 'var(--text-muted)', auth_failed: 'var(--accent-red)' }
               const sc = statusColors[order.status] || 'var(--text-muted)'
               return (
                 <div>
                   {/* Header */}
                   <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '26px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: '4px' }}>{card.card_name || '—'}</div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '4px' }}>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '26px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1.2 }}>{card.card_name || '—'}</div>
+                      {card.id && <a href={`/listing/${order.listing_id}`} target="_blank" rel="noreferrer" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', border: '1px solid var(--teal)', borderRadius: '6px', padding: '4px 10px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>View Listing ↗</a>}
+                    </div>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                       <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{'#' + order.id.slice(0, 8).toUpperCase()}</span>
                       <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '20px', border: `1px solid ${sc}`, color: sc, background: `${sc}18` }}>{order.status?.replace(/_/g, ' ')}</span>
@@ -445,7 +449,7 @@ export default function AdminPanel() {
                       <div>
                         {/* Decision + meta */}
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap' }}>
-                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', padding: '4px 14px', borderRadius: '20px', fontWeight: 600, background: passed ? 'rgba(76,175,124,0.12)' : inspPending ? 'rgba(232,168,56,0.12)' : 'rgba(200,75,60,0.12)', border: `1px solid ${passed ? 'rgba(76,175,124,0.4)' : inspPending ? 'rgba(232,168,56,0.4)' : 'rgba(200,75,60,0.4)'}`, color: passed ? 'var(--accent-green)' : inspPending ? 'var(--accent-amber)' : 'var(--accent-red)' }}>{passed ? '✓ Passed' : inspPending ? '⏳ Pending Review' : '✕ Failed'}</span>
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', padding: '4px 14px', borderRadius: '20px', fontWeight: 600, background: passed ? 'rgba(76,175,124,0.12)' : inspPending ? 'rgba(232,168,56,0.12)' : inspWaived ? 'rgba(60,125,200,0.12)' : 'rgba(200,75,60,0.12)', border: `1px solid ${passed ? 'rgba(76,175,124,0.4)' : inspPending ? 'rgba(232,168,56,0.4)' : inspWaived ? 'rgba(60,125,200,0.4)' : 'rgba(200,75,60,0.4)'}`, color: passed ? 'var(--accent-green)' : inspPending ? 'var(--accent-amber)' : inspWaived ? 'var(--accent-blue)' : 'var(--accent-red)' }}>{passed ? '✓ Passed' : inspPending ? '⏳ Pending Review' : inspWaived ? '— Auth Waived' : '✕ Failed'}</span>
                           {inspection.authenticator_name && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)' }}>by {inspection.authenticator_name}</span>}
                           <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{fmtDate(inspection.created_at)}</span>
                         </div>

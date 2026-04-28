@@ -86,7 +86,8 @@ export default function DisputeResolution() {
 
   const fetchAuthInspections = useCallback(async (orderId) => {
     if (!orderId) return
-    const res = await fetch(`/api/orders/auth-photos-signed?order_id=${orderId}`)
+    setAuthInspections([])
+    const res = await apiFetch(`/api/orders/auth-photos-signed?order_id=${orderId}`)
     if (res.ok) {
       const json = await res.json()
       setAuthInspections(json.inspections || [])
@@ -583,6 +584,26 @@ export default function DisputeResolution() {
                         </div>
                       )}
 
+                      {/* Listing Photos */}
+                      {dispute.orders?.listing?.photos?.length > 0 && (
+                        <EvidenceCard urls={dispute.orders.listing.photos} label="Listing Photos — Original Condition at Time of Sale" color="var(--text-secondary)" />
+                      )}
+
+                      {/* Pre-ship / Auth Photos */}
+                      {authInspections.length > 0 && (() => {
+                        const isWaived = authInspections.every(i => i.decision === 'waived')
+                        return authInspections.map((insp, idx) => (
+                          insp.photos?.length > 0 && (
+                            <EvidenceCard
+                              key={insp.id}
+                              urls={insp.photos}
+                              label={isWaived ? 'Pre-Ship Photos — Submitted by Seller Before Shipping' : `Auth Inspection ${idx + 1} — Chase Hollow (${insp.decision?.toUpperCase() || '—'})`}
+                              color={isWaived ? 'var(--accent-amber)' : 'var(--teal)'}
+                            />
+                          )
+                        ))
+                      })()}
+
                       <EvidenceCard urls={dispute.buyer_evidence} label={`Buyer Evidence — ${dispute.orders?.buyer?.username || dispute.orders?.buyer?.full_name || 'Buyer'}`} color="var(--accent-blue)" />
                       {dispute.seller_notes && (
                         <div style={{ marginBottom: '14px' }}>
@@ -630,7 +651,7 @@ export default function DisputeResolution() {
                         ) : authInspections.map((insp, idx) => (
                           <div key={insp.id} style={{ marginBottom: '16px' }}>
                             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: isWaived ? 'var(--accent-amber)' : 'var(--teal)', marginBottom: '8px', fontWeight: 500 }}>
-                              {isWaived ? 'Pre-Ship Seller Photos' : `Inspection ${idx + 1}`} · {isWaived ? 'AUTH WAIVED' : (insp.decision?.toUpperCase() || '—')} · {fmtDate(insp.timestamp)}
+                              {isWaived ? 'Pre-Ship Seller Photos' : `Inspection ${idx + 1}`} · {isWaived ? 'AUTH WAIVED' : (insp.decision?.toUpperCase() || '—')} · {fmtDate(insp.created_at)}
                             </div>
                             {insp.notes && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{insp.notes}</div>}
                             <EvidenceCard urls={insp.photos} label={isWaived ? 'Seller Pre-Ship Photos' : 'Auth Photos (Official)'} color={isWaived ? 'var(--accent-amber)' : 'var(--teal)'} />

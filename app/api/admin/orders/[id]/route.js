@@ -57,10 +57,24 @@ export async function GET(request, { params }) {
       authenticatorName = auth?.username || auth?.full_name || null
     }
 
+    // Generate signed URLs for auth-photos (private bucket)
+    let signedPhotos = []
+    if (inspectionRes.data?.photos?.length) {
+      signedPhotos = await Promise.all(
+        inspectionRes.data.photos.map(async (path) => {
+          const { data } = await supabaseAdmin.storage
+            .from('auth-photos')
+            .createSignedUrl(path, 3600)
+          return data?.signedUrl || null
+        })
+      )
+      signedPhotos = signedPhotos.filter(Boolean)
+    }
+
     return NextResponse.json({
       order: orderRes.data,
       inspection: inspectionRes.data
-        ? { ...inspectionRes.data, authenticator_name: authenticatorName }
+        ? { ...inspectionRes.data, authenticator_name: authenticatorName, photos: signedPhotos }
         : null,
     })
   } catch (err) {

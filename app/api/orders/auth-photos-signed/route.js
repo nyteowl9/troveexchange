@@ -26,9 +26,9 @@ export async function GET(request) {
 
     const { data: inspections, error } = await supabaseAdmin
       .from('auth_inspections')
-      .select('id, photos, decision, notes, timestamp, authenticator_id')
+      .select('id, photos, decision, notes, created_at, authenticator_id')
       .eq('order_id', orderId)
-      .order('timestamp', { ascending: true })
+      .order('created_at', { ascending: true })
 
     if (error) throw error
 

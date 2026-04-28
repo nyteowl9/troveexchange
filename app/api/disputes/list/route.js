@@ -55,7 +55,7 @@ export async function GET(request) {
 
       const [{ data: listings }, { data: users }] = await Promise.all([
         listingIds.length > 0
-          ? supabaseAdmin.from('listings').select('id, card_name, set, price, auth_tier').in('id', listingIds)
+          ? supabaseAdmin.from('listings').select('id, card_name, set, price, auth_tier, photos').in('id', listingIds)
           : Promise.resolve({ data: [] }),
         userIds.length > 0
           ? supabaseAdmin.from('users').select('id, username, full_name, email').in('id', userIds)
