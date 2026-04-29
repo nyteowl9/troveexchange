@@ -510,8 +510,8 @@ export default function ComingSoon() {
             ⬡ CHASE HOLLOW
           </div>
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-            <a href="https://x.com/chasehollow" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: '#6C6A66', textDecoration: 'none', letterSpacing: '0.08em' }}>
-              𝕏 @chasehollow
+            <a href="https://x.com/chasehollowtcg" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: '#6C6A66', textDecoration: 'none', letterSpacing: '0.08em' }}>
+              𝕏 @chasehollowtcg
             </a>
           </div>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: '#3A3A42' }}>
