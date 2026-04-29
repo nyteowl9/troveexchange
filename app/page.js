@@ -290,7 +290,7 @@ export default function Home() {
               ))}
             </div>
             <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '14px', padding: '24px 28px' }}>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '16px', fontWeight: 500 }}>Where Chase Hollow's 3% Goes</div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '16px', fontWeight: 500 }}>Where Chase Hollow's 3.5% Goes</div>
               {[
                 { label: 'Visa / Mastercard cut', val: '0%', zero: true },
                 { label: 'Payment processing', val: '0%', zero: true },
@@ -544,7 +544,7 @@ export default function Home() {
               </div>
             </div>
             <div style={{ textAlign: 'center', flexShrink: 0 }}>
-              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '96px', fontWeight: 300, color: 'var(--gold)', lineHeight: 1 }}>3%</div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '96px', fontWeight: 300, color: 'var(--gold)', lineHeight: 1 }}>3.5%</div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 500 }}>Our only fee</div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>vs. ~13% everywhere else</div>
             </div>
