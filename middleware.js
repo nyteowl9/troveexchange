@@ -12,6 +12,16 @@ const PROTECTED_ROUTES = [
 export async function middleware(request) {
   const { pathname } = request.nextUrl
 
+  // ── Coming-soon redirect ──────────────────────────────────────
+  // Remove this block (and the /api/preview route) when going public.
+  const bypassSecret = process.env.PREVIEW_SECRET || 'ch-preview-2026'
+  const hasBypass = request.cookies.get('ch-bypass')?.value === bypassSecret
+  const isExempt  = hasBypass || pathname.startsWith('/coming-soon') || pathname.startsWith('/api/')
+  if (!isExempt) {
+    return NextResponse.redirect(new URL('/coming-soon', request.url))
+  }
+  // ─────────────────────────────────────────────────────────────
+
   // Check if this path requires protection
   const protectedRoute = PROTECTED_ROUTES.find(route =>
     pathname.startsWith(route.path)
