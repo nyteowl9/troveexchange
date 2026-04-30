@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { SETS_BY_CATEGORY } from '@/lib/sets'
 
 const PAGE_SIZE = 24
 
@@ -41,6 +42,8 @@ export default function Marketplace() {
   const [gradeFilters, setGradeFilters] = useState([])   // e.g. ['PSA 10']
   const [graderFilters, setGraderFilters] = useState([]) // e.g. ['PSA']
   const [tierFilters, setTierFilters] = useState([])     // e.g. ['elite']
+  const [setFilters, setSetFilters] = useState([])        // e.g. ['Prismatic Evolutions']
+  const [setFilterSearch, setSetFilterSearch] = useState('')
   const [page, setPage] = useState(1)
 
   // Data
@@ -70,6 +73,9 @@ export default function Marketplace() {
     if (search.trim()) {
       query = query.or(`card_name.ilike.%${search.trim()}%,set.ilike.%${search.trim()}%,game.ilike.%${search.trim()}%`)
     }
+
+    // Set filter
+    if (setFilters.length > 0) query = query.in('set', setFilters)
 
     // Price range
     if (priceMin !== '') query = query.gte('price', parseFloat(priceMin))
@@ -123,12 +129,15 @@ export default function Marketplace() {
     setListings(filtered)
     setTotal(count || 0)
     setLoading(false)
-  }, [category, search, sortBy, priceMin, priceMax, graderFilters, gradeFilters, tierFilters, page])
+  }, [category, search, sortBy, priceMin, priceMax, graderFilters, gradeFilters, tierFilters, setFilters, page])
 
   useEffect(() => { load() }, [load])
 
   // Reset to page 1 on any filter change
-  useEffect(() => { setPage(1) }, [category, search, sortBy, priceMin, priceMax, graderFilters, gradeFilters, tierFilters])
+  useEffect(() => { setPage(1) }, [category, search, sortBy, priceMin, priceMax, graderFilters, gradeFilters, tierFilters, setFilters])
+
+  // Clear set filters when switching categories (sets are game-specific)
+  useEffect(() => { setSetFilters([]); setSetFilterSearch('') }, [category])
 
   function toggleFilter(arr, setArr, val) {
     setArr(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
@@ -150,10 +159,12 @@ export default function Marketplace() {
     setGradeFilters([])
     setGraderFilters([])
     setTierFilters([])
+    setSetFilters([])
+    setSetFilterSearch('')
     setPage(1)
   }
 
-  const activeFilterCount = gradeFilters.length + graderFilters.length + tierFilters.length +
+  const activeFilterCount = gradeFilters.length + graderFilters.length + tierFilters.length + setFilters.length +
     (priceMin ? 1 : 0) + (priceMax ? 1 : 0) + (search ? 1 : 0)
 
   const btn = (style = {}) => ({
@@ -233,6 +244,7 @@ export default function Marketplace() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {gradeFilters.map(f => <span key={f} onClick={() => toggleFilter(gradeFilters, setGradeFilters, f)} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', color: 'var(--teal)', cursor: 'pointer' }}>{f} ✕</span>)}
                   {graderFilters.map(f => <span key={f} onClick={() => toggleFilter(graderFilters, setGraderFilters, f)} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', color: 'var(--teal)', cursor: 'pointer' }}>{f} ✕</span>)}
+                  {setFilters.map(f => <span key={f} onClick={() => toggleFilter(setFilters, setSetFilters, f)} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', color: 'var(--teal)', cursor: 'pointer' }}>{f} ✕</span>)}
                   {search && <span onClick={() => { setSearch(''); setSearchInput('') }} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px', background: 'var(--teal-bg)', border: '1px solid var(--teal-border)', color: 'var(--teal)', cursor: 'pointer' }}>"{search}" ✕</span>}
                 </div>
               </div>
@@ -249,6 +261,36 @@ export default function Marketplace() {
                 ))}
               </div>
             </div>
+
+            {/* Set Filter — only shown when a game category with known sets is selected */}
+            {(() => {
+              const catSets = SETS_BY_CATEGORY[category] || []
+              if (catSets.length === 0) return null
+              const visible = setFilterSearch.trim()
+                ? catSets.filter(s => s.toLowerCase().includes(setFilterSearch.toLowerCase()))
+                : catSets
+              return (
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500 }}>Set</div>
+                  <input
+                    type="text"
+                    placeholder="Search sets…"
+                    value={setFilterSearch}
+                    onChange={e => setSetFilterSearch(e.target.value)}
+                    style={{ width: '100%', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', marginBottom: '10px' }}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '220px', overflowY: 'auto' }}>
+                    {visible.map(s => (
+                      <label key={s} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={setFilters.includes(s)} onChange={() => toggleFilter(setFilters, setSetFilters, s)} style={{ accentColor: 'var(--teal)', width: '13px', height: '13px', flexShrink: 0 }} />
+                        <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: setFilters.includes(s) ? 'var(--teal)' : 'var(--text-secondary)', lineHeight: 1.3 }}>{s}</span>
+                      </label>
+                    ))}
+                    {visible.length === 0 && <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-muted)' }}>No sets match</div>}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Grading Company */}
             <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px' }}>

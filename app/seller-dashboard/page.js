@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import ChatModal from '@/app/components/ChatModal'
+import SetCombobox from '@/app/components/SetCombobox'
 import ConnectWalletButton, { useWalletConnection } from '@/app/components/ConnectWallet'
 import { useWallets } from '@privy-io/react-auth'
 import { ethers } from 'ethers'
@@ -1490,7 +1491,7 @@ function SellerDashboard() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <Label text="SET / EDITION" />
-                      <input type="text" placeholder="e.g. Base Set Shadowless" value={formData.set} onChange={e => setFormData(p => ({ ...p, set: e.target.value }))} style={inputStyle} />
+                      <SetCombobox game={formData.game} value={formData.set} onChange={v => setFormData(p => ({ ...p, set: v }))} inputStyle={inputStyle} />
                     </div>
                     <div>
                       <Label text="CARD NUMBER" />
@@ -1758,7 +1759,7 @@ function SellerDashboard() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <Label text="SET / EDITION" />
-                      <input type="text" value={editFormData.set || ''} onChange={e => setEditFormData(p => ({ ...p, set: e.target.value }))} style={inputStyle} />
+                      <SetCombobox game={editFormData.game || 'Pokémon TCG'} value={editFormData.set || ''} onChange={v => setEditFormData(p => ({ ...p, set: v }))} inputStyle={inputStyle} />
                     </div>
                     <div>
                       <Label text="CARD NUMBER" />
