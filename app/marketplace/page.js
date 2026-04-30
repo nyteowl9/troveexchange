@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { SETS_BY_CATEGORY } from '@/lib/sets'
+import { useSets, CATEGORY_TO_GAME } from '@/app/hooks/useSets'
 
 const PAGE_SIZE = 24
 
@@ -45,6 +45,9 @@ export default function Marketplace() {
   const [setFilters, setSetFilters] = useState([])        // e.g. ['Prismatic Evolutions']
   const [setFilterSearch, setSetFilterSearch] = useState('')
   const [page, setPage] = useState(1)
+
+  // Set list for the active category filter panel
+  const { sets: catSets, loading: setsLoading } = useSets(CATEGORY_TO_GAME[category] || null)
 
   // Data
   const [listings, setListings] = useState([])
@@ -263,15 +266,16 @@ export default function Marketplace() {
             </div>
 
             {/* Set Filter — only shown when a game category with known sets is selected */}
-            {(() => {
-              const catSets = SETS_BY_CATEGORY[category] || []
-              if (catSets.length === 0) return null
+            {catSets.length > 0 && (() => {
               const visible = setFilterSearch.trim()
                 ? catSets.filter(s => s.toLowerCase().includes(setFilterSearch.toLowerCase()))
                 : catSets
               return (
                 <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 500 }}>Set</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 500 }}>Set</div>
+                    {setsLoading && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)' }}>loading…</div>}
+                  </div>
                   <input
                     type="text"
                     placeholder="Search sets…"

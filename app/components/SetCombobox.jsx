@@ -1,21 +1,22 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { SETS_BY_GAME } from '@/lib/sets'
+import { useSets } from '@/app/hooks/useSets'
 
-// Searchable set selector — shows a filtered dropdown from the canonical set list for the
-// selected game, but still accepts free text for unlisted sets.
 export default function SetCombobox({ game, value, onChange, inputStyle = {} }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen]   = useState(false)
   const [query, setQuery] = useState(value || '')
-  const ref = useRef(null)
+  const ref               = useRef(null)
 
-  const sets = SETS_BY_GAME[game] || []
+  const { sets, loading } = useSets(game)
+
   const filtered = query.trim()
     ? sets.filter(s => s.toLowerCase().includes(query.toLowerCase()))
     : sets
 
+  // Sync when parent changes value (e.g. edit form pre-fill)
   useEffect(() => { setQuery(value || '') }, [value])
 
+  // Close on outside click
   useEffect(() => {
     function handler(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false)
@@ -24,9 +25,9 @@ export default function SetCombobox({ game, value, onChange, inputStyle = {} }) 
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  function select(set) {
-    setQuery(set)
-    onChange(set)
+  function select(s) {
+    setQuery(s)
+    onChange(s)
     setOpen(false)
   }
 
@@ -36,30 +37,26 @@ export default function SetCombobox({ game, value, onChange, inputStyle = {} }) 
     setOpen(true)
   }
 
-  const hasOptions = filtered.length > 0
-
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <input
         type="text"
         value={query}
         onChange={handleChange}
-        onFocus={() => sets.length > 0 && setOpen(true)}
-        placeholder={sets.length ? 'Search or type set name…' : 'e.g. Base Set Shadowless'}
+        onFocus={() => setOpen(true)}
+        placeholder="Search or type set name…"
         style={inputStyle}
         autoComplete="off"
       />
-      {sets.length > 0 && (
-        <div
-          style={{
-            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-            pointerEvents: 'none', color: 'var(--text-muted)', fontSize: '10px',
-          }}
-        >
-          ▾
-        </div>
-      )}
-      {open && hasOptions && (
+      {/* Caret / loading indicator */}
+      <div style={{
+        position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+        pointerEvents: 'none', color: 'var(--text-muted)', fontSize: '10px',
+      }}>
+        {loading ? '…' : '▾'}
+      </div>
+
+      {open && filtered.length > 0 && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, zIndex: 200,
           background: 'var(--bg-2)', border: '1.5px solid var(--border)',
@@ -71,13 +68,11 @@ export default function SetCombobox({ game, value, onChange, inputStyle = {} }) 
               key={s}
               onMouseDown={() => select(s)}
               style={{
-                padding: '9px 14px',
-                fontSize: '13px',
+                padding: '9px 14px', fontSize: '13px',
                 fontFamily: 'DM Sans, sans-serif',
                 color: s === value ? 'var(--teal)' : 'var(--text-secondary)',
                 background: s === value ? 'rgba(13,110,110,0.12)' : 'transparent',
                 cursor: 'pointer',
-                transition: 'background 0.1s',
               }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-3)' }}
               onMouseLeave={e => { e.currentTarget.style.background = s === value ? 'rgba(13,110,110,0.12)' : 'transparent' }}
@@ -87,7 +82,8 @@ export default function SetCombobox({ game, value, onChange, inputStyle = {} }) 
           ))}
         </div>
       )}
-      {open && !hasOptions && query.trim() && (
+
+      {open && filtered.length === 0 && query.trim() && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, zIndex: 200,
           background: 'var(--bg-2)', border: '1.5px solid var(--border)',
