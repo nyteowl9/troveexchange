@@ -67,6 +67,12 @@ function SellerDashboard() {
 
   const [theme, setTheme] = useState('dark')
   const [activeSection, setActiveSection]   = useState(() => searchParams.get('section') || 'overview')
+
+  // Sync section when URL changes (e.g. clicking "List a Card" from nav while already on this page)
+  useEffect(() => {
+    const s = searchParams.get('section')
+    if (s) setActiveSection(s)
+  }, [searchParams])
   const [chatOrder, setChatOrder]           = useState(null)
   const [activeOrders, setActiveOrders]     = useState([])
   const [myListings, setMyListings]         = useState([])
