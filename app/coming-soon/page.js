@@ -121,6 +121,15 @@ export default function ComingSoon() {
           </a>
         </div>
 
+        {/* Giveaway announcement banner */}
+        <a href="/giveaway" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', background: 'linear-gradient(90deg, rgba(201,168,76,0.07) 0%, rgba(201,168,76,0.13) 50%, rgba(201,168,76,0.07) 100%)', borderBottom: '1px solid rgba(201,168,76,0.2)', padding: '11px 24px', textDecoration: 'none', transition: 'background 0.2s', cursor: 'pointer' }}>
+          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 9px', borderRadius: '20px', background: '#C9A84C', color: '#0A0A0B', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0 }}>GIVEAWAY</span>
+          <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: '#F0EDE6', fontWeight: 500 }}>
+            Win a <strong style={{ color: '#C9A84C' }}>Prismatic Evolutions Booster Box</strong> — sign up to enter
+          </span>
+          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: '#C9A84C', flexShrink: 0 }}>→</span>
+        </a>
+
         {/* Two-column hero body */}
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '64px 40px 56px', display: 'flex', alignItems: 'center', gap: '40px', flexWrap: 'wrap' }}>
 
