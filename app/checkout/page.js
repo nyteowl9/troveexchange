@@ -38,6 +38,7 @@ function Checkout() {
   const [checkoutError, setCheckoutError]   = useState(null)
   const [authChoice, setAuthChoice]         = useState('authenticate') // 'authenticate' | 'skip'
   const [tierConfig, setTierConfig]         = useState(null)
+  const [selfShipMaxValue, setSelfShipMaxValue] = useState(25)
 
   // Buyer address state
   const [buyerAddress, setBuyerAddress]     = useState(null)
@@ -74,6 +75,13 @@ function Checkout() {
       setListingLoading(false)
     })
   }, [listingId])
+
+  useEffect(() => {
+    fetch('/api/platform/settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.self_ship_max_value !== undefined) setSelfShipMaxValue(d.self_ship_max_value) })
+      .catch(() => {})
+  }, [])
 
   // Step 2: load buyer address + USDC balance + shipping estimate in parallel
   useEffect(() => {
@@ -122,8 +130,14 @@ function Checkout() {
         setUsdcBalance(null)
       }
 
-      // Shipping estimate
-      await doFetchShipping()
+      // Shipping estimate — skip for self-ship eligible listings (card price ≤ threshold)
+      const selfShipEligible = selfShipMaxValue > 0 && parseFloat(listing?.price ?? 0) <= selfShipMaxValue
+      if (!selfShipEligible) {
+        await doFetchShipping()
+      } else {
+        setShippingFee(0)
+        setLabelACost(0)
+      }
 
       // Tier config (optional auth feature flag + thresholds)
       try {
@@ -189,10 +203,11 @@ function Checkout() {
       const updated = { ...buyerAddress, ...addressForm }
       setBuyerAddress(updated)
       setAddressEditing(false)
-      // Re-fetch shipping with updated address
-      setBalanceLoading(true)
-      await doFetchShipping()
-      setBalanceLoading(false)
+      if (!isSelfShipEligible) {
+        setBalanceLoading(true)
+        await doFetchShipping()
+        setBalanceLoading(false)
+      }
     } catch (err) {
       console.error('Failed to save address', err)
     }
@@ -201,26 +216,27 @@ function Checkout() {
 
   // Derived price data
   const cardPrice        = listing?.price ?? 0
+  const isSelfShipEligible = !!listing && selfShipMaxValue > 0 && parseFloat(cardPrice) > 0 && parseFloat(cardPrice) <= selfShipMaxValue
   const remoteAuthMax    = tierConfig?.remote_auth_max_value ?? 300
   const optionalAuthApplies = tierConfig?.optional_auth_enabled && cardPrice <= (tierConfig?.optional_auth_max_price ?? 300)
   const effectiveChoice  = optionalAuthApplies ? authChoice : 'authenticate'
   const baseAuthTier     = cardPrice <= remoteAuthMax ? 'remote' : 'physical'
-  const authTier         = effectiveChoice === 'skip' ? 'none' : baseAuthTier
-  const authFee          = effectiveChoice === 'skip' ? 0 : (authTier === 'remote' ? (tierConfig?.remote_auth_fee ?? 10) : (tierConfig?.physical_auth_fee ?? 25))
+  const authTier         = isSelfShipEligible ? 'none' : (effectiveChoice === 'skip' ? 'none' : baseAuthTier)
+  const authFee          = isSelfShipEligible ? 0 : (effectiveChoice === 'skip' ? 0 : (authTier === 'remote' ? (tierConfig?.remote_auth_fee ?? 10) : (tierConfig?.physical_auth_fee ?? 25)))
   const salesTax         = 0  // TaxJar deferred to ~$50k GMV
   const platformFee      = parseFloat((cardPrice * 0.03).toFixed(2))
   const creatorFee       = parseFloat((cardPrice * 0.005).toFixed(2))
-  const labelACostVal    = labelACost ?? (cardPrice > remoteAuthMax ? 12 : 0)
-  const shippingFeeVal   = shippingFee ?? 8
+  const labelACostVal    = isSelfShipEligible ? 0 : (labelACost ?? (cardPrice > remoteAuthMax ? 12 : 0))
+  const shippingFeeVal   = isSelfShipEligible ? 0 : (shippingFee ?? 8)
   const sellerPayout     = parseFloat((cardPrice - platformFee - creatorFee - labelACostVal).toFixed(2))
   // Tier 2 (physical): both Label A and Label B are funded through escrow so the Safe can pay for both.
   // Label A is already deducted from sellerPayout; adding it to shippingFee here ensures it reaches the Safe.
-  const shippingFeeForDisplay = baseAuthTier === 'physical' ? labelACostVal + shippingFeeVal : shippingFeeVal
+  const shippingFeeForDisplay = isSelfShipEligible ? 0 : (baseAuthTier === 'physical' ? labelACostVal + shippingFeeVal : shippingFeeVal)
   const escrowTotal      = parseFloat((sellerPayout + platformFee + creatorFee + authFee + shippingFeeForDisplay + salesTax).toFixed(2))
   const total            = escrowTotal.toFixed(2)
 
   // Display total — clean until shipping is known
-  const shippingKnown = shippingFee !== null && !balanceLoading
+  const shippingKnown = isSelfShipEligible || (shippingFee !== null && !balanceLoading)
   const displayTotal  = shippingKnown
     ? escrowTotal.toFixed(2)
     : parseFloat(cardPrice + authFee).toFixed(2)
@@ -297,7 +313,7 @@ function Checkout() {
       const shippingFeeForContractU = baseAuthTier === 'physical' ? labelACostU + shippingFeeU : shippingFeeU
       const sellerPayoutU = cardPriceU - platformFeeU - creatorFeeU - labelACostU
       const escrowAmountU = sellerPayoutU + platformFeeU + creatorFeeU + authFeeU + shippingFeeForContractU + salesTaxU
-      const sellerBondUSD = calcSellerBond(cardPrice, sellerTier)
+      const sellerBondUSD = isSelfShipEligible ? 0 : calcSellerBond(cardPrice, sellerTier)
       const sellerBondU   = u(sellerBondUSD)
 
       setSigningStatus('Step 1 of 2 — Approve USDC spend · confirm in wallet...')
@@ -548,7 +564,11 @@ function Checkout() {
           {step === 2 && (
             <div>
               <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Confirm <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Shipping Address</em></div>
-              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>We'll ship your card here. Confirm it's correct before we calculate your final shipping cost.</p>
+              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>
+                {isSelfShipEligible
+                  ? `Confirm your delivery address. No shipping cost — the seller ships directly at no charge for orders under $${selfShipMaxValue}.`
+                  : "We'll ship your card here. Confirm it's correct before we calculate your final shipping cost."}
+              </p>
 
               {/* ADDRESS CARD */}
               <div style={{ background: 'var(--bg-2)', border: `1.5px solid ${addressConfirmed ? 'rgba(76,175,124,0.4)' : 'var(--border)'}`, borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' }}>
@@ -620,7 +640,7 @@ function Checkout() {
                           padding: '10px 18px', fontSize: '12px', flex: 1,
                         })}
                       >
-                        {addressSaving ? 'Saving…' : 'Save & Calculate Shipping'}
+                        {addressSaving ? 'Saving…' : isSelfShipEligible ? 'Save Address' : 'Save & Calculate Shipping'}
                       </button>
                     </div>
                   </div>
@@ -641,8 +661,21 @@ function Checkout() {
                 )}
               </div>
 
-              {/* AUTH CHOICE CARD — only when optional auth is enabled and card is under threshold */}
-              {optionalAuthApplies && !addressLoading && !addressEditing && (
+              {/* SELF-SHIP NOTICE — card is under the low-value threshold */}
+              {isSelfShipEligible && !addressLoading && !addressEditing && (
+                <div style={{ background: 'rgba(76,175,124,0.06)', border: '1.5px solid rgba(76,175,124,0.3)', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '20px', flexShrink: 0 }}>📦</span>
+                  <div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-green)', fontWeight: 500, marginBottom: '4px' }}>Free Shipping · No Authentication</div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                      Cards under ${selfShipMaxValue} ship directly from the seller at no extra cost. No authentication fee applies — escrow and dispute protection still fully cover your purchase.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* AUTH CHOICE CARD — only when optional auth is enabled, card is not self-ship eligible */}
+              {optionalAuthApplies && !isSelfShipEligible && !addressLoading && !addressEditing && (
                 <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' }}>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Authentication</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -685,8 +718,8 @@ function Checkout() {
                   <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {[
                       { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
-                      { label: authTier === 'none' ? 'Authentication' : `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: authTier === 'none' ? 'Skipped — Free' : `$${authFee}` },
-                      { label: 'Shipping & insurance', val: balanceLoading ? 'Calculating…' : shippingKnown ? `~$${shippingFeeVal.toFixed(2)}` : 'Est. at checkout' },
+                      { label: isSelfShipEligible ? 'Authentication' : (authTier === 'none' ? 'Authentication' : `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`), val: isSelfShipEligible ? 'None — card under threshold' : (authTier === 'none' ? 'Skipped — Free' : `$${authFee}`) },
+                      { label: 'Shipping & insurance', val: isSelfShipEligible ? 'Free — seller ships' : (balanceLoading ? 'Calculating…' : shippingKnown ? `~$${shippingFeeVal.toFixed(2)}` : 'Est. at checkout') },
                       { label: shippingKnown ? 'Total to lock in escrow' : 'Subtotal (excl. shipping)', val: `$${displayTotal} USDC`, total: true },
                       { label: 'Remaining after purchase', val: usdcBalanceFormatted !== null ? `$${Math.max(0, parseFloat(usdcBalanceFormatted) - parseFloat(displayTotal)).toFixed(2)} USDC` : '—', green: true },
                     ].map((row, i) => (
@@ -742,7 +775,7 @@ function Checkout() {
                     { label: 'Card', val: listing ? `${listing.card_name}${listing.set ? ` · ${listing.set}` : ''}` : '—' },
                     { label: 'Grade', val: listing?.grade ? `${listing.grader} ${listing.grade}${listing.cert_number ? ` · Cert #${listing.cert_number}` : ''}` : 'Raw' },
                     { label: 'Seller', val: listing ? `${sellerName} · ${sellerTier.charAt(0).toUpperCase() + sellerTier.slice(1)}${sellerRep ? ` · ${sellerRep.toFixed(2)}★` : ''}` : '—', teal: true },
-                    { label: 'Authentication', val: authTier === 'none' ? '⚠ Skipped by buyer' : '✓ Yes — verified before delivery', green: authTier !== 'none' },
+                    { label: 'Authentication', val: isSelfShipEligible ? '— Not required (low-value card)' : (authTier === 'none' ? '⚠ Skipped by buyer' : '✓ Yes — verified before delivery'), green: !isSelfShipEligible && authTier !== 'none' },
                   ]
                 },
                 {
@@ -750,7 +783,7 @@ function Checkout() {
                   rows: [
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}`, gold: true },
                     { label: authTier === 'none' ? 'Authentication' : `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: authTier === 'none' ? 'Skipped — Free' : `$${authFee}` },
-                    { label: 'Shipping & insurance', val: `~$${shippingFeeVal.toFixed(2)}` },
+                    { label: 'Shipping & insurance', val: isSelfShipEligible ? 'Free — seller ships' : `~$${shippingFeeVal.toFixed(2)}` },
                     { label: 'Total locked in escrow', val: `$${total} USDC`, gold: true, total: true },
                   ]
                 },
@@ -817,13 +850,19 @@ function Checkout() {
               {/* Escrow explainer */}
               <div style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {[
+                  {(isSelfShipEligible ? [
+                    'Funds go to escrow — not to us, not to the seller yet',
+                    'Auto-refund if seller misses 48hr shipping deadline',
+                    'No authentication required — card ships directly from seller',
+                    `Escrow auto-releases after ${tierConfig?.self_ship_release_days ?? 14} days — dispute window stays open`,
+                    'Transaction recorded permanently on Base blockchain',
+                  ] : [
                     'Funds go to escrow — not to us, not to the seller yet',
                     'Auto-refund if seller misses 48hr shipping deadline',
                     authTier === 'remote' ? 'Card photo-authenticated by staff during transit' : 'Card physically authenticated by experts before it reaches you',
                     '72hr inspection window after delivery — dispute if needed',
                     'Transaction recorded permanently on Base blockchain',
-                  ].map((item, i) => (
+                  ]).map((item, i) => (
                     <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                       <span style={{ color: 'var(--accent-green)', flexShrink: 0 }}>✓</span>{item}
                     </div>
@@ -883,11 +922,11 @@ function Checkout() {
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '20px' }}>Live tracking · Updates automatically</div>
                 {[
                   { title: 'Escrow Funded', desc: `$${total} USDC locked in smart contract on Base. Transaction confirmed.`, done: true, active: false },
-                  { title: 'Awaiting Shipment', desc: `${sellerName} has been notified. They have 48hrs to${authTier === 'remote' ? ' upload 3 photos and' : ''} ship${authTier === 'physical' ? ' to our authentication center' : ' directly to your address'}.`, done: false, active: true, time: '⏱ Ship deadline: 48hrs from now' },
-                  ...(authTier !== 'none' ? [{ title: authTier === 'remote' ? 'In Transit · Photo Review' : 'In Transit to Auth Center', desc: authTier === 'remote' ? 'Card en route to you. Staff reviews photos in transit.' : 'Card en route to Chase Hollow authentication center.', done: false, active: false }] : [{ title: 'In Transit', desc: 'Card en route to your address.', done: false, active: false }]),
-                  ...(authTier !== 'none' ? [{ title: 'Authentication', desc: 'Expert verifies grade, condition, and cert number match listing exactly.', done: false, active: false }] : []),
-                  { title: 'Shipped to You', desc: `Card${authTier === 'physical' ? ' ships from auth center' : ' already en route'} to ${buyerAddress?.city ? `${buyerAddress.city}, ${buyerAddress.state}` : 'your address'}.`, done: false, active: false },
-                  { title: 'Delivered · Auto-Release', desc: 'Delivery confirmed. 72hr window opens. USDC auto-releases to seller at window close unless you dispute.', done: false, active: false },
+                  { title: 'Awaiting Shipment', desc: isSelfShipEligible ? `${sellerName} has been notified. They have 48hrs to upload 3 photos and ship directly to your address.` : `${sellerName} has been notified. They have 48hrs to${authTier === 'remote' ? ' upload 3 photos and' : ''} ship${authTier === 'physical' ? ' to our authentication center' : ' directly to your address'}.`, done: false, active: true, time: '⏱ Ship deadline: 48hrs from now' },
+                  { title: 'In Transit', desc: 'Card en route to your address.', done: false, active: false },
+                  ...(!isSelfShipEligible && authTier !== 'none' ? [{ title: 'Authentication', desc: 'Expert verifies grade, condition, and cert number match listing exactly.', done: false, active: false }] : []),
+                  ...(!isSelfShipEligible && authTier === 'physical' ? [{ title: 'Shipped to You', desc: `Card ships from auth center to ${buyerAddress?.city ? `${buyerAddress.city}, ${buyerAddress.state}` : 'your address'}.`, done: false, active: false }] : []),
+                  { title: 'Delivered · Auto-Release', desc: isSelfShipEligible ? `Delivery confirmed. Escrow auto-releases to seller after ${tierConfig?.self_ship_release_days ?? 14} days unless you dispute.` : 'Delivery confirmed. 72hr window opens. USDC auto-releases to seller at window close unless you dispute.', done: false, active: false },
                 ].map((s, i) => (
                   <div key={i} style={{ display: 'flex', gap: '14px', position: 'relative', paddingBottom: i < 5 ? '18px' : '0' }}>
                     {i < 5 && <div style={{ position: 'absolute', left: '13px', top: '28px', bottom: '0', width: '1.5px', background: s.done ? 'var(--accent-green)' : 'var(--border)' }} />}

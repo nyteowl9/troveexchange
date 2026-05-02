@@ -78,6 +78,13 @@ function SellerDashboard() {
   const [myListings, setMyListings]         = useState([])
   const [completedSales, setCompletedSales] = useState([])
   const [dataLoading, setDataLoading]       = useState(true)
+  const [selfShipThreshold, setSelfShipThreshold] = useState(25) // from tier_config
+  const [selfShipModal, setSelfShipModal]   = useState(null)     // { orderId, cardName, price }
+  const [selfShipCarrier, setSelfShipCarrier]   = useState('')
+  const [selfShipTracking, setSelfShipTracking] = useState('')
+  const [selfShipLoading, setSelfShipLoading]   = useState({})   // { [orderId]: true }
+  const [selfShipError, setSelfShipError]       = useState({})   // { [orderId]: message }
+  const [selfShipDone, setSelfShipDone]         = useState({})   // { [orderId]: true }
   const [labelLoading, setLabelLoading]     = useState({}) // { [orderId]: true }
   const [labelError, setLabelError]         = useState({}) // { [orderId]: message }
   const [bondLoading, setBondLoading]       = useState({}) // { [orderId]: true }
@@ -174,7 +181,7 @@ function SellerDashboard() {
       const [ordersRes, listingsRes, salesRes] = await Promise.all([
         supabase
           .from('orders')
-          .select(`id, status, escrow_amount, auth_tier, bond_amount, bond_tx_hash, onchain_order_id, tracking_a, label_a_url, shipped_at, created_at, auto_release_at, return_deadline_at, return_review_deadline_at,
+          .select(`id, status, ship_method, escrow_amount, auth_tier, bond_amount, bond_tx_hash, onchain_order_id, tracking_a, label_a_url, shipped_at, created_at, auto_release_at, return_deadline_at, return_review_deadline_at,
                    listing:listing_id (id, card_name, game, set, grade, grader, photos, price, auth_tier),
                    buyer:buyer_id (id, username),
                    disputes (id, reason, seller_evidence, outcome)`)
@@ -265,17 +272,25 @@ function SellerDashboard() {
     }
   }, [user, fetchData])
 
-  const calcFees = (p) => {
+  // Load public platform settings (self-ship threshold)
+  useEffect(() => {
+    fetch('/api/platform/settings').then(r => r.json()).then(d => {
+      if (d?.self_ship_max_value !== undefined) setSelfShipThreshold(parseFloat(d.self_ship_max_value))
+    }).catch(() => {})
+  }, [])
+
+  const calcFees = (p, selfShip = false) => {
     const num = parseFloat(p) || 0
     const platform = (num * 0.035).toFixed(2)
-    const shipCost = 8
+    const shipCost = selfShip ? 0 : 8
     const net = (num - parseFloat(platform) - shipCost).toFixed(2)
     return { platform, shipCost, net }
   }
 
-  const fees = calcFees(price)
+  const priceIsSelfShipEligible = selfShipThreshold > 0 && parseFloat(price) > 0 && parseFloat(price) <= selfShipThreshold
+  const fees = calcFees(price, priceIsSelfShipEligible)
   const bondRate   = BOND_RATE[profile?.seller_tier] || BOND_RATE.new
-  const bondAmount = price ? (BOND_FLOOR + parseFloat(price) * bondRate).toFixed(2) : null
+  const bondAmount = priceIsSelfShipEligible ? null : (price ? (BOND_FLOOR + parseFloat(price) * bondRate).toFixed(2) : null)
 
   const ordersNeedLabel   = activeOrders.filter(o => o.status === 'awaiting_shipment' && !o.label_a_url)
   const ordersLabelReady  = activeOrders.filter(o => o.status === 'awaiting_shipment' && o.label_a_url)
@@ -618,13 +633,35 @@ function SellerDashboard() {
     { id: 'listings',     icon: '◆', label: 'My Listings',    badgeColor: 'var(--accent-green)' },
     { id: 'new-listing',  icon: '+', label: 'New Listing' },
     { id: 'earnings',     icon: '$', label: 'Earnings' },
+    { id: 'messages',     icon: '💬', label: 'Messages',       badgeColor: 'var(--accent-red)' },
     { id: 'bond',         icon: '🔒', label: 'Bond & Strikes' },
     { id: 'profile',      icon: '◑', label: 'Profile' },
   ]
 
+  const [inboxThreads, setInboxThreads] = useState([])
+  const [inboxLoading, setInboxLoading] = useState(false)
+  const [inboxUnread, setInboxUnread]   = useState(0)
+
+  const fetchInbox = useCallback(async () => {
+    setInboxLoading(true)
+    try {
+      const res = await fetch('/api/messages/inbox')
+      const data = await res.json()
+      const threads = data.threads || []
+      setInboxThreads(threads)
+      setInboxUnread(threads.reduce((sum, t) => sum + (t.unread || 0), 0))
+    } catch {}
+    setInboxLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (activeSection === 'messages') fetchInbox()
+  }, [activeSection, fetchInbox])
+
   const navBadge = (id) => {
     if (id === 'orders')   return activeOrders.length || null
     if (id === 'listings') return myListings.length || null
+    if (id === 'messages') return inboxUnread || null
     return null
   }
 
@@ -731,6 +768,27 @@ function SellerDashboard() {
     }
   }
 
+  const handleSelfShip = async (orderId, carrier, tracking) => {
+    setSelfShipLoading(prev => ({ ...prev, [orderId]: true }))
+    setSelfShipError(prev => ({ ...prev, [orderId]: null }))
+    try {
+      const res = await fetch('/api/orders/self-ship', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, carrier: carrier || undefined, tracking_number: tracking || undefined }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Self-ship failed')
+      setSelfShipDone(prev => ({ ...prev, [orderId]: true }))
+      setSelfShipModal(null)
+      await fetchData()
+    } catch (err) {
+      setSelfShipError(prev => ({ ...prev, [orderId]: err.message }))
+    } finally {
+      setSelfShipLoading(prev => ({ ...prev, [orderId]: false }))
+    }
+  }
+
   async function handleSubmitAuthPhotos(orderId) {
     if (authPhotoFiles.length < 3) { setAuthPhotoError('Please upload all 3 photos'); return }
     setAuthPhotoUploading(true)
@@ -776,9 +834,13 @@ function SellerDashboard() {
         <div style={{ padding: '12px 18px' }}>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: sm.urgent ? 'var(--accent-amber)' : 'var(--text-secondary)', background: 'var(--bg-3)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', lineHeight: 1.5 }}>
             {order.status === 'awaiting_shipment' && `⚠ Ship within ${hrs !== null ? hrs : '—'}hrs · Deadline ${fmtDate(dl)} · Auto-refund + Strike if missed`}
-            {order.status === 'in_transit'        && (order.tracking_a
-              ? <><span>In transit · </span><a href={(/^1Z/i.test(order.tracking_a) ? `https://www.ups.com/track?tracknum=` : /^9[0-9]{21}$/.test(order.tracking_a) ? `https://tools.usps.com/go/TrackConfirmAction?tLabels=` : `https://www.fedex.com/fedextrack/?trknbr=`) + order.tracking_a} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'none', fontFamily: 'DM Mono, monospace' }}>{order.tracking_a} ↗</a></>
-              : 'In transit · En route')}
+            {order.status === 'in_transit'        && (() => {
+              const isSelfShip = order.ship_method === 'self_ship' || order.ship_method === 'self_ship_untracked'
+              const releaseLine = order.auto_release_at ? ` · Escrow releases ${fmtDate(order.auto_release_at)}` : ''
+              if (isSelfShip && !order.tracking_a) return `Self-shipped (no tracking) · Buyer assumes delivery risk${releaseLine}`
+              if (order.tracking_a) return <><span>{isSelfShip ? 'Self-shipped · ' : 'In transit · '}</span><a href={(/^1Z/i.test(order.tracking_a) ? `https://www.ups.com/track?tracknum=` : /^9[0-9]{21}$/.test(order.tracking_a) ? `https://tools.usps.com/go/TrackConfirmAction?tLabels=` : `https://www.fedex.com/fedextrack/?trknbr=`) + order.tracking_a} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'none', fontFamily: 'DM Mono, monospace' }}>{order.tracking_a} ↗</a>{isSelfShip ? releaseLine : ''}</>
+              return 'In transit · En route'
+            })()}
             {order.status === 'auth_review'       && `At Chase Hollow HQ · Authentication in progress`}
             {order.status === 'auth_passed'       && `Authentication passed · Shipping to buyer`}
             {order.status === 'delivered'         && `Delivered · Buyer inspection window open`}
@@ -787,55 +849,73 @@ function SellerDashboard() {
             {order.status === 'auth_failed'       && `Authentication failed · Card is in transit to buyer · A prepaid return label will be sent to them automatically`}
           </div>
           {(bondError[order.id] || labelError[order.id]) && (
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)', marginBottom: '8px' }}>{bondError[order.id] || labelError[order.id]}</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)', marginBottom: '8px' }}>{labelError[order.id] || bondError[order.id]}</div>
           )}
           {bondStatus[order.id] && (
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-amber)', marginBottom: '8px' }}>{bondStatus[order.id]}</div>
           )}
-          {order.status === 'awaiting_shipment' && (
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              {/* STEP 1 — Post Bond */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--accent-green)' : 'var(--accent-amber)', fontWeight: 600 }}>Step 1</span>
-                {order.bond_tx_hash ? (
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)', padding: '8px 14px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', whiteSpace: 'nowrap' }}>✓ Bond Posted</span>
-                ) : (
-                  <button onClick={() => handlePostBond(order)} disabled={bondLoading[order.id]} style={{ background: 'var(--accent-amber)', border: 'none', color: '#0A0A0B', padding: '8px 16px', fontSize: '12px', fontWeight: 700, borderRadius: '8px', cursor: bondLoading[order.id] ? 'wait' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: bondLoading[order.id] ? 0.7 : 1, whiteSpace: 'nowrap' }}>
-                    {bondLoading[order.id] ? '⏳ Posting…' : `🔒 Post Bond — $${Number(order.bond_amount || 0).toFixed(2)}`}
-                  </button>
+          {order.status === 'awaiting_shipment' && (() => {
+            const isSelfShipEligible = selfShipThreshold > 0 && Number(order.listing?.price ?? 0) <= selfShipThreshold
+            const hasPhotos = order.auth_tier === 'remote' || order.auth_tier === 'none'
+            const photosRequired = hasPhotos && !authPhotosDone[order.id]
+            // Bond not required for self-ship eligible orders — escrow + strike system covers it
+            const bondReady = isSelfShipEligible || !!order.bond_tx_hash
+            const canLabel = bondReady && !labelLoading[order.id] && !photosRequired
+            // Step numbers shift when bond step is hidden
+            const photoStep = isSelfShipEligible ? 'Step 1' : 'Step 2'
+            const shipStep  = isSelfShipEligible ? (hasPhotos ? 'Step 2' : 'Step 1') : (hasPhotos ? 'Step 3' : 'Step 2')
+            return (
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                {/* STEP 1 — Post Bond (hidden for self-ship eligible orders) */}
+                {!isSelfShipEligible && (
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--accent-green)' : 'var(--accent-amber)', fontWeight: 600 }}>Step 1</span>
+                      {order.bond_tx_hash ? (
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)', padding: '8px 14px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', whiteSpace: 'nowrap' }}>✓ Bond Posted</span>
+                      ) : (
+                        <button onClick={() => handlePostBond(order)} disabled={bondLoading[order.id]} style={{ background: 'var(--accent-amber)', border: 'none', color: '#0A0A0B', padding: '8px 16px', fontSize: '12px', fontWeight: 700, borderRadius: '8px', cursor: bondLoading[order.id] ? 'wait' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: bondLoading[order.id] ? 0.7 : 1, whiteSpace: 'nowrap' }}>
+                          {bondLoading[order.id] ? '⏳ Posting…' : `🔒 Post Bond — $${Number(order.bond_amount || 0).toFixed(2)}`}
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '14px', paddingBottom: '9px' }}>→</div>
+                  </>
                 )}
-              </div>
 
-              <div style={{ color: 'var(--text-muted)', fontSize: '14px', paddingBottom: '9px' }}>→</div>
+                {/* Photo step (remote / none auth tier) */}
+                {hasPhotos && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: bondReady ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: 600 }}>{order.auth_tier === 'none' ? `${photoStep} · Evidence` : photoStep}</span>
+                    {authPhotosDone[order.id] ? (
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)', padding: '8px 14px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', whiteSpace: 'nowrap' }}>✓ 3 Photos Uploaded</span>
+                    ) : (
+                      <button onClick={() => { if (bondReady) { setPhotoOrderId(order.id); setPhotoOrderAuthTier(order.auth_tier); setAuthPhotoFiles([]); setAuthPhotoError('') } }} disabled={!bondReady} style={{ background: bondReady ? 'rgba(60,125,200,0.15)' : 'var(--bg-3)', border: `1.5px solid ${bondReady ? 'rgba(60,125,200,0.4)' : 'var(--border)'}`, color: bondReady ? 'var(--accent-blue)' : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: bondReady ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
+                        📷 Upload 3 Photos
+                      </button>
+                    )}
+                  </div>
+                )}
 
-              {/* STEP 2 — Upload 3 Auth Photos (remote or none tier — dispute evidence) */}
-              {(order.auth_tier === 'remote' || order.auth_tier === 'none') && (
+                {/* Ship step — label or self-ship */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: 600 }}>{order.auth_tier === 'none' ? 'Step 2 · Evidence' : 'Step 2'}</span>
-                  {authPhotosDone[order.id] ? (
-                    <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)', padding: '8px 14px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', whiteSpace: 'nowrap' }}>✓ 3 Photos Uploaded</span>
-                  ) : (
-                    <button onClick={() => { if (order.bond_tx_hash) { setPhotoOrderId(order.id); setPhotoOrderAuthTier(order.auth_tier); setAuthPhotoFiles([]); setAuthPhotoError('') } }} disabled={!order.bond_tx_hash} style={{ background: order.bond_tx_hash ? 'rgba(60,125,200,0.15)' : 'var(--bg-3)', border: `1.5px solid ${order.bond_tx_hash ? 'rgba(60,125,200,0.4)' : 'var(--border)'}`, color: order.bond_tx_hash ? 'var(--accent-blue)' : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: order.bond_tx_hash ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
-                      📷 Upload 3 Photos
-                    </button>
-                  )}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--teal)' : 'var(--text-muted)', fontWeight: 600 }}>{(order.auth_tier === 'remote' || order.auth_tier === 'none') ? 'Step 3' : 'Step 2'}</span>
-                {(() => {
-                  const photosRequired = (order.auth_tier === 'remote' || order.auth_tier === 'none') && !authPhotosDone[order.id]
-                  const canLabel = order.bond_tx_hash && !labelLoading[order.id] && !photosRequired
-                  return (
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: bondReady ? 'var(--teal)' : 'var(--text-muted)', fontWeight: 600 }}>{shipStep}</span>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button onClick={() => canLabel && handlePrintLabel(order)} disabled={!canLabel} title={photosRequired ? 'Upload 3 auth photos first' : ''} style={{ background: canLabel ? 'var(--teal)' : 'var(--bg-3)', border: `1.5px solid ${canLabel ? 'transparent' : 'var(--border)'}`, color: canLabel ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: canLabel ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: labelLoading[order.id] ? 0.7 : 1, whiteSpace: 'nowrap' }}>
                       {labelLoading[order.id] ? '⏳ Generating…' : order.label_a_url ? (order.auth_tier === 'physical' ? '🖨 Print Label → Auth Center' : '🖨 Print Label') : (order.auth_tier === 'physical' ? '🖨 Get Label → Auth Center' : '🖨 Get Label')}
                     </button>
-                  )
-                })()}
+                    {isSelfShipEligible && !photosRequired && !selfShipDone[order.id] && (
+                      <button
+                        onClick={() => { setSelfShipModal({ orderId: order.id, cardName: order.listing?.card_name, price: order.listing?.price }); setSelfShipCarrier(''); setSelfShipTracking('') }}
+                        style={{ background: 'rgba(201,168,76,0.1)', border: '1.5px solid rgba(201,168,76,0.35)', color: 'var(--gold)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
+                        ✉ Self-Ship
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
           {order.status === 'disputed' && (() => {
             const activeDispute = order.disputes?.find(d => d.outcome === 'pending')
             if (!activeDispute) return null
@@ -883,9 +963,10 @@ function SellerDashboard() {
 
       {chatOrder && (
         <ChatModal
-          orderId={chatOrder.id}
-          orderLabel={chatOrder.label}
-          onClose={() => setChatOrder(null)}
+          orderId={chatOrder.listingId ? undefined : chatOrder.id}
+          listingId={chatOrder.listingId}
+          contextLabel={chatOrder.label}
+          onClose={() => { setChatOrder(null); if (activeSection === 'messages') fetchInbox() }}
         />
       )}
 
@@ -1076,6 +1157,58 @@ function SellerDashboard() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* SELF-SHIP MODAL */}
+      {selfShipModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '440px' }}>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '6px' }}>Self-Ship Order</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '18px', lineHeight: 1.6 }}>
+              {selfShipModal.cardName} · {fmtUSD(selfShipModal.price)}
+            </div>
+            <div style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '8px', padding: '10px 12px', marginBottom: '18px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              Ship the card yourself using any carrier. Escrow will auto-release after the timer expires — no delivery webhook needed. If you have tracking, enter it below so the buyer can follow along. Without tracking, the buyer assumes delivery risk.
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Carrier (optional)</div>
+              <input
+                type="text"
+                placeholder="USPS, UPS, FedEx, etc."
+                value={selfShipCarrier}
+                onChange={e => setSelfShipCarrier(e.target.value)}
+                style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tracking number (optional)</div>
+              <input
+                type="text"
+                placeholder="Leave blank if no tracking"
+                value={selfShipTracking}
+                onChange={e => setSelfShipTracking(e.target.value)}
+                style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            {selfShipError[selfShipModal.orderId] && (
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)', marginBottom: '10px' }}>{selfShipError[selfShipModal.orderId]}</div>
+            )}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => handleSelfShip(selfShipModal.orderId, selfShipCarrier, selfShipTracking)}
+                disabled={selfShipLoading[selfShipModal.orderId]}
+                style={{ flex: 1, background: 'var(--gold)', border: 'none', color: '#0A0A0B', padding: '10px 0', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 700, borderRadius: '8px', cursor: selfShipLoading[selfShipModal.orderId] ? 'wait' : 'pointer', opacity: selfShipLoading[selfShipModal.orderId] ? 0.7 : 1 }}>
+                {selfShipLoading[selfShipModal.orderId] ? '⏳ Confirming…' : 'Confirm Shipped'}
+              </button>
+              <button
+                onClick={() => setSelfShipModal(null)}
+                disabled={selfShipLoading[selfShipModal.orderId]}
+                style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '10px 18px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer' }}>
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1662,7 +1795,7 @@ function SellerDashboard() {
                     {[
                       { label: 'Your listing price',           val: `$${parseFloat(price).toLocaleString()}` },
                       { label: 'Platform fee (3.5%)',          val: `-$${fees.platform}` },
-                      { label: 'Shipping & insurance (est.)',  val: `~$${fees.shipCost}` },
+                      { label: 'Shipping & insurance (est.)',  val: priceIsSelfShipEligible ? 'Free — buyer ships' : `~$${fees.shipCost}` },
                       { label: 'You receive on settlement',    val: `~$${fees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
@@ -1677,26 +1810,37 @@ function SellerDashboard() {
               {/* Bond notice */}
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '8px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px', fontWeight: 500 }}>Seller Bond — What is this?</div>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 14px' }}>
-                  When a buyer purchases your listing, a <strong style={{ color: 'var(--text-primary)' }}>bond is held as collateral</strong> alongside the buyer's payment in escrow. It is <strong style={{ color: 'var(--accent-green)' }}>not a fee</strong> — it is returned to you in full within 5–7 business days after the sale completes. On every clean sale, your net bond cost is <strong style={{ color: 'var(--accent-green)' }}>$0.00.</strong>
-                </p>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 14px' }}>
-                  The bond only becomes relevant if a dispute is opened after delivery. In that case it covers return shipping costs — Chase Hollow manages the full return process and generates all labels. The bond is only forfeited if you lose the dispute, which is rare and entirely avoidable with accurate listings.
-                </p>
-                <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px', marginBottom: '4px' }}>
-                  {[
-                    { label: 'Bond formula',       val: price && bondAmount ? `$${bondAmount}  ($20 + ${(bondRate * 100).toFixed(0)}% × $${price})` : `$20 + ${(bondRate * 100).toFixed(0)}% of sale price`, amber: true },
-                    { label: 'Posted',             val: 'When buyer purchases — not when you list' },
-                    { label: 'Returned',           val: 'Within 5–7 days after settlement', green: true },
-                    { label: 'Forfeited only if',  val: 'You lose a dispute' },
-                    { label: 'Net cost (clean sale)', val: '$0.00', green: true },
-                  ].map((row, i, arr) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '6px 0', borderBottom: i < arr.length - 1 ? '0.5px solid var(--border)' : 'none', gap: '12px' }}>
-                      <span style={{ color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '10px', flexShrink: 0 }}>{row.label}</span>
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: row.green ? 'var(--accent-green)' : row.amber ? 'var(--accent-amber)' : 'var(--text-secondary)', fontWeight: 500, textAlign: 'right' }}>{row.val}</span>
+                {priceIsSelfShipEligible ? (
+                  <div style={{ background: 'rgba(76,175,124,0.06)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', padding: '12px 14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                    <span style={{ color: 'var(--accent-green)', fontSize: '16px', flexShrink: 0 }}>✓</span>
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                      <strong style={{ color: 'var(--accent-green)' }}>No bond required</strong> for listings under ${selfShipThreshold}. The buyer assumes delivery risk and escrow + strikes provide sufficient seller accountability at this price point.
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 14px' }}>
+                      When a buyer purchases your listing, a <strong style={{ color: 'var(--text-primary)' }}>bond is held as collateral</strong> alongside the buyer's payment in escrow. It is <strong style={{ color: 'var(--accent-green)' }}>not a fee</strong> — it is returned to you in full within 5–7 business days after the sale completes. On every clean sale, your net bond cost is <strong style={{ color: 'var(--accent-green)' }}>$0.00.</strong>
+                    </p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 14px' }}>
+                      The bond only becomes relevant if a dispute is opened after delivery. In that case it covers return shipping costs — Chase Hollow manages the full return process and generates all labels. The bond is only forfeited if you lose the dispute, which is rare and entirely avoidable with accurate listings.
+                    </p>
+                    <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px', marginBottom: '4px' }}>
+                      {[
+                        { label: 'Bond formula',       val: price && bondAmount ? `$${bondAmount}  ($20 + ${(bondRate * 100).toFixed(0)}% × $${price})` : `$20 + ${(bondRate * 100).toFixed(0)}% of sale price`, amber: true },
+                        { label: 'Posted',             val: 'When buyer purchases — not when you list' },
+                        { label: 'Returned',           val: 'Within 5–7 days after settlement', green: true },
+                        { label: 'Forfeited only if',  val: 'You lose a dispute' },
+                        { label: 'Net cost (clean sale)', val: '$0.00', green: true },
+                      ].map((row, i, arr) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '6px 0', borderBottom: i < arr.length - 1 ? '0.5px solid var(--border)' : 'none', gap: '12px' }}>
+                          <span style={{ color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '10px', flexShrink: 0 }}>{row.label}</span>
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: row.green ? 'var(--accent-green)' : row.amber ? 'var(--accent-amber)' : 'var(--text-secondary)', fontWeight: 500, textAlign: 'right' }}>{row.val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
               <div style={{ background: 'rgba(200,75,60,0.05)', border: '1px solid rgba(200,75,60,0.2)', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 <strong style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Ship within 48hrs of sale.</strong> One free extension available. Miss deadline = auto-refund to buyer + Strike 1. Three strikes = permanent ban.
@@ -1868,13 +2012,16 @@ function SellerDashboard() {
                     <span style={{ fontWeight: 700 }}>⚠</span> Maximum listing price is $50,000.
                   </div>
                 )}
-                {editPrice && parseFloat(editPrice) > 0 && parseFloat(editPrice) <= 50000 && (
+                {editPrice && parseFloat(editPrice) > 0 && parseFloat(editPrice) <= 50000 && (() => {
+                    const editIsSelfShip = selfShipThreshold > 0 && parseFloat(editPrice) <= selfShipThreshold
+                    const editFees = calcFees(editPrice, editIsSelfShip)
+                    return (
                   <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px' }}>
                     {[
                       { label: 'Your listing price',           val: `$${parseFloat(editPrice).toLocaleString()}` },
-                      { label: 'Platform fee (3.5%)',          val: `-$${calcFees(editPrice).platform}` },
-                      { label: 'Shipping & insurance (est.)',  val: `~$${calcFees(editPrice).shipCost}` },
-                      { label: 'You receive on settlement',    val: `~$${calcFees(editPrice).net}`, green: true, total: true },
+                      { label: 'Platform fee (3.5%)',          val: `-$${editFees.platform}` },
+                      { label: 'Shipping & insurance (est.)',  val: editIsSelfShip ? 'Free — buyer ships' : `~$${editFees.shipCost}` },
+                      { label: 'You receive on settlement',    val: `~$${editFees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
                         <span style={{ color: row.total ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row.total ? 600 : 400 }}>{row.label}</span>
@@ -1882,7 +2029,8 @@ function SellerDashboard() {
                       </div>
                     ))}
                   </div>
-                )}
+                    )
+                  })()}
               </div>
 
               {editSubmitError && (
@@ -1973,6 +2121,50 @@ function SellerDashboard() {
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* MESSAGES INBOX */}
+          {activeSection === 'messages' && (
+            <div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                Messages
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>
+                All conversations — pre-sale questions and order messages.
+              </div>
+              {inboxLoading ? (
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)' }}>Loading…</div>
+              ) : inboxThreads.length === 0 ? (
+                <div style={{ textAlign: 'center', paddingTop: '40px' }}>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', color: 'var(--text-muted)', marginBottom: '8px' }}>No messages yet</div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Conversations with buyers will appear here.</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {inboxThreads.map(thread => (
+                    <button key={`${thread.type}-${thread.id}`}
+                      onClick={() => setChatOrder(thread.type === 'order' ? { id: thread.id, label: thread.title } : { listingId: thread.id, label: thread.title })}
+                      style={{ background: thread.unread ? 'rgba(201,168,76,0.05)' : 'var(--bg-2)', border: `1.5px solid ${thread.unread ? 'rgba(201,168,76,0.25)' : 'var(--border)'}`, borderRadius: '12px', padding: '14px 18px', cursor: 'pointer', textAlign: 'left', width: '100%', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--teal)', flexShrink: 0 }}>
+                        {thread.type === 'listing' ? '💬' : '🧾'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                          <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>@{thread.otherUsername}</span>
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{thread.type === 'listing' ? '· Pre-sale' : '· Order'}</span>
+                          {thread.unread > 0 && <span style={{ background: 'var(--accent-red)', color: '#fff', borderRadius: '10px', padding: '1px 6px', fontSize: '9px', fontWeight: 700, fontFamily: 'DM Mono, monospace' }}>{thread.unread} new</span>}
+                        </div>
+                        <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{thread.lastMessage || '…'}</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{thread.title}</div>
+                      </div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                        {new Date(thread.lastAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
