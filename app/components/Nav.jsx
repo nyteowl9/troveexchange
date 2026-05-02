@@ -21,20 +21,15 @@ export default function Nav() {
       .then(({ data }) => setIsCreator(!!data))
   }, [user])
 
-  // Unread message count — poll on mount, update via Realtime inserts
+  // Unread message count — fetch on mount + page nav, poll every 30s
   useEffect(() => {
     if (!user) { setUnreadCount(0); return }
     const fetchUnread = () =>
       fetch('/api/messages/unread').then(r => r.ok ? r.json() : { count: 0 }).then(d => setUnreadCount(d.count || 0)).catch(() => {})
     fetchUnread()
-    const channelName = `nav-messages-${user.id}-${Date.now()}`
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, fetchUnread)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, fetchUnread)
-      .subscribe()
-    return () => supabase.removeChannel(channel)
-  }, [user])
+    const interval = setInterval(fetchUnread, 30000)
+    return () => clearInterval(interval)
+  }, [user, pathname])
 
   // If logged in but onboarding never completed (no username), redirect there.
   // Wait for both auth AND profile to finish loading to avoid false redirects.

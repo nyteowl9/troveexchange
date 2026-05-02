@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Nav from '@/app/components/Nav'
+import ChatModal from '@/app/components/ChatModal'
 import { supabase } from '@/lib/supabase'
 
 const TIER_COLORS = {
@@ -29,13 +30,16 @@ export default function ListingPage() {
   const [notFound, setNotFound] = useState(false)
   const [activePhoto, setActivePhoto] = useState(0)
   const [showBuyModal, setShowBuyModal] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [currentUserId, setCurrentUserId] = useState(null)
   const [showTierInfo, setShowTierInfo] = useState(false)
   const [tierConfig, setTierConfig] = useState(null)
+  const [selfShipMaxValue, setSelfShipMaxValue] = useState(25)
 
   useEffect(() => {
     fetch('/api/checkout/config').then(r => r.ok ? r.json() : null).then(d => d && setTierConfig(d)).catch(() => {})
+    fetch('/api/platform/settings').then(r => r.ok ? r.json() : null).then(d => { if (d?.self_ship_max_value !== undefined) setSelfShipMaxValue(d.self_ship_max_value) }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -103,7 +107,8 @@ export default function ListingPage() {
   const { card_name, game, set, card_number, grade, grader, cert_number, condition, description, listing_type, price, auth_tier, photos, seller } = listing
   const isGraded = listing_type === 'graded' && grader
   const isPhysical = auth_tier === 'physical'
-  const authFee = isPhysical ? 25 : 10
+  const isSelfShipEligible = selfShipMaxValue > 0 && parseFloat(price) > 0 && parseFloat(price) <= selfShipMaxValue
+  const authFee = isSelfShipEligible ? 0 : (isPhysical ? 25 : 10)
   const buyTotal = (parseFloat(price) + authFee).toFixed(2)
   const tc = TIER_COLORS[seller?.tier] || TIER_COLORS.new
   const sellerInitials = (seller?.username || '??').slice(0, 2).toUpperCase()
@@ -153,6 +158,14 @@ export default function ListingPage() {
       `}</style>
 
       {/* BUY MODAL */}
+      {chatOpen && listing && (
+        <ChatModal
+          listingId={listing.id}
+          contextLabel={listing.card_name}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
+
       {showBuyModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '460px', position: 'relative' }}>
@@ -165,8 +178,8 @@ export default function ListingPage() {
                 { label: 'Card',            val: `${card_name}${isGraded ? ` ${grader} ${grade}` : ''}` },
                 { label: 'Seller',          val: `@${seller?.username} · ${tc.label}` },
                 { label: 'Card price',      val: `$${parseFloat(price).toLocaleString()}`, gold: true },
-                { label: `Auth fee`,        val: `$${authFee} (${isPhysical ? 'Physical' : 'Remote Photo'})` },
-                { label: 'Shipping + tax',  val: 'Calculated at checkout' },
+                { label: 'Auth fee',         val: isSelfShipEligible ? 'None — Free (under $' + selfShipMaxValue + ')' : `$${authFee} (${isPhysical ? 'Physical' : 'Remote Photo'})` },
+                { label: 'Shipping + tax',  val: isSelfShipEligible ? 'Free — seller self-ships' : 'Calculated at checkout' },
                 { label: 'Network',         val: 'Base (Ethereum L2)' },
               ].map((r, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -177,7 +190,7 @@ export default function ListingPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-              {['Card matches listing exactly or full refund', 'Auto-refund if seller misses 48hr ship deadline', isPhysical ? 'Human authenticated before card ships to you' : 'Photo reviewed by Chase Hollow staff in transit', '72hr inspection window after delivery'].map((item, i) => (
+              {['Card matches listing exactly or full refund', 'Auto-refund if seller misses 48hr ship deadline', isSelfShipEligible ? 'No authentication — card ships directly from seller' : (isPhysical ? 'Human authenticated before card ships to you' : 'Photo reviewed by Chase Hollow staff in transit'), isSelfShipEligible ? 'Escrow auto-releases after delivery · dispute window open' : '72hr inspection window after delivery'].map((item, i) => (
                 <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                   <span style={{ color: 'var(--accent-green)', flexShrink: 0 }}>✓</span>{item}
                 </div>
@@ -387,16 +400,20 @@ export default function ListingPage() {
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Fee Breakdown</div>
               {[
                 { label: 'Card price', val: `$${parseFloat(price).toLocaleString()}` },
-                { label: `Auth fee (${isPhysical ? 'Physical' : 'Remote Photo'})`, val: `$${authFee}` },
-                { label: 'Shipping & insurance', val: 'At checkout' },
+                { label: isSelfShipEligible ? 'Authentication' : `Auth fee (${isPhysical ? 'Physical' : 'Remote Photo'})`, val: isSelfShipEligible ? 'None — Free' : `$${authFee}` },
+                { label: 'Shipping & insurance', val: isSelfShipEligible ? 'Free — seller self-ships' : 'At checkout' },
                 { label: 'Sales tax', val: 'At checkout' },
               ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '5px 0', borderBottom: '0.5px solid var(--border)' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: isSelfShipEligible && i === 1 ? 'var(--accent-green)' : 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
                 </div>
               ))}
-              {tierConfig?.optional_auth_enabled && parseFloat(price) <= (tierConfig?.optional_auth_max_price ?? 300) && (
+              {isSelfShipEligible ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', marginTop: '6px', background: 'rgba(76,175,124,0.06)', border: '1px solid rgba(76,175,124,0.25)', borderRadius: '7px', fontSize: '11px', color: 'var(--accent-green)', fontFamily: 'DM Mono, monospace' }}>
+                  <span>✓</span> No authentication — card value is under ${selfShipMaxValue}. Seller self-ships directly to you.
+                </div>
+              ) : tierConfig?.optional_auth_enabled && parseFloat(price) <= (tierConfig?.optional_auth_max_price ?? 300) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', marginTop: '6px', background: 'rgba(232,168,56,0.07)', border: '1px solid rgba(232,168,56,0.25)', borderRadius: '7px', fontSize: '11px', color: 'var(--accent-amber)', fontFamily: 'DM Mono, monospace' }}>
                   <span>⚡</span> You can skip authentication at checkout — auth fee optional for this card
                 </div>
@@ -428,6 +445,14 @@ export default function ListingPage() {
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px', lineHeight: 1.6 }}>
                     Auto-refund if seller misses 48hr deadline · 72hr inspection window
                   </div>
+                  {/* Message Seller — available to anyone who isn't the seller */}
+                  {currentUserId !== listing?.seller?.id && (
+                    <button
+                      onClick={() => setChatOpen(true)}
+                      style={{ width: '100%', background: 'transparent', border: '1.5px solid var(--teal-border)', color: 'var(--teal)', padding: '12px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginTop: '8px' }}>
+                      💬 Message Seller
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -436,9 +461,9 @@ export default function ListingPage() {
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
                 { icon: '🔒', text: 'Escrow protected — funds held by smart contract' },
-                { icon: '✓', text: isPhysical ? 'Human authenticated before delivery' : 'Photo authenticated in transit' },
+                { icon: '✓', text: isSelfShipEligible ? 'No authentication — seller self-ships directly to you' : (isPhysical ? 'Human authenticated before delivery' : 'Photo authenticated in transit') },
                 { icon: '↩', text: "Auto-refund if seller doesn't ship in 48hrs" },
-                { icon: '⏱', text: '72hr inspection window after delivery' },
+                { icon: '⏱', text: isSelfShipEligible ? 'Escrow auto-releases after delivery · dispute window open' : '72hr inspection window after delivery' },
                 { icon: '⬡', text: 'Permanent on-chain record on Base' },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
