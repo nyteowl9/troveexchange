@@ -13,11 +13,27 @@ export default function Nav() {
   const router = useRouter()
   const { user, profile, loading, profileLoading, signOut } = useAuth()
   const [isCreator, setIsCreator] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     if (!user) { setIsCreator(false); return }
     supabase.from('creators').select('id').eq('user_id', user.id).eq('status', 'approved').maybeSingle()
       .then(({ data }) => setIsCreator(!!data))
+  }, [user])
+
+  // Unread message count — poll on mount, update via Realtime inserts
+  useEffect(() => {
+    if (!user) { setUnreadCount(0); return }
+    const fetchUnread = () =>
+      fetch('/api/messages/unread').then(r => r.ok ? r.json() : { count: 0 }).then(d => setUnreadCount(d.count || 0)).catch(() => {})
+    fetchUnread()
+    const channelName = `nav-messages-${user.id}-${Date.now()}`
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, fetchUnread)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, fetchUnread)
+      .subscribe()
+    return () => supabase.removeChannel(channel)
   }, [user])
 
   // If logged in but onboarding never completed (no username), redirect there.
@@ -179,6 +195,13 @@ export default function Nav() {
                   ].map(({ href, label }) => (
                     <Link key={href} href={href} style={{ fontSize: '9px', color: pathname === href ? 'var(--gold)' : 'var(--text-muted)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap', padding: '2px 6px', borderRadius: '4px', border: `1px solid ${pathname === href ? 'rgba(201,168,76,0.4)' : 'rgba(255,255,255,0.07)'}`, background: pathname === href ? 'rgba(201,168,76,0.08)' : 'transparent' }}>{label}</Link>
                   ))}
+                  {/* Messages badge */}
+                  <Link href="/buyer-dashboard?section=messages" style={{ position: 'relative', fontSize: '9px', color: 'var(--text-muted)', textDecoration: 'none', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.07)', background: 'transparent', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                    💬 Messages
+                    {unreadCount > 0 && (
+                      <span style={{ background: 'var(--accent-red)', color: '#fff', borderRadius: '50%', minWidth: '14px', height: '14px', fontSize: '8px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', lineHeight: 1 }}>{unreadCount > 99 ? '99+' : unreadCount}</span>
+                    )}
+                  </Link>
                 </div>
               </div>
               <button onClick={async () => { await signOut(); router.push('/') }} style={{ background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '6px 14px', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
