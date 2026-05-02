@@ -1795,7 +1795,7 @@ function SellerDashboard() {
                     {[
                       { label: 'Your listing price',           val: `$${parseFloat(price).toLocaleString()}` },
                       { label: 'Platform fee (3.5%)',          val: `-$${fees.platform}` },
-                      { label: 'Shipping & insurance (est.)',  val: priceIsSelfShipEligible ? 'Free — buyer ships' : `~$${fees.shipCost}` },
+                      { label: 'Shipping & insurance (est.)',  val: priceIsSelfShipEligible ? 'Free — seller self-ships' : `~$${fees.shipCost}` },
                       { label: 'You receive on settlement',    val: `~$${fees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
@@ -2020,7 +2020,7 @@ function SellerDashboard() {
                     {[
                       { label: 'Your listing price',           val: `$${parseFloat(editPrice).toLocaleString()}` },
                       { label: 'Platform fee (3.5%)',          val: `-$${editFees.platform}` },
-                      { label: 'Shipping & insurance (est.)',  val: editIsSelfShip ? 'Free — buyer ships' : `~$${editFees.shipCost}` },
+                      { label: 'Shipping & insurance (est.)',  val: editIsSelfShip ? 'Free — seller self-ships' : `~$${editFees.shipCost}` },
                       { label: 'You receive on settlement',    val: `~$${editFees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
@@ -2032,6 +2032,31 @@ function SellerDashboard() {
                     )
                   })()}
               </div>
+
+              {/* Bond notice for edit modal */}
+              {editPrice && parseFloat(editPrice) > 0 && (() => {
+                const editIsSelfShip = selfShipThreshold > 0 && parseFloat(editPrice) <= selfShipThreshold
+                const editBondAmount = editIsSelfShip ? null : (BOND_FLOOR + parseFloat(editPrice) * bondRate).toFixed(2)
+                return editIsSelfShip ? (
+                  <div style={{ background: 'rgba(76,175,124,0.06)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px', display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <span style={{ color: 'var(--accent-green)', flexShrink: 0 }}>✓</span>
+                    <span><strong style={{ color: 'var(--accent-green)' }}>No bond required</strong> for listings under ${selfShipThreshold}.</span>
+                  </div>
+                ) : (
+                  <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px' }}>
+                    {[
+                      { label: 'Bond (posted at purchase)', val: `$${editBondAmount}  ($20 + ${(bondRate * 100).toFixed(0)}% × $${editPrice})`, amber: true },
+                      { label: 'Returned',                  val: 'Within 5–7 days after settlement', green: true },
+                      { label: 'Forfeited only if',         val: 'You lose a dispute' },
+                    ].map((row, i, arr) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '5px 0', borderBottom: i < arr.length - 1 ? '0.5px solid var(--border)' : 'none', gap: '12px' }}>
+                        <span style={{ color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '10px', flexShrink: 0 }}>{row.label}</span>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: row.green ? 'var(--accent-green)' : row.amber ? 'var(--accent-amber)' : 'var(--text-secondary)', fontWeight: 500, textAlign: 'right' }}>{row.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
 
               {editSubmitError && (
                 <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.3)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: 'var(--accent-red)' }}>{editSubmitError}</div>
