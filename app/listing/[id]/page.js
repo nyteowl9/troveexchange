@@ -108,7 +108,7 @@ export default function ListingPage() {
   const isGraded = listing_type === 'graded' && grader
   const isPhysical = auth_tier === 'physical'
   const isSelfShipEligible = selfShipMaxValue > 0 && parseFloat(price) > 0 && parseFloat(price) <= selfShipMaxValue
-  const authFee = isSelfShipEligible ? 0 : (isPhysical ? 25 : 10)
+  const authFee = isSelfShipEligible ? 0 : (isPhysical ? (tierConfig?.physical_auth_fee ?? 25) : (tierConfig?.remote_auth_fee ?? 10))
   const buyTotal = (parseFloat(price) + authFee).toFixed(2)
   const tc = TIER_COLORS[seller?.tier] || TIER_COLORS.new
   const sellerInitials = (seller?.username || '??').slice(0, 2).toUpperCase()

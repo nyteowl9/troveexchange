@@ -144,7 +144,7 @@ export default function BuyerDashboard() {
       const [activeRes, histRes, dispRes, strikesRes] = await Promise.all([
         supabase
           .from('orders')
-          .select(`id, status, escrow_amount, auth_tier, tracking_a, tracking_b, tracking_c, shipped_at, delivered_at, auto_release_at, created_at, onchain_order_id, label_c_url, return_deadline_at, shipping_cost,
+          .select(`id, status, ship_method, escrow_amount, auth_tier, tracking_a, tracking_b, tracking_c, shipped_at, delivered_at, auto_release_at, created_at, onchain_order_id, label_c_url, return_deadline_at, shipping_cost,
                    listing:listing_id (id, card_name, game, set, grade, grader, photos, price),
                    seller:seller_id (id, username, seller_tier)`)
           .eq('buyer_id', user.id)
@@ -369,10 +369,34 @@ export default function BuyerDashboard() {
   const totalSpent = historyOrders.reduce((sum, o) => sum + Number(o.escrow_amount || 0), 0)
   const initials   = (profile?.username || 'U').slice(0, 2).toUpperCase()
   const tierLabel  = TIER_LABEL[profile?.seller_tier] || 'New'
-  const inspectionOrders = activeOrders.filter(o => o.status === 'inspection_window')
+  const inspectionOrders = activeOrders.filter(o =>
+    o.status === 'inspection_window' ||
+    ((o.ship_method === 'self_ship' || o.ship_method === 'self_ship_untracked') && o.status === 'in_transit')
+  )
+  const [inboxThreads, setInboxThreads] = useState([])
+  const [inboxLoading, setInboxLoading] = useState(false)
+  const [inboxUnread, setInboxUnread]   = useState(0)
+
+  const fetchInbox = useCallback(async () => {
+    setInboxLoading(true)
+    try {
+      const res = await fetch('/api/messages/inbox')
+      const data = await res.json()
+      const threads = data.threads || []
+      setInboxThreads(threads)
+      setInboxUnread(threads.reduce((sum, t) => sum + (t.unread || 0), 0))
+    } catch {}
+    setInboxLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (activeSection === 'messages') fetchInbox()
+  }, [activeSection, fetchInbox])
+
   const navBadge   = (key) => {
     if (key === 'active')     return activeOrders.length || null
     if (key === 'inspection') return inspectionOrders.length || null
+    if (key === 'messages')   return inboxUnread || null
     if (key === 'history')    return null
     if (key === 'disputes')   return disputes.filter(d => !d.outcome).length || null
     if (key === 'standing')   return (profile?.buyer_strike_count || 0) > 0 ? profile.buyer_strike_count : null
@@ -384,6 +408,7 @@ export default function BuyerDashboard() {
     { id: 'notifications', icon: '◉', label: 'Notifications' },
     { id: 'active',        icon: '⇄', label: 'Active Purchases',  badgeColor: 'var(--accent-amber)' },
     { id: 'inspection',    icon: '⏱', label: 'Auto-Release',      badgeColor: 'var(--accent-red)' },
+    { id: 'messages',      icon: '💬', label: 'Messages',          badgeColor: 'var(--accent-red)' },
     { id: 'watchlist',     icon: '♡', label: 'Watchlist' },
     { id: 'offers',        icon: '◆', label: 'My Offers' },
     { id: 'history',       icon: '◎', label: 'Purchase History' },
@@ -551,6 +576,9 @@ export default function BuyerDashboard() {
                 </>
               )
             })()}
+            {(order.ship_method === 'self_ship' || order.ship_method === 'self_ship_untracked') && order.status === 'in_transit' && (
+              <button onClick={() => { setDisputeOrderId(order.id); setDisputeGateStep('gate'); setActiveSection('disputes') }} style={btn({ border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)' })}>Raise Dispute</button>
+            )}
             {order.status === 'awaiting_return' && order.label_c_url && (
               <a href={order.label_c_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
                 <button style={btn({ background: 'var(--accent-amber)', border: 'none', color: '#0A0A0B', fontWeight: 700 })}>Print Return Label</button>
@@ -583,9 +611,10 @@ export default function BuyerDashboard() {
 
       {chatOrder && (
         <ChatModal
-          orderId={chatOrder.id}
-          orderLabel={chatOrder.label}
-          onClose={() => setChatOrder(null)}
+          orderId={chatOrder.listingId ? undefined : chatOrder.id}
+          listingId={chatOrder.listingId}
+          contextLabel={chatOrder.label}
+          onClose={() => { setChatOrder(null); if (activeSection === 'messages') fetchInbox() }}
         />
       )}
 
@@ -1026,6 +1055,50 @@ export default function BuyerDashboard() {
             </div>
           )}
 
+          {/* MESSAGES INBOX */}
+          {activeSection === 'messages' && (
+            <div>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                Messages
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', fontFamily: 'DM Mono, monospace' }}>
+                All conversations — pre-sale questions and order messages.
+              </div>
+              {inboxLoading ? (
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)' }}>Loading…</div>
+              ) : inboxThreads.length === 0 ? (
+                <div style={{ textAlign: 'center', paddingTop: '40px' }}>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', color: 'var(--text-muted)', marginBottom: '8px' }}>No messages yet</div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Message a seller from any listing page to get started.</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {inboxThreads.map(thread => (
+                    <button key={`${thread.type}-${thread.id}`}
+                      onClick={() => setChatOrder(thread.type === 'order' ? { id: thread.id, label: thread.title } : { listingId: thread.id, label: thread.title })}
+                      style={{ background: thread.unread ? 'rgba(201,168,76,0.05)' : 'var(--bg-2)', border: `1.5px solid ${thread.unread ? 'rgba(201,168,76,0.25)' : 'var(--border)'}`, borderRadius: '12px', padding: '14px 18px', cursor: 'pointer', textAlign: 'left', width: '100%', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--teal)', flexShrink: 0 }}>
+                        {thread.type === 'listing' ? '💬' : '🧾'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                          <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>@{thread.otherUsername}</span>
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)' }}>{thread.type === 'listing' ? '· Pre-sale' : '· Order'}</span>
+                          {thread.unread > 0 && <span style={{ background: 'var(--accent-red)', color: '#fff', borderRadius: '10px', padding: '1px 6px', fontSize: '9px', fontWeight: 700, fontFamily: 'DM Mono, monospace' }}>{thread.unread} new</span>}
+                        </div>
+                        <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{thread.lastMessage || '…'}</div>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{thread.title}</div>
+                      </div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                        {new Date(thread.lastAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* DISPUTES */}
           {activeSection === 'disputes' && (
             <div>
@@ -1180,7 +1253,7 @@ export default function BuyerDashboard() {
                   </div>
                 </div>
               ) : (
-                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '13px' }}>No orders currently eligible for dispute. Orders can be disputed during the 72-hour inspection window after delivery.</div>
+                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', fontSize: '13px' }}>No orders currently eligible for dispute. Orders can be disputed during the inspection window after delivery, or while a self-ship order is in transit.</div>
               )}
 
               {/* Resolved disputes — shown at the bottom */}
