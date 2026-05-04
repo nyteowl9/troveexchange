@@ -43,6 +43,7 @@ export async function PATCH(req) {
     'min_bond_floor_usd',
     'optional_auth_enabled', 'optional_auth_max_price',
     'shipping_handling_pct',
+    'self_ship_max_value', 'self_ship_release_days',
   ]
   const updates = {}
   for (const key of allowed) {

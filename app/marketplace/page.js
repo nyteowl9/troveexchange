@@ -63,7 +63,7 @@ export default function Marketplace() {
       .from('listings')
       .select(`
         id, card_name, game, set, grade, grader, listing_type, condition,
-        price, auth_tier, photos, created_at, expires_at,
+        price, auth_tier, free_shipping, photos, created_at, expires_at,
         seller:seller_id (id, username, seller_tier, suspended_until, banned)
       `, { count: 'exact' })
       .eq('status', 'active')
@@ -394,6 +394,9 @@ export default function Marketplace() {
                         {gradeLabel !== '' && (
                           <div style={{ position: 'absolute', top: '8px', right: '8px', fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '3px 8px', borderRadius: '5px', fontWeight: 700, background: 'rgba(10,10,11,0.82)', border: '1.5px solid #C9A84C', color: '#C9A84C', backdropFilter: 'blur(4px)', whiteSpace: 'nowrap' }}>{gradeLabel}</div>
                         )}
+                        {card.free_shipping && (
+                          <div style={{ position: 'absolute', bottom: '8px', left: '8px', fontFamily: 'DM Mono, monospace', fontSize: '8px', padding: '3px 7px', borderRadius: '5px', fontWeight: 700, background: 'rgba(13,110,110,0.85)', border: '1px solid rgba(13,200,200,0.5)', color: '#5DF5E6', backdropFilter: 'blur(4px)', whiteSpace: 'nowrap', letterSpacing: '0.05em' }}>FREE SHIPPING</div>
+                        )}
                       </div>
                       <div style={{ padding: '12px 14px' }}>
                         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '3px', fontWeight: 500 }}>{card.game}{card.set ? ` · ${card.set}` : ''}</div>
@@ -446,6 +449,7 @@ export default function Marketplace() {
                       </div>
                       <div style={{ textAlign: 'right', minWidth: '100px' }}>
                         <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '18px', fontWeight: 700, color: 'var(--gold)' }}>${parseFloat(card.price).toLocaleString()}</div>
+                        {card.free_shipping && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', fontWeight: 700, color: 'var(--teal)', marginTop: '2px', letterSpacing: '0.06em' }}>FREE SHIPPING</div>}
                       </div>
                       <button style={{ background: 'var(--teal)', border: 'none', color: 'var(--bg)', padding: '10px 20px', fontSize: '12px', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', borderRadius: '8px', cursor: 'pointer', flexShrink: 0 }}>Buy Now</button>
                     </div>

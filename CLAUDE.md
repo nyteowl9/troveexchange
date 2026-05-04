@@ -7,6 +7,7 @@
 - **Local:** C:\Users\pdwat\Desktop\troveexchange
 - **Deploy:** Vercel (auto-deploys on push to main)
 - **Git terminal:** CMD only (not PowerShell)
+- **Social:** @chasehollowtcg on X
 
 ---
 
@@ -17,8 +18,8 @@ Database:    Supabase (PostgreSQL + Auth + Realtime + Storage)
 Blockchain:  Base L2 (Ethereum L2) · Solidity · Hardhat
 RPC:         Alchemy
 Wallets:     WalletConnect · Privy (embedded wallets)
-Shipping:    EasyPost (FedEx carrier · labels · webhooks)
-Tax:         TaxJar (sales tax by zip)
+Shipping:    Shippo (multi-carrier · labels · webhooks)
+Tax:         TaxJar (deferred until ~$50k GMV)
 Email:       Resend (transactional)
 Treasury:    Safe multisig (4-wallet structure)
 Auth firm:   External (engaged)
@@ -44,6 +45,7 @@ Theme:          Dark default · Light toggle · stored in localStorage as 'ch-th
 | Route | File | Notes |
 |-------|------|-------|
 | / | app/page.js | Homepage |
+| /coming-soon | app/coming-soon/page.js | Pre-launch landing page — active redirect |
 | /marketplace | app/marketplace/page.js | Card grid + filters |
 | /listing/[id] | app/listing/[id]/page.js | Listing detail + buy |
 | /checkout | app/checkout/page.js | 5-step escrow flow |
@@ -56,6 +58,20 @@ Theme:          Dark default · Light toggle · stored in localStorage as 'ch-th
 | /profile | app/profile/page.js | Public profile |
 | /creators | app/creators/page.js | Affiliate application |
 | /creator-dashboard | app/creator-dashboard/page.js | Affiliate portal |
+
+## Coming-Soon Redirect (Active)
+```
+middleware.js redirects all traffic → /coming-soon
+Exceptions: /api/* routes, requests with ch-bypass cookie
+
+Owner bypass: visit /api/preview?secret=<PREVIEW_SECRET>
+  Sets 30-day ch-bypass cookie → full site access
+  Add ?clear=1 to remove cookie
+  PREVIEW_SECRET env var set in Vercel
+
+To disable redirect: remove the coming-soon block in middleware.js
+Countdown target: 2026-05-21 (set in app/coming-soon/page.js LAUNCH_DATE)
+```
 
 ## Shared Components
 ```
@@ -79,9 +95,24 @@ Seller receives:  Listing price - 3.5% - shipping cost
 Buyer protection fee: NONE (removed — seller bond covers disputes)
 ```
 
-### Two-Tier Authentication Model
+### Authentication Tiers
 
-**Tier 1 — Remote Photo Auth ($1–$300)**
+**No-Auth Zone ($0–$99) — auth_tier = 'none', no bond**
+```
+Seller choice per listing (free_shipping boolean on listings table):
+  free_shipping = true  → Seller self-ships with own label at own expense
+                          Buyer pays nothing for shipping
+                          "FREE SHIPPING" badge shown on marketplace
+  free_shipping = false → Chase Hollow generates Shippo label
+                          Buyer pays shipping cost at checkout
+Auth:     None — no photo review required
+Bond:     None — escrow + strike system is sufficient accountability
+Photos:   Pre-ship evidence photos still uploaded (for dispute protection)
+Window:   72hr buyer inspection after delivery
+Threshold: self_ship_max_value in tier_config (default $100, admin-editable)
+```
+
+**Tier 1 — Remote Photo Auth ($100–$300) — auth_tier = 'remote'**
 ```
 Auth fee:     $10 (buyer pays)
 Shipping:     1 label — seller ships DIRECT to buyer
@@ -96,19 +127,21 @@ Auth:         Staff reviews photos IN TRANSIT (async, no delay)
               FAIL → buyer notified, 72hr dispute window
 ```
 
-**Tier 2 — Physical Auth ($301–$50,000)**
+**Tier 2 — Physical Auth ($301–$50,000) — auth_tier = 'physical'**
 ```
 Auth fee:     $25 (buyer pays)
 Shipping:     Label A: seller → Chase Hollow auth center
               Label B: auth center → buyer
-              Both Chase Hollow EasyPost labels
+              Both Chase Hollow Shippo labels
               Declared value = sale price (automatic)
+Auth center:  4091 North Ammon Road, Idaho Falls ID 83401
+              (home address — update when permanent location confirmed)
 Timing:       48hrs to ship (Label A) — same extension rules
 Auth:         Physical inspection at auth center
               Graded: photo match, grade label, cert DB verify,
                       slab integrity, holo sticker
               Raw: condition match, no undisclosed damage
-              6 photos taken by staff, stored in Supabase Storage
+              6 photos taken by staff, stored in Supabase Storage (auth-photos private bucket)
               PASS → Label B generated → ships to buyer
               FAIL → full refund + strike
 Window:       72hr buyer inspection after delivery (both tiers)
@@ -140,6 +173,20 @@ Auth:         Photo auth only (same 3 photos) — never zero auth
 10. Bond returned within 5–7 business days
 ```
 
+### Dispute Flow (Buyer Wins)
+```
+1. Buyer opens dispute → evidence submitted
+2. Seller has 48hr window to submit counter-evidence + photos
+3. Staff reviews all evidence (listing photos, pre-ship photos, buyer/seller evidence)
+4. Staff submits recommendation (never executes)
+5. Owner executes → Label C generated (buyer → seller return)
+6. Buyer ships card back within 5 days
+7. Label C delivered → order = return_received_seller
+8. Seller inspects return (72hr window):
+   - Correct card → confirm-return → on-chain resolveDispute(true) → buyer refunded
+   - Wrong card → dispute-return (photos + notes) → back to staff review → owner executes immediately
+```
+
 ### Bond System
 ```
 New Seller:   4% bond per transaction
@@ -156,11 +203,11 @@ Forfeited:    If seller loses dispute
 
 ### Strike System
 ```
-New seller first offense:  Warning only
+New seller first offense:  Warning only (strike_number = 0)
 Strike 1:                  7-day suspension
 Strike 2:                  30-day suspension + bond → 4%
 Strike 3:                  Permanent ban
-Trigger:                   No carrier scan by T+48hrs (automatic)
+Trigger:                   No carrier scan by T+48hrs (automatic via cron)
 Appeal:                    7 days · owner reviews · 48hr decision
 ```
 
@@ -190,8 +237,9 @@ Pages:        /creators (apply) · /creator-dashboard (stats)
 ```
 Staff:    Reviews evidence · recommends outcome (never executes)
 Owner:    Executes final decision (cannot be delegated)
-Buyer wins:   Full refund · seller bond forfeited · Strike 1
-Seller wins:  Escrow releases · buyer bond forfeited
+          Uses DISPUTE_RESOLVER_PRIVATE_KEY (not OWNER_PRIVATE_KEY)
+Buyer wins:   Label C → return → on-chain resolveDispute(true) → refund
+Seller wins:  on-chain resolveDispute(false) → escrow releases to seller
 ```
 
 ### Multisig Governance (Safe on Base)
@@ -206,6 +254,10 @@ L2: W1 only
 L3 standard: 2-of-4
 L3 treasury:  3-of-4
 L4 critical:  4-of-4 (emergency pause, upgrade, large withdrawal)
+
+NOTE: Hot wallet (OPERATOR_PRIVATE_KEY) and W1 Safe multisig are intentionally
+separate and must NEVER be the same wallet.
+Guardian address: 0x14721FdF...78B3 (set in contract)
 ```
 
 ---
@@ -236,83 +288,46 @@ physicalAuthFee      = 25     // USDC
 ✓ Live at chasehollow.com
 ```
 
-### Phase 2 — Backend (CURRENT)
+### Phase 2 — Backend ✅ COMPLETE (April 2026)
 ```
-Priority order:
+✓ Supabase schema — all tables, RLS, storage buckets
+✓ Role-based middleware (owner/staff/authenticator/dispute_resolver)
+✓ Privy wallet integration (Base mainnet locked)
+✓ Shippo shipping (labels A/B/C/D, webhooks, signature thresholds)
+✓ Resend email (all transactional emails)
+✓ Cron jobs: strike-check (hourly), listing-expiry (daily), auto-release (hourly), bond-return (daily)
+✓ Full dispute flow (evidence, staff rec, owner execute, return chain)
+✓ Creator attribution (?ref= cookie, conversion tracking, monthly payout)
+✓ Admin panel (orders, disputes, users, strikes, listings, platform settings)
+✓ Coming-soon landing page + email waitlist capture
+✓ Preview bypass system (PREVIEW_SECRET env var)
 
-1. SUPABASE SETUP ✅ COMPLETE
-   ✓ PostgreSQL schema (users, listings, orders, auth_inspections,
-     disputes, strikes, creators, referral_conversions)
-   ✓ username + full_name columns added (migration 001)
-   ✓ Supabase Auth (email + wallet linking)
-   ✓ Row Level Security policies
-   ✓ Supabase Storage (listing-photos public, auth-photos private)
-   □ Realtime subscriptions (order status updates — Phase 2 later)
-
-2. NEXT.JS MIDDLEWARE ✅ COMPLETE
-   ✓ Role-based route protection (proxy.js)
-   ✓ /authenticator  → role: authenticator
-   ✓ /admin          → role: owner
-   ✓ /dispute-*      → role: staff | owner
-   ✓ /customer-*     → role: staff | owner
-   ✓ Unauthorized    → redirect to /
-
-3. WALLETCONNECT / PRIVY ✅ COMPLETE
-   ✓ Privy SDK installed + PrivyProvider configured
-   ✓ Base mainnet locked as default + only chain
-   ✓ Embedded wallets auto-created for non-crypto users
-   ✓ External wallets: MetaMask, Coinbase, WalletConnect, Phantom
-   ✓ Wallet address synced to Supabase on connect
-   ✓ ConnectWalletButton component (app/components/ConnectWallet.jsx)
-   ✓ Wallet connection deferred to transaction time (not signup)
-
-4. SHIPPING INTEGRATION ✅ COMPLETE (Shippo — replaced EasyPost)
-   ✓ Shippo SDK installed
-   ✓ Rate calculation API (cheapest carrier + 15% handling)
-   ✓ Label generation API (Label A + Label B, declared value insurance)
-   ✓ Webhook handler (carrier scan → in_transit, delivery → inspection_window)
-   ✓ Webhook registered at chasehollow.com/api/webhooks/shippo
-   ✓ User address fields added (migration 002)
-   ⚠ Auth center address is placeholder in lib/shippo.js — update before launch
-
-5. TAXJAR — DEFERRED UNTIL GMV EXCEEDS ~$50K (economic nexus threshold)
-   □ Sales tax currently passes 0 — fully removed from UI
-   □ When ready: sales tax calculation by buyer zip code
-   □ Called at checkout Step 2 (after address confirmed)
-
-6. RESEND EMAIL ✅ COMPLETE
-   ✓ Resend SDK installed
-   ✓ All transactional emails built (lib/emails.js)
-   ✓ Buyer: purchase confirmed, shipped, auth result, delivered, funds released, dispute
-   ✓ Seller: sale/ship now, 24hr reminder, auth result, funds released, strike, dispute, bond returned
-   ✓ chasehollow.com domain added to Resend — DNS verifying (auto-configured via Cloudflare)
-
-7. CREATOR ATTRIBUTION
-   □ 30-day cookie on ?ref= parameter
-   □ Conversion tracking on purchase
-   □ Monthly payout batch (1st-7th of month)
-
-8. AUTOMATION
-   □ Strike auto-apply (EasyPost webhook → T+48hr miss)
-   □ Listing expiry jobs (Day 75/85/90/97/100)
-   □ Bond return automation (T+7 days after settlement)
-   □ Auto-release escrow (T+72hrs after delivery)
-
-## Auth & Wallet Notes
-- Email confirmation OFF in Supabase (re-enable before launch)
-- Google OAuth: needs Google Cloud credentials (Privy dashboard ready)
-- Privy wallet order: MetaMask, Phantom, Coinbase, Rainbow, Backpack, WalletConnect
-- MetaMask does not support programmatic disconnect (by design)
-- Checkout Step 1 uses real Privy connection — "Switch Wallet" re-opens modal
+All Phase 2 flows tested end-to-end (April 2026):
+  ✓ Tier 1 full flow (list → buy → ship → auth → deliver → release)
+  ✓ Tier 2 full flow (list → buy → ship → auth center → deliver → release)
+  ✓ Auto-release cron
+  ✓ Listing expiry cron (Day 90 pause, Day 100 remove)
+  ✓ Strike-check cron (warning, Strike 1, Strike 2, Strike 3)
+  ✓ Auth fail Tier 1 (Label C return → seller confirm → refund)
+  ✓ Full dispute flow (buyer opens → staff rec → owner execute → Label C → seller confirm)
+  ✓ Return dispute (seller claims wrong card → photos → admin override)
 ```
 
-### Phase 3 — Blockchain
+### Phase 3 — Blockchain (CURRENT)
 ```
-□ Solidity contract (escrow, auto-release, dispute, creator payout)
-□ Hardhat → Base Sepolia testnet
-□ External audit (firm engaged)
-□ Safe multisig setup (W1/W2/W3/W4)
-□ Mainnet deployment
+✓ Solidity contract v1.2 — ChaseHollowEscrow
+✓ Deployed to Base Sepolia testnet
+✓ External audit fixes applied (contract v1.2)
+✓ End-to-end tested on testnet (real USDC, real labels, real transactions)
+
+□ Deploy contract to Base mainnet
+□ Safe multisig setup (W2/W3/W4 holders TBD)
+□ Flip 3 Vercel env vars to mainnet values:
+    NEXT_PUBLIC_CHAIN_ID=8453
+    NEXT_PUBLIC_ESCROW_ADDRESS=<mainnet deployed address>
+    NEXT_PUBLIC_USDC_ADDRESS=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+□ Remove coming-soon redirect from middleware.js
+□ Upgrade Vercel to Pro (hobby = daily crons only; need hourly)
 □ Beta seller onboarding (invite-only)
 □ Public launch
 ```
@@ -321,32 +336,46 @@ Priority order:
 
 ## Supabase Schema Reference
 ```sql
-users (id, email, wallet_address, role, strike_count, joined_at,
-       suspended_until, banned,
+users (id, email, wallet_address, role, strike_count, buyer_strike_count,
+       joined_at, suspended_until, banned,
        seller_tier [new|trusted|pro|elite|legend], total_sales,
        seller_rep_score, seller_review_count,
-       buyer_rep_score,  buyer_review_count,
-       dispute_losses, last_dispute_loss_at)
+       buyer_rep_score, buyer_review_count,
+       dispute_losses, last_dispute_loss_at,
+       full_name, username, street1, street2, city, state, zip, country)
 
 listings (id, seller_id, game, set, card_name, card_number,
           grade, grader, cert_number, condition, listing_type,
-          price, auth_tier, photos[], status, expires_at)
+          price, auth_tier, photos[], status, expires_at,
+          expiry_warned_75, expiry_warned_85, expiry_warned_97)
 
 orders (id, listing_id, buyer_id, seller_id, auth_tier,
-        escrow_amount, escrow_tx_hash, platform_fee, creator_fee,
-        auth_fee, label_a_url, label_b_url, tracking_a, tracking_b,
+        escrow_amount, escrow_tx_hash, onchain_order_id,
+        platform_fee, creator_fee, auth_fee,
+        label_a_url, label_b_url, label_c_url, label_d_url,
+        tracking_a, tracking_b, tracking_c, tracking_d,
         declared_value, shipping_cost, sales_tax,
-        status, shipped_at, delivered_at, auto_release_at, released_at)
+        ship_deadline, ship_reminder_sent, strike_applied_at,
+        bond_tx_hash, bond_amount, bond_returned_at,
+        status, shipped_at, delivered_at, auto_release_at, released_at,
+        return_deadline_at, return_review_deadline_at)
 
 auth_inspections (id, order_id, authenticator_id,
-                  type, checklist, photos[], decision, notes, timestamp)
+                  type, checklist, photos[], decision, notes, created_at)
+-- decision: pending | pass | fail | waived
+-- waived = buyer waived auth (auth_tier='none'), photos are seller pre-ship evidence
 
 disputes (id, order_id, raised_by, reason,
-          buyer_evidence[], seller_evidence[], auth_photos[],
-          staff_recommendation, owner_decision, outcome)
+          buyer_evidence[], seller_evidence[], seller_notes,
+          seller_return_evidence[], seller_return_notes,
+          seller_evidence_deadline,
+          staff_recommendation, owner_decision, outcome,
+          resolved_by, resolved_at, onchain_tx_hash, notes)
 
 strikes (id, user_id, order_id, strike_number,
-         reason, action_taken, appealed, appeal_outcome)
+         strike_role [seller|buyer], reason, action_taken,
+         appealed, appeal_notes, appeal_outcome)
+-- strike_number=0 for warnings
 
 creators (id, user_id, handle, platform, channel_url,
           wallet_address, ref_code, status, approved_at)
@@ -357,14 +386,39 @@ referral_conversions (id, creator_id, order_id,
 reviews (id, order_id, reviewer_id, reviewed_id,
          reviewer_role [buyer|seller], rating 1-5, comment,
          flagged, created_at)
--- One review per order per role. Only after status=released.
 
-tier_config (singleton row — admin editable via /admin → Platform Settings)
+tier_config (singleton — admin editable via /admin → Platform Settings)
   trusted_min_sales, pro_min_sales, elite_min_sales, legend_min_sales
-  elite_max_dispute_rate (default 0.02 = 2%)
-  elite_min_account_age_days (default 365)
-  elite_no_dispute_loss_days (default 90)
-  trust_tier_unlocks_at [elite|legend] (default elite)
+  elite_max_dispute_rate, elite_min_account_age_days, elite_no_dispute_loss_days
+  trust_tier_unlocks_at [elite|legend]
+
+early_access (id, email unique, created_at)
+-- Waitlist signups from /coming-soon page
+```
+
+---
+
+## Cron Jobs (Vercel)
+```
+/api/cron/strike-check     hourly  — 24hr ship reminders + auto-strike missed deadlines
+/api/cron/listing-expiry   daily   — Day 75/85/90/97/100 warnings + pause + remove
+/api/cron/auto-release     hourly  — Release escrow T+72hrs after delivery
+/api/cron/bond-return      daily   — Return seller bonds T+5 days after settlement
+
+NOTE: Vercel Hobby plan = daily crons only.
+Upgrade to Pro before launch to restore hourly schedule.
+All routes protected by Authorization: Bearer <CRON_SECRET> header.
+```
+
+## Shippo Label Chain
+```
+Label A: seller → auth center (Tier 2) OR seller → buyer (Tier 1)
+Label B: auth center → buyer (Tier 2 only)
+Label C: buyer → seller (dispute return Tier 1) OR buyer → auth center (Tier 2)
+Label D: auth center → seller (Tier 2 dispute return only)
+
+Webhooks: track_updated TRANSIT → in_transit
+          track_updated DELIVERED → next status per label type
 ```
 
 ---
@@ -372,51 +426,82 @@ tier_config (singleton row — admin editable via /admin → Platform Settings)
 ## Email Notifications (Resend)
 ```
 Buyer:   Purchase confirmed · Seller shipped · Auth passed/failed ·
-         Card delivered · Funds released · Dispute opened/resolved
+         Card delivered · Funds released · Dispute opened/resolved ·
+         Auth fail return label
 
 Seller:  Sale — ship within 48hrs · 24hr reminder ·
          Auth passed/failed · Funds released ·
-         Dispute opened · Strike applied · Bond returned
+         Dispute opened · Strike applied · Bond returned ·
+         Return received for review
 ```
 
 ---
 
-## Environment Variables Needed
+## Environment Variables
 ```
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-EASYPOST_API_KEY=
-TAXJAR_API_KEY=
-RESEND_API_KEY=
+
+# Blockchain (testnet values for local dev — swap for mainnet on launch)
 ALCHEMY_RPC_URL=
+NEXT_PUBLIC_CHAIN_ID=84532            # 84532=Sepolia testnet · 8453=mainnet
+NEXT_PUBLIC_ESCROW_ADDRESS=           # ChaseHollowEscrow deployed address
+NEXT_PUBLIC_USDC_ADDRESS=             # MockUSDC on testnet · 0x833589f...on mainnet
+OPERATOR_PRIVATE_KEY=                 # Hot wallet — added as operator on contract
+DISPUTE_RESOLVER_PRIVATE_KEY=         # Separate key for resolveDispute calls
+
+# Shipping
+SHIPPO_API_KEY=
+SHIPPO_WEBHOOK_SECRET=
+
+# Email
+RESEND_API_KEY=
+
+# Wallets
+NEXT_PUBLIC_PRIVY_APP_ID=
 WALLETCONNECT_PROJECT_ID=
-NEXT_PUBLIC_CHAIN_ID=8453
-OPERATOR_PRIVATE_KEY=          # Hot wallet — must be added as operator on the contract
-NEXT_PUBLIC_ESCROW_ADDRESS=    # ChaseHollowEscrow deployed address
-NEXT_PUBLIC_USDC_ADDRESS=      # USDC contract address (MockUSDC on testnet)
+
+# Automation
+CRON_SECRET=                          # Bearer token for cron route protection
+
+# Preview bypass
+PREVIEW_SECRET=                       # Set in Vercel — bypasses coming-soon redirect
+                                      # Visit /api/preview?secret=<value> to set cookie
+
+# Deferred
+TAXJAR_API_KEY=                       # Not active — deferred until ~$50k GMV
 ```
 
 ---
 
-## Pre-Launch Business Requirements
+## Pre-Launch Checklist
 ```
-⚠ REQUIRED BEFORE ACCEPTING ANY CARD:
-  □ Commercial inland marine insurance policy
-    (covers cards physically at auth center)
-    Estimated: $200–400/month
+✅ Terms of Service — lawyer approved April 2026
+✅ Supabase email confirmation — re-enabled April 2026
+✅ Google OAuth — published to production April 2026
+✅ Shippo auth center address — 4091 North Ammon Road, Idaho Falls ID 83401
+✅ Contract v1.2 audit fixes applied
+✅ All Phase 2 flows tested end-to-end
 
-□ Terms of Service (lawyer)
-□ Business entity formation (LLC/Corp)
-□ EasyPost account + API key
-□ Safe multisig wallet holders (W2, W3, W4 — TBD)
-□ External audit passing (firm engaged)
+□ Wyoming LLC + registered agent (~$50-100/yr)
+  → Add registered agent address to ToS contact section once formed
+□ Commercial inland marine insurance (~$200-400/mo)
+  → REQUIRED before accepting any physical card at auth center
+□ Safe multisig W2/W3/W4 wallet holders confirmed
+□ Deploy contract to Base mainnet
+□ Flip 3 Vercel env vars to mainnet values
+□ Upgrade Vercel to Pro (hourly crons)
+□ Update ToS [DATE] placeholder once LLC formed
+□ TaxJar — deferred until ~$50k GMV
 ```
 
 ---
 
 ## Key Decisions — Never Change Without Review
 - Auth is NEVER optional — every card photo or physically authenticated
+- Never use the word "guarantee" — use "authenticate" or "verified"
 - Platform fee never shown to buyer
 - Buyer protection fee: NONE (seller bond covers disputes)
 - Bond is collateral, not a fee — always shown separately
@@ -425,3 +510,5 @@ NEXT_PUBLIC_USDC_ADDRESS=      # USDC contract address (MockUSDC on testnet)
 - Chase Hollow generates ALL labels (no seller labels Phase 1)
 - Wallet connection deferred until transaction time
 - Listings go live immediately — no wallet needed to list
+- DISPUTE_RESOLVER_PRIVATE_KEY ≠ OWNER_PRIVATE_KEY — never mix these
+- Hot wallet (OPERATOR_PRIVATE_KEY) ≠ W1 Safe multisig — intentionally separate

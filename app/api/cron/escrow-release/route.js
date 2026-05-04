@@ -16,16 +16,23 @@ export async function GET(request) {
   const now = new Date()
   const results = { released: 0, skipped_no_onchain_id: 0, errors: [] }
 
-  const { data: orders } = await supabaseAdmin
-    .from('orders')
-    .select(`
-      *,
-      buyer:buyer_id (email, full_name),
-      seller:seller_id (email, full_name),
-      listing:listing_id (card_name, price)
-    `)
-    .eq('status', 'inspection_window')
-    .lte('auto_release_at', now.toISOString())
+  // Two categories of orders ready to release:
+  // 1. inspection_window orders whose 72hr buyer window has elapsed
+  // 2. in_transit self-ship orders (no delivery webhook) with elapsed auto_release_at timer
+  const [windowRes, selfShipRes] = await Promise.all([
+    supabaseAdmin
+      .from('orders')
+      .select(`*, buyer:buyer_id (email, full_name), seller:seller_id (email, full_name), listing:listing_id (card_name, price)`)
+      .eq('status', 'inspection_window')
+      .lte('auto_release_at', now.toISOString()),
+    supabaseAdmin
+      .from('orders')
+      .select(`*, buyer:buyer_id (email, full_name), seller:seller_id (email, full_name), listing:listing_id (card_name, price)`)
+      .eq('status', 'in_transit')
+      .in('ship_method', ['self_ship', 'self_ship_untracked'])
+      .lte('auto_release_at', now.toISOString()),
+  ])
+  const orders = [...(windowRes.data || []), ...(selfShipRes.data || [])]
 
   // Set up operator wallet — used to call releaseEscrow() on-chain
   let escrowContract = null

@@ -35,7 +35,7 @@ export default function ListingPage() {
   const [currentUserId, setCurrentUserId] = useState(null)
   const [showTierInfo, setShowTierInfo] = useState(false)
   const [tierConfig, setTierConfig] = useState(null)
-  const [selfShipMaxValue, setSelfShipMaxValue] = useState(25)
+  const [selfShipMaxValue, setSelfShipMaxValue] = useState(100)
 
   useEffect(() => {
     fetch('/api/checkout/config').then(r => r.ok ? r.json() : null).then(d => d && setTierConfig(d)).catch(() => {})
@@ -66,7 +66,7 @@ export default function ListingPage() {
       .from('listings')
       .select(`
         id, card_name, game, set, card_number, grade, grader, cert_number,
-        condition, description, listing_type, price, auth_tier, photos, created_at, expires_at, status,
+        condition, description, listing_type, price, auth_tier, free_shipping, photos, created_at, expires_at, status,
         seller:seller_id (id, username, full_name, seller_tier, strike_count, wallet_address)
       `)
       .eq('id', id)
@@ -107,8 +107,9 @@ export default function ListingPage() {
   const { card_name, game, set, card_number, grade, grader, cert_number, condition, description, listing_type, price, auth_tier, photos, seller } = listing
   const isGraded = listing_type === 'graded' && grader
   const isPhysical = auth_tier === 'physical'
-  const isSelfShipEligible = selfShipMaxValue > 0 && parseFloat(price) > 0 && parseFloat(price) <= selfShipMaxValue
-  const authFee = isSelfShipEligible ? 0 : (isPhysical ? (tierConfig?.physical_auth_fee ?? 25) : (tierConfig?.remote_auth_fee ?? 10))
+  const isSelfShipEligible = !!listing.free_shipping && selfShipMaxValue > 0 && parseFloat(price) > 0 && parseFloat(price) <= selfShipMaxValue
+  const isNoAuthZone = selfShipMaxValue > 0 && parseFloat(price) > 0 && parseFloat(price) <= selfShipMaxValue
+  const authFee = isNoAuthZone ? 0 : (isPhysical ? (tierConfig?.physical_auth_fee ?? 25) : (tierConfig?.remote_auth_fee ?? 10))
   const buyTotal = (parseFloat(price) + authFee).toFixed(2)
   const tc = TIER_COLORS[seller?.tier] || TIER_COLORS.new
   const sellerInitials = (seller?.username || '??').slice(0, 2).toUpperCase()
@@ -130,7 +131,11 @@ export default function ListingPage() {
     : [`Front, back, and sealed-package photos reviewed`, `${isGraded ? `Grade label shows ${grader} ${grade} — verified` : 'Condition matches listing'}`, isGraded ? `Cert #${cert_number || '—'} verified on ${grader || ''} database` : null, 'If anything doesn\'t match — full refund, automatically']
   const authChecklistFiltered = authChecklist.filter(Boolean)
 
-  const transactionSteps = [
+  const transactionSteps = isNoAuthZone ? [
+    { num: '01', title: 'You Lock USDC in Escrow', desc: `$${buyTotal}+ USDC locked in smart contract on Base. Neither party can touch it. Seller is notified immediately.` },
+    { num: '02', title: isSelfShipEligible ? 'Seller Ships Directly — Free' : 'Seller Ships Directly', desc: isSelfShipEligible ? 'Seller ships with their own label directly to you within 48hrs. No extra shipping cost. Miss deadline — auto-refund.' : 'Chase Hollow generates a shipping label. Seller ships directly to you within 48hrs. Miss deadline — auto-refund.' },
+    { num: '03', title: 'Delivered · Auto-Release', desc: '72hrs after delivery, USDC releases to seller automatically. You can release early or dispute anytime.' },
+  ] : [
     { num: '01', title: 'You Lock USDC in Escrow', desc: `$${buyTotal}+ USDC locked in smart contract on Base. Neither party can touch it. Seller is notified immediately.` },
     { num: '02', title: isPhysical ? 'Seller Ships to Chase Hollow' : 'Seller Ships Direct + Photos', desc: isPhysical ? 'Seller ships to our auth center within 48hrs. Miss the deadline — your USDC auto-refunds automatically.' : 'Seller uploads 3 photos and ships directly to you within 48hrs. Photos reviewed during transit. Miss the deadline — auto-refund.' },
     { num: '03', title: isPhysical ? 'Expert Authentication' : 'Photo Review In Transit', desc: isPhysical ? 'Our authenticator physically verifies the card — photos, grade label, cert number, slab integrity. Pass = ships to you.' : 'Our staff reviews the 3 uploaded photos while your card is in transit. Pass = card continues to you. Fail = full refund.' },
@@ -178,8 +183,8 @@ export default function ListingPage() {
                 { label: 'Card',            val: `${card_name}${isGraded ? ` ${grader} ${grade}` : ''}` },
                 { label: 'Seller',          val: `@${seller?.username} · ${tc.label}` },
                 { label: 'Card price',      val: `$${parseFloat(price).toLocaleString()}`, gold: true },
-                { label: 'Auth fee',         val: isSelfShipEligible ? 'None — Free (under $' + selfShipMaxValue + ')' : `$${authFee} (${isPhysical ? 'Physical' : 'Remote Photo'})` },
-                { label: 'Shipping + tax',  val: isSelfShipEligible ? 'Free — seller self-ships' : 'Calculated at checkout' },
+                { label: 'Auth fee',         val: isNoAuthZone ? 'None' : `$${authFee} (${isPhysical ? 'Physical' : 'Remote Photo'})` },
+                { label: 'Shipping + tax',  val: isSelfShipEligible ? 'Free' : 'Calculated at checkout' },
                 { label: 'Network',         val: 'Base (Ethereum L2)' },
               ].map((r, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -190,7 +195,7 @@ export default function ListingPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-              {['Card matches listing exactly or full refund', 'Auto-refund if seller misses 48hr ship deadline', isSelfShipEligible ? 'No authentication — card ships directly from seller' : (isPhysical ? 'Human authenticated before card ships to you' : 'Photo reviewed by Chase Hollow staff in transit'), isSelfShipEligible ? 'Escrow auto-releases after delivery · dispute window open' : '72hr inspection window after delivery'].map((item, i) => (
+              {['Card matches listing exactly or full refund', 'Auto-refund if seller misses 48hr ship deadline', isNoAuthZone ? (isSelfShipEligible ? 'No authentication — card ships free directly from seller' : 'No authentication required — Chase Hollow generates label') : (isPhysical ? 'Human authenticated before card ships to you' : 'Photo reviewed by Chase Hollow staff in transit'), isSelfShipEligible ? 'Escrow auto-releases after delivery · dispute window open' : '72hr inspection window after delivery'].map((item, i) => (
                 <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                   <span style={{ color: 'var(--accent-green)', flexShrink: 0 }}>✓</span>{item}
                 </div>
@@ -400,20 +405,20 @@ export default function ListingPage() {
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Fee Breakdown</div>
               {[
                 { label: 'Card price', val: `$${parseFloat(price).toLocaleString()}` },
-                { label: isSelfShipEligible ? 'Authentication' : `Auth fee (${isPhysical ? 'Physical' : 'Remote Photo'})`, val: isSelfShipEligible ? 'None — Free' : `$${authFee}` },
-                { label: 'Shipping & insurance', val: isSelfShipEligible ? 'Free — seller self-ships' : 'At checkout' },
+                { label: isNoAuthZone ? 'Authentication' : `Auth fee (${isPhysical ? 'Physical' : 'Remote Photo'})`, val: isNoAuthZone ? 'None' : `$${authFee}` },
+                { label: 'Shipping & insurance', val: isSelfShipEligible ? 'Free' : 'At checkout' },
                 { label: 'Sales tax', val: 'At checkout' },
               ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '5px 0', borderBottom: '0.5px solid var(--border)' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: isSelfShipEligible && i === 1 ? 'var(--accent-green)' : 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: isNoAuthZone && i === 1 ? 'var(--accent-green)' : 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
                 </div>
               ))}
-              {isSelfShipEligible ? (
+              {isNoAuthZone ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', marginTop: '6px', background: 'rgba(76,175,124,0.06)', border: '1px solid rgba(76,175,124,0.25)', borderRadius: '7px', fontSize: '11px', color: 'var(--accent-green)', fontFamily: 'DM Mono, monospace' }}>
-                  <span>✓</span> No authentication — card value is under ${selfShipMaxValue}. Seller self-ships directly to you.
+                  <span>✓</span> {isSelfShipEligible ? `No authentication · seller covers shipping — card value is under $${selfShipMaxValue}.` : `No authentication required — card value is under $${selfShipMaxValue}. Shipping calculated at checkout.`}
                 </div>
-              ) : tierConfig?.optional_auth_enabled && parseFloat(price) <= (tierConfig?.optional_auth_max_price ?? 300) && (
+              ) : tierConfig?.optional_auth_enabled && parseFloat(price) <= (tierConfig?.optional_auth_max_price ?? 500) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', marginTop: '6px', background: 'rgba(232,168,56,0.07)', border: '1px solid rgba(232,168,56,0.25)', borderRadius: '7px', fontSize: '11px', color: 'var(--accent-amber)', fontFamily: 'DM Mono, monospace' }}>
                   <span>⚡</span> You can skip authentication at checkout — auth fee optional for this card
                 </div>
@@ -461,7 +466,7 @@ export default function ListingPage() {
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
                 { icon: '🔒', text: 'Escrow protected — funds held by smart contract' },
-                { icon: '✓', text: isSelfShipEligible ? 'No authentication — seller self-ships directly to you' : (isPhysical ? 'Human authenticated before delivery' : 'Photo authenticated in transit') },
+                { icon: '✓', text: isNoAuthZone ? (isSelfShipEligible ? 'No authentication — seller self-ships directly to you' : 'No authentication required — Chase Hollow generates label') : (isPhysical ? 'Human authenticated before delivery' : 'Photo authenticated in transit') },
                 { icon: '↩', text: "Auto-refund if seller doesn't ship in 48hrs" },
                 { icon: '⏱', text: isSelfShipEligible ? 'Escrow auto-releases after delivery · dispute window open' : '72hr inspection window after delivery' },
                 { icon: '⬡', text: 'Permanent on-chain record on Base' },

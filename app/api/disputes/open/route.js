@@ -59,7 +59,7 @@ export async function POST(request) {
     const { data: order } = await supabaseAdmin
       .from('orders')
       .select(`
-        id, status, buyer_id, seller_id,
+        id, status, ship_method, buyer_id, seller_id,
         buyer:buyer_id (email, full_name),
         seller:seller_id (email, full_name),
         listing:listing_id (card_name)
@@ -69,9 +69,13 @@ export async function POST(request) {
 
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     if (order.buyer_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    if (order.status !== 'inspection_window') {
+
+    // Self-shipped orders can be disputed while in_transit (no delivery webhook, buyer assumes risk on untracked)
+    const isSelfShip = order.ship_method === 'self_ship' || order.ship_method === 'self_ship_untracked'
+    const disputeAllowed = order.status === 'inspection_window' || (isSelfShip && order.status === 'in_transit')
+    if (!disputeAllowed) {
       return NextResponse.json(
-        { error: `Order is not in inspection window (current status: ${order.status})` },
+        { error: `Order is not in a disputable state (current status: ${order.status})` },
         { status: 400 }
       )
     }

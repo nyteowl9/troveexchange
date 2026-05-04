@@ -2,9 +2,46 @@
 
 import { useState, useEffect } from 'react'
 
-// ── Change this to your target beta launch date ──────────────────
 const LAUNCH_DATE = new Date('2026-05-21T09:00:00-06:00')
-// ─────────────────────────────────────────────────────────────────
+
+const PRIZES = [
+  {
+    week: 'Week 1',
+    status: 'active',
+    name: 'Prismatic Evolutions',
+    subtitle: 'Pokémon TCG · Booster Box · English',
+    value: 95,
+    image: '/giveaway/prismatic.jpg',
+    tags: ['SEALED', '1 WINNER'],
+  },
+  {
+    week: 'Week 2',
+    status: 'upcoming',
+    name: '151 Booster Bundle',
+    subtitle: 'Pokémon TCG · Scarlet & Violet · English',
+    value: 225,
+    image: '/giveaway/151booster.jpg',
+    tags: ['SEALED', '1 WINNER'],
+  },
+  {
+    week: 'Week 3',
+    status: 'upcoming',
+    name: 'Monkey D. Luffy PSA 10',
+    subtitle: 'One Piece TCG · OP13 #118 · Alt Art',
+    value: 300,
+    image: '/giveaway/monkeydluffypsa10.png',
+    tags: ['PSA 10', '1 WINNER'],
+  },
+  {
+    week: 'Launch Day',
+    status: 'grand',
+    name: 'Secrets of Strixhaven',
+    subtitle: 'Magic: The Gathering · Booster Box · English',
+    value: 500,
+    image: '/giveaway/strixhaven.jpg',
+    tags: ['SEALED', '1 WINNER'],
+  },
+]
 
 function useCountdown(target) {
   const [delta, setDelta] = useState(null)
@@ -26,10 +63,9 @@ function useCountdown(target) {
   return delta
 }
 
-
-function EmailForm({ id = 'hero', buttonLabel = 'Get Early Access' }) {
+function EmailForm({ id = 'hero', buttonLabel = 'Get Early Access', pill = false }) {
   const [email, setEmail]     = useState('')
-  const [status, setStatus]   = useState(null) // null | 'loading' | 'success' | 'error'
+  const [status, setStatus]   = useState(null)
   const [message, setMessage] = useState('')
 
   async function submit(e) {
@@ -50,10 +86,51 @@ function EmailForm({ id = 'hero', buttonLabel = 'Get Early Access' }) {
   }
 
   if (status === 'success') {
+    if (pill) {
+      return (
+        <div style={{ textAlign: 'center', padding: '24px 28px', background: 'rgba(201,168,76,0.06)', border: '1.5px solid rgba(201,168,76,0.3)', borderRadius: '14px' }}>
+          <div style={{ fontSize: '28px', marginBottom: '8px' }}>🎉</div>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#C9A84C', marginBottom: '6px' }}><em>You're in the draw!</em></div>
+          <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: '#B8B4AC', lineHeight: 1.6 }}>
+            Winner announced <strong style={{ color: '#F0EDE6' }}>May 21</strong> on{' '}
+            <a href="https://x.com/chasehollowtcg" target="_blank" rel="noopener noreferrer" style={{ color: '#C9A84C', textDecoration: 'none' }}>@chasehollowtcg</a>
+          </div>
+        </div>
+      )
+    }
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 20px', background: 'rgba(76,175,124,0.08)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '12px', fontFamily: 'DM Sans, sans-serif', fontSize: '14px', color: '#4CAF7C' }}>
         <span style={{ fontSize: '18px' }}>✓</span> {message}
       </div>
+    )
+  }
+
+  if (pill) {
+    return (
+      <form onSubmit={submit}>
+        <div style={{ display: 'flex', borderRadius: '12px', overflow: 'hidden', border: '1.5px solid rgba(201,168,76,0.45)', background: '#0d0d10' }}>
+          <input
+            type="email"
+            value={email}
+            onChange={e => { setEmail(e.target.value); setStatus(null) }}
+            placeholder="your@email.com"
+            required
+            disabled={status === 'loading'}
+            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', padding: '14px 18px', fontFamily: 'DM Sans, sans-serif', fontSize: '14px', color: '#F0EDE6' }}
+          />
+          <button
+            type="submit"
+            disabled={status === 'loading'}
+            style={{ background: 'linear-gradient(135deg, #C9A84C 0%, #E8CC72 50%, #C9A84C 100%)', backgroundSize: '200% 100%', border: 'none', padding: '14px 24px', cursor: 'pointer', fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.14em', fontWeight: 600, color: '#0A0A0B', whiteSpace: 'nowrap' }}
+          >
+            {status === 'loading' ? '···' : buttonLabel}
+          </button>
+        </div>
+        {status === 'error' && <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: '#C84B3C', textAlign: 'center', marginTop: '8px' }}>{message}</div>}
+        <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '11px', color: '#6C6A66', textAlign: 'center', marginTop: '10px' }}>
+          Free to enter · Also reserves your spot in the Chase Hollow beta
+        </div>
+      </form>
     )
   }
 
@@ -90,7 +167,6 @@ function FeatureCard({ icon, title, body }) {
   )
 }
 
-
 function SectionLabel({ children }) {
   return (
     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '14px', fontWeight: 500 }}>
@@ -99,11 +175,102 @@ function SectionLabel({ children }) {
   )
 }
 
+function CountBox({ value, label }) {
+  return (
+    <div style={{ textAlign: 'center', minWidth: '54px' }}>
+      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '32px', fontWeight: 500, color: '#C9A84C', lineHeight: 1, letterSpacing: '-0.02em', textShadow: '0 0 28px rgba(201,168,76,0.5)' }}>
+        {String(value ?? 0).padStart(2, '0')}
+      </div>
+      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: '#6C6A66', letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: '5px' }}>
+        {label}
+      </div>
+    </div>
+  )
+}
+
+function PrizeCard({ week, status, name, subtitle, value, image }) {
+  const isActive  = status === 'active'
+  const isGrand   = status === 'grand'
+  return (
+    <div style={{
+      background:  isActive ? 'rgba(201,168,76,0.04)' : isGrand ? 'linear-gradient(135deg, #1a1408 0%, #111114 100%)' : '#111114',
+      border:      `1.5px solid ${isActive ? 'rgba(201,168,76,0.45)' : isGrand ? 'rgba(201,168,76,0.22)' : '#2A2A32'}`,
+      borderRadius: '14px',
+      padding:     '20px 16px',
+      textAlign:   'center',
+      animation:   isGrand ? 'grand-pulse 3s ease-in-out infinite' : undefined,
+      position:    'relative',
+      overflow:    'hidden',
+    }}>
+      {isGrand && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />}
+
+      <div style={{ marginBottom: '14px' }}>
+        <span style={{
+          fontFamily: 'DM Mono, monospace', fontSize: '7px', padding: '3px 10px', borderRadius: '20px',
+          background: isActive ? '#C9A84C' : isGrand ? 'rgba(201,168,76,0.1)' : 'rgba(42,42,50,0.8)',
+          color:      isActive ? '#0A0A0B' : isGrand ? '#C9A84C' : '#6C6A66',
+          border:     isActive ? 'none' : `1px solid ${isGrand ? 'rgba(201,168,76,0.3)' : '#2A2A32'}`,
+          letterSpacing: '0.1em', fontWeight: isActive ? 700 : 500, textTransform: 'uppercase',
+        }}>
+          {isActive ? 'ACTIVE NOW' : isGrand ? 'GRAND PRIZE' : 'COMING SOON'}
+        </span>
+      </div>
+
+      <div style={{ width: '88px', height: '116px', margin: '0 auto 14px', borderRadius: '10px', overflow: 'hidden', border: `1.5px solid ${isActive ? 'rgba(201,168,76,0.4)' : isGrand ? 'rgba(201,168,76,0.2)' : '#2A2A32'}` }}>
+        <img src={image} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      </div>
+
+      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', color: '#6C6A66', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '5px' }}>{week}</div>
+      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '15px', color: isActive || isGrand ? '#C9A84C' : '#F0EDE6', fontStyle: 'italic', marginBottom: '3px', lineHeight: 1.2 }}>{name}</div>
+      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '10px', color: '#6C6A66', marginBottom: '12px', lineHeight: 1.4 }}>{subtitle}</div>
+
+      <div style={{
+        fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '3px 10px', borderRadius: '20px',
+        background: isActive ? 'rgba(201,168,76,0.1)' : 'rgba(42,42,50,0.5)',
+        border:     `1px solid ${isActive ? 'rgba(201,168,76,0.3)' : '#2A2A32'}`,
+        color:      isActive ? '#C9A84C' : '#B8B4AC',
+        display: 'inline-block', letterSpacing: '0.06em',
+      }}>
+        ~${value.toLocaleString()} VALUE
+      </div>
+    </div>
+  )
+}
+
 export default function ComingSoon() {
   const countdown = useCountdown(LAUNCH_DATE)
+  const [entryCount, setEntryCount] = useState(null)
+
+  useEffect(() => {
+    fetch('/api/giveaway')
+      .then(r => r.json())
+      .then(({ count }) => setEntryCount(count))
+      .catch(() => {})
+  }, [])
+
+  const countDisplay = entryCount !== null && entryCount >= 50
+    ? `${entryCount.toLocaleString()} people entered`
+    : null
 
   return (
     <div style={{ minHeight: '100vh', background: '#0A0A0B', color: '#F0EDE6', fontFamily: 'DM Sans, sans-serif' }}>
+      <style>{`
+        @keyframes float-left   { 0%,100% { transform: rotate(-12deg) translateY(0px);  } 50% { transform: rotate(-12deg) translateY(-14px); } }
+        @keyframes float-center { 0%,100% { transform: rotate(-2deg)  translateY(0px);  } 50% { transform: rotate(-2deg)  translateY(-18px); } }
+        @keyframes float-right  { 0%,100% { transform: rotate(10deg)  translateY(0px);  } 50% { transform: rotate(10deg)  translateY(-11px); } }
+        @keyframes prize-float  { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-16px); } }
+        @keyframes prize-glow   { 0%,100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+        @keyframes grand-pulse  { 0%,100% { box-shadow: 0 0 30px rgba(201,168,76,0.15), 0 0 60px rgba(201,168,76,0.05); } 50% { box-shadow: 0 0 50px rgba(201,168,76,0.35), 0 0 100px rgba(201,168,76,0.14); } }
+        @keyframes badge-in     { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .prize-float  { animation: prize-float 4.5s ease-in-out infinite; }
+        .glow-ring    { animation: prize-glow  4.5s ease-in-out infinite; }
+        .step-card    { transition: border-color 0.2s, transform 0.2s; }
+        .step-card:hover { border-color: rgba(201,168,76,0.3) !important; transform: translateY(-2px); }
+        @media (max-width: 700px)  { .prize-grid       { grid-template-columns: 1fr 1fr !important; } }
+        @media (max-width: 480px)  { .prize-grid       { grid-template-columns: 1fr !important; } }
+        @media (max-width: 640px)  { .gw-hero-grid     { grid-template-columns: 1fr !important; } }
+        @media (max-width: 640px)  { .gw-steps-grid    { grid-template-columns: 1fr !important; } }
+      `}</style>
 
       {/* ── Hero ── */}
       <section style={{
@@ -111,7 +278,6 @@ export default function ComingSoon() {
         backgroundImage: 'linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px)',
         backgroundSize: '48px 48px',
       }}>
-        {/* Nav inside hero */}
         <div style={{ borderBottom: '1px solid #2A2A32', padding: '16px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', letterSpacing: '0.08em', color: '#C9A84C', fontWeight: 600 }}>
             ⬡ CHASE HOLLOW
@@ -121,16 +287,6 @@ export default function ComingSoon() {
           </a>
         </div>
 
-        {/* Giveaway announcement banner */}
-        <a href="/giveaway" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', background: 'linear-gradient(90deg, rgba(201,168,76,0.07) 0%, rgba(201,168,76,0.13) 50%, rgba(201,168,76,0.07) 100%)', borderBottom: '1px solid rgba(201,168,76,0.2)', padding: '11px 24px', textDecoration: 'none', transition: 'background 0.2s', cursor: 'pointer' }}>
-          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '2px 9px', borderRadius: '20px', background: '#C9A84C', color: '#0A0A0B', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0 }}>GIVEAWAY</span>
-          <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: '#F0EDE6', fontWeight: 500 }}>
-            Win a <strong style={{ color: '#C9A84C' }}>Prismatic Evolutions Booster Box</strong> — sign up to enter
-          </span>
-          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: '#C9A84C', flexShrink: 0 }}>→</span>
-        </a>
-
-        {/* Two-column hero body */}
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '64px 40px 56px', display: 'flex', alignItems: 'center', gap: '40px', flexWrap: 'wrap' }}>
 
           {/* Left — copy */}
@@ -159,12 +315,11 @@ export default function ComingSoon() {
               2,431 collectors already in line
             </div>
 
-            {/* Stat strip */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1px', background: '#2A2A32', border: '1px solid #2A2A32', borderRadius: '12px', overflow: 'hidden' }}>
               {[
-                { stat: 'USDC',  sub: 'Escrow on Base' },
-                { stat: 'Trust', sub: 'Every Card Inspected' },
-                { stat: '0%',   sub: 'Buyer Fees' },
+                { stat: 'USDC',   sub: 'Escrow on Base' },
+                { stat: 'Trust',  sub: 'Every Card Inspected' },
+                { stat: '0%',     sub: 'Buyer Fees' },
                 { stat: 'Shared', sub: 'Creator Program' },
               ].map(({ stat, sub }) => (
                 <div key={stat} style={{ flex: '1 1 80px', background: '#0A0A0B', padding: '14px 16px' }}>
@@ -177,37 +332,18 @@ export default function ComingSoon() {
 
           {/* Right — floating cards + countdown */}
           <div style={{ flex: '1 1 360px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '36px' }}>
-
-            {/* Cards */}
             <style>{`
               @keyframes float-left   { 0%,100% { transform: rotate(-12deg) translateY(0px);  } 50% { transform: rotate(-12deg) translateY(-14px); } }
               @keyframes float-center { 0%,100% { transform: rotate(-2deg)  translateY(0px);  } 50% { transform: rotate(-2deg)  translateY(-18px); } }
               @keyframes float-right  { 0%,100% { transform: rotate(10deg)  translateY(0px);  } 50% { transform: rotate(10deg)  translateY(-11px); } }
             `}</style>
             <div style={{ position: 'relative', width: '340px', height: '340px', filter: 'drop-shadow(0 40px 60px rgba(0,0,0,0.5))' }}>
-              {/* Soft glow pool beneath cards */}
               <div style={{ position: 'absolute', bottom: '-20px', left: '50%', transform: 'translateX(-50%)', width: '280px', height: '60px', background: 'radial-gradient(ellipse, rgba(201,168,76,0.18) 0%, transparent 70%)', borderRadius: '50%', zIndex: 0 }} />
-              {/* Left card */}
-              <img
-                src="/cards/card-1.png"
-                alt=""
-                style={{ position: 'absolute', width: '185px', left: '0px', top: '40px', borderRadius: '12px', zIndex: 1, animation: 'float-left 3.8s ease-in-out infinite', boxShadow: '0 20px 50px rgba(0,0,0,0.75), 0 6px 30px rgba(160,50,50,0.3)' }}
-              />
-              {/* Center card — front */}
-              <img
-                src="/cards/card-2.png"
-                alt=""
-                style={{ position: 'absolute', width: '205px', left: '67px', top: '8px', borderRadius: '12px', zIndex: 3, animation: 'float-center 4.4s ease-in-out infinite', boxShadow: '0 28px 70px rgba(0,0,0,0.85), 0 8px 40px rgba(201,168,76,0.25)' }}
-              />
-              {/* Right card */}
-              <img
-                src="/cards/card-3.png"
-                alt=""
-                style={{ position: 'absolute', width: '178px', right: '0px', top: '52px', borderRadius: '12px', zIndex: 2, animation: 'float-right 3.2s ease-in-out infinite', boxShadow: '0 20px 50px rgba(0,0,0,0.75), 0 6px 30px rgba(30,130,130,0.3)' }}
-              />
+              <img src="/cards/card-1.png" alt="" style={{ position: 'absolute', width: '185px', left: '0px', top: '40px', borderRadius: '12px', zIndex: 1, animation: 'float-left 3.8s ease-in-out infinite', boxShadow: '0 20px 50px rgba(0,0,0,0.75), 0 6px 30px rgba(160,50,50,0.3)' }} />
+              <img src="/cards/card-2.png" alt="" style={{ position: 'absolute', width: '205px', left: '67px', top: '8px', borderRadius: '12px', zIndex: 3, animation: 'float-center 4.4s ease-in-out infinite', boxShadow: '0 28px 70px rgba(0,0,0,0.85), 0 8px 40px rgba(201,168,76,0.25)' }} />
+              <img src="/cards/card-3.png" alt="" style={{ position: 'absolute', width: '178px', right: '0px', top: '52px', borderRadius: '12px', zIndex: 2, animation: 'float-right 3.2s ease-in-out infinite', boxShadow: '0 20px 50px rgba(0,0,0,0.75), 0 6px 30px rgba(30,130,130,0.3)' }} />
             </div>
 
-            {/* Countdown */}
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.22em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '16px' }}>
                 ◆ Beta opens in ◆
@@ -228,16 +364,122 @@ export default function ComingSoon() {
                 ))}
               </div>
             </div>
-
           </div>
+        </div>
+      </section>
+
+      {/* ── Giveaway Section ── */}
+      <section style={{ background: '#0D0D10', borderTop: '1px solid #2A2A32', borderBottom: '1px solid #2A2A32' }}>
+        <div style={{ maxWidth: '1060px', margin: '0 auto', padding: '80px 24px' }}>
+
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+            <SectionLabel>Beta Launch Giveaway Series</SectionLabel>
+            <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(30px, 4vw, 52px)', fontWeight: 300, color: '#F0EDE6', margin: '0 0 14px', lineHeight: 1.05 }}>
+              Win big — <em style={{ color: '#C9A84C' }}>enter free</em>
+            </h2>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '15px', color: '#B8B4AC', margin: '0 auto', maxWidth: '440px', lineHeight: 1.7 }}>
+              Sign up once — you're entered into every weekly draw until launch day.
+            </p>
+            {countDisplay && (
+              <div style={{ display: 'inline-block', fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '5px 16px', borderRadius: '20px', background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.25)', color: '#C9A84C', letterSpacing: '0.1em', marginTop: '16px', animation: 'badge-in 0.4s ease forwards' }}>
+                🏆 {countDisplay}
+              </div>
+            )}
+          </div>
+
+          {/* Active prize featured */}
+          <div className="gw-hero-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center', marginBottom: '64px' }}>
+
+            {/* Floating prize image */}
+            <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
+              <div className="glow-ring" style={{ position: 'absolute', width: '300px', height: '380px', borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(201,168,76,0.26) 0%, rgba(201,168,76,0.07) 55%, transparent 75%)', pointerEvents: 'none', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
+              <div className="prize-float" style={{ position: 'relative', zIndex: 1 }}>
+                <img
+                  src={PRIZES[0].image}
+                  alt={PRIZES[0].name}
+                  style={{ width: '230px', borderRadius: '14px', border: '2px solid rgba(201,168,76,0.5)', boxShadow: '0 0 40px rgba(201,168,76,0.25), 0 24px 64px rgba(0,0,0,0.65)', display: 'block' }}
+                />
+                <div style={{ width: '160px', height: '20px', background: 'radial-gradient(ellipse, rgba(201,168,76,0.14) 0%, transparent 70%)', margin: '12px auto 0', borderRadius: '50%' }} />
+              </div>
+            </div>
+
+            {/* Prize details + countdown + form */}
+            <div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.22em', textTransform: 'uppercase', color: '#6C6A66', marginBottom: '8px' }}>Week 1 · Current Giveaway</div>
+              <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(28px, 3.5vw, 40px)', fontWeight: 300, color: '#F0EDE6', margin: '0 0 6px', lineHeight: 1.05 }}>
+                <em style={{ color: '#C9A84C' }}>{PRIZES[0].name}</em>
+              </h3>
+              <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: '#B8B4AC', marginBottom: '22px' }}>{PRIZES[0].subtitle}</div>
+
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', flexWrap: 'wrap' }}>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '4px 12px', borderRadius: '20px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', color: '#C9A84C', letterSpacing: '0.08em', fontWeight: 500 }}>~${PRIZES[0].value} VALUE</span>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '4px 12px', borderRadius: '20px', background: 'rgba(76,175,124,0.08)', border: '1px solid rgba(76,175,124,0.25)', color: '#4CAF7C', letterSpacing: '0.08em', fontWeight: 500 }}>1 WINNER</span>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', padding: '4px 12px', borderRadius: '20px', background: 'rgba(60,125,200,0.08)', border: '1px solid rgba(60,125,200,0.25)', color: '#3C7DC8', letterSpacing: '0.08em', fontWeight: 500 }}>SEALED</span>
+              </div>
+
+              {countdown && (
+                <div style={{ marginBottom: '28px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#6C6A66', marginBottom: '12px' }}>Draw in</div>
+                  <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                    <CountBox value={countdown.days}    label="days" />
+                    <div style={{ color: '#2A2A32', fontSize: '20px', fontFamily: 'DM Mono, monospace', marginBottom: '10px' }}>:</div>
+                    <CountBox value={countdown.hours}   label="hrs" />
+                    <div style={{ color: '#2A2A32', fontSize: '20px', fontFamily: 'DM Mono, monospace', marginBottom: '10px' }}>:</div>
+                    <CountBox value={countdown.minutes} label="min" />
+                    <div style={{ color: '#2A2A32', fontSize: '20px', fontFamily: 'DM Mono, monospace', marginBottom: '10px' }}>:</div>
+                    <CountBox value={countdown.seconds} label="sec" />
+                  </div>
+                </div>
+              )}
+
+              <EmailForm id="giveaway-entry" buttonLabel="ENTER TO WIN →" pill />
+            </div>
+          </div>
+
+          {/* All 4 prizes */}
+          <div style={{ marginBottom: '56px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#6C6A66' }}>
+                All Prizes · One entry covers every draw
+              </div>
+            </div>
+            <div className="prize-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+              {PRIZES.map(prize => <PrizeCard key={prize.week} {...prize} />)}
+            </div>
+          </div>
+
+          {/* How to enter */}
+          <div style={{ background: '#111114', border: '1.5px solid #2A2A32', borderRadius: '16px', padding: '40px 32px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#6C6A66', marginBottom: '8px' }}>How It Works</div>
+              <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 300, color: '#F0EDE6', margin: 0 }}>Three steps to win</h3>
+            </div>
+            <div className="gw-steps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              {[
+                { n: '01', title: 'Enter your email', body: 'Sign up for Chase Hollow beta access. Your email is your entry — one per person, automatically entered in every weekly draw.' },
+                { n: '02', title: 'Follow on X',       body: 'Follow @chasehollowtcg for winner announcements. Winners are contacted via X DM or email within 48hrs of each draw.' },
+                { n: '03', title: 'Win & get shipped', body: 'Weekly winners drawn until launch day — May 21. Your prize ships directly to you, sealed and insured.' },
+              ].map(step => (
+                <div key={step.n} className="step-card" style={{ background: '#0A0A0B', border: '1.5px solid #2A2A32', borderRadius: '14px', padding: '28px 22px' }}>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '26px', color: 'rgba(201,168,76,0.2)', fontWeight: 500, marginBottom: '14px', lineHeight: 1 }}>{step.n}</div>
+                  <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '14px', fontWeight: 600, color: '#F0EDE6', marginBottom: '8px' }}>{step.title}</div>
+                  <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: '#6C6A66', lineHeight: 1.6 }}>{step.body}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: '#3a3a44', lineHeight: 1.8, letterSpacing: '0.04em', textAlign: 'center', marginTop: '28px', marginBottom: 0 }}>
+            No purchase necessary. Open to US residents 18+. One entry per email address. Winners selected randomly and notified via email and/or X DM within 48 hours of draw. Prize shipped sealed and insured.
+          </p>
+
         </div>
       </section>
 
       {/* ── Trust bar ── */}
       <div style={{ borderTop: '1px solid #2A2A32', borderBottom: '1px solid #2A2A32', padding: '32px 24px' }}>
         <div style={{ maxWidth: '1060px', margin: '0 auto' }}>
-
-          {/* Two featured stats */}
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '20px' }}>
             <div style={{ flex: '1 1 300px', background: 'rgba(201,168,76,0.05)', border: '1.5px solid rgba(201,168,76,0.25)', borderRadius: '12px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '42px', fontWeight: 600, color: '#C9A84C', lineHeight: 1, flexShrink: 0 }}>3.5%</div>
@@ -254,8 +496,6 @@ export default function ComingSoon() {
               </div>
             </div>
           </div>
-
-          {/* Supporting items */}
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 28px' }}>
             {['USDC Escrow on Base', 'Physical Card Authentication', 'Earn With Every Sale — Creator Program'].map(item => (
               <div key={item} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#6C6A66' }}>
@@ -263,7 +503,6 @@ export default function ComingSoon() {
               </div>
             ))}
           </div>
-
         </div>
       </div>
 
@@ -275,10 +514,7 @@ export default function ComingSoon() {
             Simple for everyone
           </h2>
         </div>
-
         <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-
-          {/* Buyer column */}
           <div style={{ flex: '1 1 440px', background: '#111114', border: '1.5px solid #2A2A32', borderRadius: '16px', padding: '32px 28px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '32px' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(60,125,200,0.15)', border: '1.5px solid rgba(60,125,200,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>👤</div>
@@ -305,8 +541,6 @@ export default function ComingSoon() {
               ))}
             </div>
           </div>
-
-          {/* Seller column */}
           <div style={{ flex: '1 1 440px', background: '#111114', border: '1.5px solid #2A2A32', borderRadius: '16px', padding: '32px 28px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '32px' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(201,168,76,0.12)', border: '1.5px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🏪</div>
@@ -318,7 +552,7 @@ export default function ComingSoon() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
               {[
                 { n: '1', title: 'List your card', body: 'Upload photos, set your price, and go live instantly. No wallet needed to list — you only connect at transaction time.' },
-                { n: '2', title: 'Card sells — ship within 48hrs', body: 'You\'ll get an email the moment a buyer locks funds. Upload 3 pre-ship photos, print your Chase Hollow label, and hand it to the carrier.' },
+                { n: '2', title: 'Card sells — ship within 48hrs', body: "You'll get an email the moment a buyer locks funds. Upload 3 pre-ship photos, print your Chase Hollow label, and hand it to the carrier." },
                 { n: '3', title: 'Authentication happens in transit', body: 'Our staff reviews your photos while the card is on its way. No delays — for physical auth, the card routes through our center first.' },
                 { n: '4', title: 'Get paid in USDC', body: 'Once the buyer confirms delivery (or 72hrs pass), escrow releases. You receive the sale price minus 3.5%, direct to your wallet.' },
               ].map(({ n, title, body }, i, arr) => (
@@ -333,7 +567,6 @@ export default function ComingSoon() {
               ))}
             </div>
           </div>
-
         </div>
       </section>
 
@@ -346,36 +579,12 @@ export default function ComingSoon() {
           </h2>
         </div>
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <FeatureCard
-            icon="🔒"
-            title="USDC Escrow — Always"
-            body="Funds lock on-chain the moment a buyer purchases. The seller can't touch it. The buyer can't claw it back. Only a verified outcome — delivery, authentication pass, or dispute resolution — moves the money."
-          />
-          <FeatureCard
-            icon="🔍"
-            title="Authentication on Every Card"
-            body="Remote photo auth for cards under $300. Physical inspection at our auth center for $301+. No tier skips, no exceptions. Every card is verified before it reaches the buyer."
-          />
-          <FeatureCard
-            icon="⚖️"
-            title="Human Dispute Resolution"
-            body="When something goes wrong, a real person reviews the evidence — not an algorithm. Staff recommends, the owner executes. Both sides get a fair hearing, every time."
-          />
-          <FeatureCard
-            icon="💸"
-            title="3.5% Flat — Sellers Only"
-            body="Buyers pay zero platform fees. Ever. Sellers pay 3.5% — that's it. No withdrawal fees, no hidden charges, no subscription. We make money when you do."
-          />
-          <FeatureCard
-            icon="🛡"
-            title="Seller Bond System"
-            body="Every seller posts a small USDC bond per transaction — collateral, not a fee, returned after settlement. It keeps bad actors out and gives buyers a real financial backstop if anything goes wrong."
-          />
-          <FeatureCard
-            icon="🎯"
-            title="Creator Affiliate Program"
-            body="Refer a sale through your link and earn 0.5% of the transaction — deposited in USDC, every month, forever. Build an audience, earn from every card your community buys."
-          />
+          <FeatureCard icon="🔒" title="USDC Escrow — Always"           body="Funds lock on-chain the moment a buyer purchases. The seller can't touch it. The buyer can't claw it back. Only a verified outcome — delivery, authentication pass, or dispute resolution — moves the money." />
+          <FeatureCard icon="🔍" title="Authentication on Every Card"   body="Remote photo auth for cards under $300. Physical inspection at our auth center for $301+. No tier skips, no exceptions. Every card is verified before it reaches the buyer." />
+          <FeatureCard icon="⚖️" title="Human Dispute Resolution"       body="When something goes wrong, a real person reviews the evidence — not an algorithm. Staff recommends, the owner executes. Both sides get a fair hearing, every time." />
+          <FeatureCard icon="💸" title="3.5% Flat — Sellers Only"       body="Buyers pay zero platform fees. Ever. Sellers pay 3.5% — that's it. No withdrawal fees, no hidden charges, no subscription. We make money when you do." />
+          <FeatureCard icon="🛡" title="Seller Bond System"             body="Every seller posts a small USDC bond per transaction — collateral, not a fee, returned after settlement. It keeps bad actors out and gives buyers a real financial backstop if anything goes wrong." />
+          <FeatureCard icon="🎯" title="Creator Affiliate Program"      body="Refer a sale through your link and earn 0.5% of the transaction — deposited in USDC, every month, forever. Build an audience, earn from every card your community buys." />
         </div>
       </section>
 
@@ -444,10 +653,10 @@ export default function ComingSoon() {
             <div style={{ background: '#111114', border: '1px solid #2A2A32', borderRadius: '10px', padding: '16px 18px' }}>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#6C6A66', marginBottom: '10px' }}>How it works</div>
               {[
-                ['Buyer opens dispute', 'Submits photos + description'],
-                ['Seller responds', '48hr window to submit counter-evidence'],
-                ['Staff reviews all evidence', 'Listing photos, pre-ship photos, both sides'],
-                ['Owner executes on-chain', 'Funds move — no manual transfers'],
+                ['Buyer opens dispute',       'Submits photos + description'],
+                ['Seller responds',           '48hr window to submit counter-evidence'],
+                ['Staff reviews all evidence','Listing photos, pre-ship photos, both sides'],
+                ['Owner executes on-chain',   'Funds move — no manual transfers'],
               ].map(([step, detail]) => (
                 <div key={step} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '8px 0', borderBottom: '1px solid #1A1A20', fontSize: '12px' }}>
                   <span style={{ fontFamily: 'DM Sans, sans-serif', color: '#F0EDE6', fontWeight: 500 }}>{step}</span>
@@ -473,10 +682,10 @@ export default function ComingSoon() {
         </p>
         <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
           {[
-            ['0.5%', 'Per referred sale'],
+            ['0.5%',    'Per referred sale'],
             ['30 days', 'Attribution window'],
             ['Monthly', 'USDC payout'],
-            ['Open', 'Application — anyone can apply'],
+            ['Open',    'Application — anyone can apply'],
           ].map(([stat, label]) => (
             <div key={label} style={{ background: '#111114', border: '1.5px solid #2A2A32', borderRadius: '12px', padding: '20px 24px', minWidth: '140px', textAlign: 'center' }}>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 600, color: '#C9A84C', lineHeight: 1 }}>{stat}</div>

@@ -1459,6 +1459,34 @@ export default function AdminPanel() {
                       </div>
                     </div>
 
+                    {/* Self-ship */}
+                    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>No-Auth Zone Threshold</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.6 }}>
+                        Cards at or below this price have no auth and no bond. Sellers choose: offer free shipping (self-ship at own expense) or let buyer pay shipping (Chase Hollow label). Set to 0 to disable. Self-ship auto-releases after the configured days.
+                      </div>
+                      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                        <div style={{ maxWidth: '200px', flex: 1 }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Max order value ($)</div>
+                          <input type="number" min="0" max="1000" value={tierConfigEdit?.self_ship_max_value ?? ''}
+                            onChange={e => setTierConfigEdit(p => ({ ...p, self_ship_max_value: parseFloat(e.target.value) || 0 }))}
+                            onWheel={e => e.target.blur()}
+                            style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', opacity: 0.8 }}>0 = disabled</div>
+                        </div>
+                        <div style={{ maxWidth: '200px', flex: 1 }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Auto-release days</div>
+                          <input type="number" min="7" max="60" value={tierConfigEdit?.self_ship_release_days ?? ''}
+                            onChange={e => setTierConfigEdit(p => ({ ...p, self_ship_release_days: parseInt(e.target.value) || 14 }))}
+                            onWheel={e => e.target.blur()}
+                            style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', opacity: 0.8 }}>Days from ship date until escrow releases</div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Strike auto-clear */}
                     <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Strike Auto-Clear</div>

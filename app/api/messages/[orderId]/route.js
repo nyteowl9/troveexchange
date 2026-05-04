@@ -44,7 +44,7 @@ export async function GET(req, { params }) {
   // Fetch messages
   const { data: messages } = await supabaseService
     .from('messages')
-    .select('id, sender_id, body, read_at, created_at')
+    .select('id, sender_id, body, image_url, read_at, created_at')
     .eq('order_id', orderId)
     .order('created_at', { ascending: true })
 
@@ -82,10 +82,14 @@ export async function POST(req, { params }) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { orderId } = await params
-  const { body } = await req.json()
+  const { body, image_url } = await req.json()
 
-  if (!body?.trim()) return NextResponse.json({ error: 'Message cannot be empty' }, { status: 400 })
-  if (body.trim().length > 2000) return NextResponse.json({ error: 'Message too long (max 2000 chars)' }, { status: 400 })
+  if (!body?.trim() && !image_url) {
+    return NextResponse.json({ error: 'Message or image required' }, { status: 400 })
+  }
+  if (body && body.trim().length > 2000) {
+    return NextResponse.json({ error: 'Message too long (max 2000 chars)' }, { status: 400 })
+  }
 
   // Verify user is a party
   const { data: order } = await supabaseService
@@ -99,15 +103,9 @@ export async function POST(req, { params }) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Allow messaging on active orders only (not released/refunded)
-  const activeStatuses = ['awaiting_shipment', 'in_transit', 'inspection_window', 'dispute_open']
-  if (!activeStatuses.includes(order.status)) {
-    return NextResponse.json({ error: 'Messaging is only available on active orders' }, { status: 403 })
-  }
-
   const { data: message, error } = await supabaseService
     .from('messages')
-    .insert({ order_id: orderId, sender_id: user.id, body: body.trim() })
+    .insert({ order_id: orderId, sender_id: user.id, body: body?.trim() || null, image_url: image_url || null })
     .select()
     .single()
 
