@@ -1254,8 +1254,8 @@ export default function AdminPanel() {
                 {
                   title: 'Fee Structure', items: [
                     { label: 'Platform fee', val: '3%', editable: false, note: 'Smart contract state variable · Change via 3-of-4 Safe multisig transaction · ~$0.04 gas · No redeployment needed' },
-                    { label: 'Auth fee — Remote Photo (≤$300)', val: tierConfig ? `$${tierConfig.remote_auth_fee} per card` : '—', editable: true },
-                    { label: 'Auth fee — Physical (>$300)', val: tierConfig ? `$${tierConfig.physical_auth_fee} per card` : '—', editable: true },
+                    { label: 'Auth fee — Remote Photo', val: tierConfig ? `$${tierConfig.remote_auth_fee} per card` : '—', editable: true },
+                    { label: 'Auth fee — Physical', val: tierConfig ? `$${tierConfig.physical_auth_fee} per card` : '—', editable: true },
                     { label: 'Shipping — Tier 1 (buyer pays)', val: 'Live Shippo rate + handling%', editable: false, note: 'Seller ships direct to buyer · 1 label · buyer pays' },
                     { label: 'Shipping — Tier 2 (split)', val: 'Live Shippo rate + handling%', editable: false, note: 'Label A: seller → auth center (deducted from seller payout) · Label B: auth center → buyer (buyer pays)' },
                     { label: 'Dispute bond', val: '0.5% of order value', editable: false, note: 'Smart contract state variable · Change via 3-of-4 Safe multisig transaction' },
@@ -1387,15 +1387,18 @@ export default function AdminPanel() {
                       </div>
                     </div>
 
-                    {/* Auth tier thresholds */}
+                    {/* Auth fees + behavior thresholds */}
                     <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Authentication Tier Thresholds</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Authentication Fees & Thresholds</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.6 }}>
+                        Auth is buyer-optional on every card. Default pre-selects physical above the default threshold. Required enforces physical above the required threshold.
+                      </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
                         {[
-                          { key: 'remote_auth_max_value',   label: 'Tier 1 max value ($)',  note: 'Cards ≤ this → remote photo auth' },
-                          { key: 'physical_auth_max_value', label: 'Tier 2 max value ($)',  note: 'Cards ≤ this → physical auth' },
-                          { key: 'remote_auth_fee',         label: 'Tier 1 auth fee ($)',   note: 'Buyer pays (remote)' },
-                          { key: 'physical_auth_fee',       label: 'Tier 2 auth fee ($)',   note: 'Buyer pays (physical)' },
+                          { key: 'remote_auth_fee',          label: 'Remote photo fee ($)',     note: 'Buyer pays — staff reviews photos in transit' },
+                          { key: 'physical_auth_fee',        label: 'Physical auth fee ($)',    note: 'Buyer pays — card goes to auth center' },
+                          { key: 'auth_default_threshold',   label: 'Default physical ($)',     note: 'Price ≥ this → physical pre-selected (buyer can change)' },
+                          { key: 'auth_required_threshold',  label: 'Required physical ($)',    note: 'Price ≥ this → physical locked, cannot remove' },
                         ].map(({ key, label, note }) => (
                           <div key={key}>
                             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
@@ -1428,34 +1431,10 @@ export default function AdminPanel() {
                       </div>
                     </div>
 
-                    {/* Optional Auth Bypass */}
+                    {/* Auth model note */}
                     <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Optional Authentication Bypass</div>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.6 }}>
-                        When enabled, buyers purchasing cards at or below the threshold can choose to skip authentication at checkout. Auth is still available — this just adds a &quot;Skip — Free&quot; option. Disable instantly to force auth on all orders.
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={tierConfigEdit?.optional_auth_enabled ?? false}
-                            onChange={e => setTierConfigEdit(p => ({ ...p, optional_auth_enabled: e.target.checked }))}
-                            style={{ width: '16px', height: '16px', accentColor: 'var(--teal)', cursor: 'pointer' }}
-                          />
-                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-primary)' }}>
-                            Enable optional auth bypass
-                          </span>
-                        </label>
-                        <div style={{ maxWidth: '220px' }}>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Max card price for bypass ($)</div>
-                          <input type="number" min="0" value={tierConfigEdit?.optional_auth_max_price ?? ''}
-                            onChange={e => setTierConfigEdit(p => ({ ...p, optional_auth_max_price: parseInt(e.target.value) || 0 }))}
-                            style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
-                          />
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', opacity: 0.8 }}>
-                            Only applies when bypass is enabled above. Cards above this price always require auth.
-                          </div>
-                        </div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                        Auth is now always buyer-optional. Use <strong style={{ color: 'var(--text-primary)' }}>Default physical</strong> and <strong style={{ color: 'var(--text-primary)' }}>Required physical</strong> thresholds above to control pre-selection and enforcement by price.
                       </div>
                     </div>
 

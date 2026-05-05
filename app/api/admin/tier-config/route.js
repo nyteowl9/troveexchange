@@ -42,6 +42,7 @@ export async function PATCH(req) {
     'remote_auth_fee', 'physical_auth_fee',
     'min_bond_floor_usd',
     'optional_auth_enabled', 'optional_auth_max_price',
+    'auth_default_threshold', 'auth_required_threshold',
     'shipping_handling_pct',
     'self_ship_max_value', 'self_ship_release_days',
   ]

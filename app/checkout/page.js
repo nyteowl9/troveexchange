@@ -36,7 +36,7 @@ function Checkout() {
   const [txHash, setTxHash]                 = useState(null)
   const [supabaseOrderId, setSupabaseOrderId] = useState(null)
   const [checkoutError, setCheckoutError]   = useState(null)
-  const [authChoice, setAuthChoice]         = useState('authenticate') // 'authenticate' | 'skip'
+  const [authChoice, setAuthChoice]         = useState('none') // 'none' | 'remote' | 'physical'
   const [tierConfig, setTierConfig]         = useState(null)
   const [selfShipMaxValue, setSelfShipMaxValue] = useState(100)
 
@@ -82,6 +82,16 @@ function Checkout() {
       .then(d => { if (d?.self_ship_max_value !== undefined) setSelfShipMaxValue(d.self_ship_max_value) })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!listing || !tierConfig) return
+    const price = parseFloat(listing.price ?? 0)
+    if (price >= (tierConfig.auth_required_threshold ?? 5000) || price >= (tierConfig.auth_default_threshold ?? 1000)) {
+      setAuthChoice('physical')
+    } else {
+      setAuthChoice('none')
+    }
+  }, [listing, tierConfig])
 
   // Step 2: load buyer address + USDC balance + shipping estimate in parallel
   useEffect(() => {
@@ -130,14 +140,8 @@ function Checkout() {
         setUsdcBalance(null)
       }
 
-      // Shipping estimate — skip only for free-shipping listings (seller self-ships)
-      const selfShipEligible = listing?.free_shipping === true && selfShipMaxValue > 0 && parseFloat(listing?.price ?? 0) <= selfShipMaxValue
-      if (!selfShipEligible) {
-        await doFetchShipping()
-      } else {
-        setShippingFee(0)
-        setLabelACost(0)
-      }
+      // Always fetch shipping — auth choice can change on step 2, isSelfShipEligible will suppress display if needed
+      await doFetchShipping()
 
       // Tier config (optional auth feature flag + thresholds)
       try {
@@ -203,11 +207,9 @@ function Checkout() {
       const updated = { ...buyerAddress, ...addressForm }
       setBuyerAddress(updated)
       setAddressEditing(false)
-      if (!isSelfShipEligible) {
-        setBalanceLoading(true)
-        await doFetchShipping()
-        setBalanceLoading(false)
-      }
+      setBalanceLoading(true)
+      await doFetchShipping()
+      setBalanceLoading(false)
     } catch (err) {
       console.error('Failed to save address', err)
     }
@@ -216,14 +218,12 @@ function Checkout() {
 
   // Derived price data
   const cardPrice        = listing?.price ?? 0
-  const isSelfShipEligible = !!listing && !!listing.free_shipping && selfShipMaxValue > 0 && parseFloat(cardPrice) > 0 && parseFloat(cardPrice) <= selfShipMaxValue
-  const isNoAuthZone     = !!listing && selfShipMaxValue > 0 && parseFloat(cardPrice) > 0 && parseFloat(cardPrice) <= selfShipMaxValue
-  const remoteAuthMax    = tierConfig?.remote_auth_max_value ?? 300
-  const optionalAuthApplies = tierConfig?.optional_auth_enabled && cardPrice <= (tierConfig?.optional_auth_max_price ?? 500)
-  const effectiveChoice  = optionalAuthApplies ? authChoice : 'authenticate'
-  const baseAuthTier     = cardPrice <= remoteAuthMax ? 'remote' : 'physical'
-  const authTier         = isNoAuthZone ? 'none' : (effectiveChoice === 'skip' ? 'none' : baseAuthTier)
-  const authFee          = isNoAuthZone ? 0 : (effectiveChoice === 'skip' ? 0 : (authTier === 'remote' ? (tierConfig?.remote_auth_fee ?? 10) : (tierConfig?.physical_auth_fee ?? 25)))
+  const remoteAuthFee    = tierConfig?.remote_auth_fee ?? 10
+  const physicalAuthFee  = tierConfig?.physical_auth_fee ?? 25
+  const authRequired     = parseFloat(cardPrice) >= (tierConfig?.auth_required_threshold ?? 5000)
+  const authTier         = authRequired ? 'physical' : authChoice
+  const authFee          = authTier === 'none' ? 0 : authTier === 'remote' ? remoteAuthFee : physicalAuthFee
+  const isSelfShipEligible = !!listing?.free_shipping && authTier === 'none'
   const salesTax         = 0  // TaxJar deferred to ~$50k GMV
   const platformFee      = parseFloat((cardPrice * 0.03).toFixed(2))
   const creatorFee       = parseFloat((cardPrice * 0.005).toFixed(2))
@@ -232,7 +232,7 @@ function Checkout() {
   const sellerPayout     = parseFloat((cardPrice - platformFee - creatorFee - labelACostVal).toFixed(2))
   // Tier 2 (physical): both Label A and Label B are funded through escrow so the Safe can pay for both.
   // Label A is already deducted from sellerPayout; adding it to shippingFee here ensures it reaches the Safe.
-  const shippingFeeForDisplay = isSelfShipEligible ? 0 : (baseAuthTier === 'physical' ? labelACostVal + shippingFeeVal : shippingFeeVal)
+  const shippingFeeForDisplay = isSelfShipEligible ? 0 : (authTier === 'physical' ? labelACostVal + shippingFeeVal : shippingFeeVal)
   const escrowTotal      = parseFloat((sellerPayout + platformFee + creatorFee + authFee + shippingFeeForDisplay + salesTax).toFixed(2))
   const total            = escrowTotal.toFixed(2)
 
@@ -311,10 +311,10 @@ function Checkout() {
       const salesTaxU     = u(salesTax)
       // Tier 2: shippingFee sent to contract = Label A + Label B so the Safe receives both.
       // Label A is already deducted from sellerPayout; this ensures it reaches the Safe on release.
-      const shippingFeeForContractU = baseAuthTier === 'physical' ? labelACostU + shippingFeeU : shippingFeeU
+      const shippingFeeForContractU = authTier === 'physical' ? labelACostU + shippingFeeU : shippingFeeU
       const sellerPayoutU = cardPriceU - platformFeeU - creatorFeeU - labelACostU
       const escrowAmountU = sellerPayoutU + platformFeeU + creatorFeeU + authFeeU + shippingFeeForContractU + salesTaxU
-      const sellerBondUSD = isNoAuthZone ? 0 : calcSellerBond(cardPrice, sellerTier)
+      const sellerBondUSD = parseFloat(cardPrice) <= selfShipMaxValue ? 0 : calcSellerBond(cardPrice, sellerTier)
       const sellerBondU   = u(sellerBondUSD)
 
       setSigningStatus('Step 1 of 2 — Approve USDC spend · confirm in wallet...')
@@ -567,10 +567,8 @@ function Checkout() {
               <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Confirm <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Shipping Address</em></div>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>
                 {isSelfShipEligible
-                  ? `Confirm your delivery address. No shipping cost — the seller ships directly at no charge.`
-                  : isNoAuthZone
-                    ? 'Confirm your delivery address. No authentication required — Chase Hollow generates your shipping label, calculated below.'
-                    : "We'll ship your card here. Confirm it's correct before we calculate your final shipping cost."}
+                  ? 'Confirm your delivery address. No shipping cost — the seller ships directly at no charge.'
+                  : "We'll ship your card here. Confirm it's correct before we calculate your final shipping cost."}
               </p>
 
               {/* ADDRESS CARD */}
@@ -643,7 +641,7 @@ function Checkout() {
                           padding: '10px 18px', fontSize: '12px', flex: 1,
                         })}
                       >
-                        {addressSaving ? 'Saving…' : isSelfShipEligible ? 'Save Address' : 'Save & Calculate Shipping'}
+                        {addressSaving ? 'Saving…' : 'Save Address'}
                       </button>
                     </div>
                   </div>
@@ -664,51 +662,62 @@ function Checkout() {
                 )}
               </div>
 
-              {/* FREE SHIPPING NOTICE — seller is self-shipping */}
+              {/* AUTH SELECTOR — always shown once address confirmed */}
+              {!addressLoading && !addressEditing && (
+                authRequired ? (
+                  <div style={{ background: 'rgba(201,168,76,0.06)', border: '1.5px solid rgba(201,168,76,0.3)', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '20px', flexShrink: 0 }}>🔍</span>
+                    <div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 500, marginBottom: '4px' }}>Physical Authentication — Required</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                        Cards over ${(tierConfig?.auth_required_threshold ?? 5000).toLocaleString()} require physical authentication at the Chase Hollow center before delivery. Auth fee: ${physicalAuthFee}.
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Authentication — Your Choice</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', border: `1.5px solid ${authChoice === 'none' ? 'rgba(108,106,102,0.5)' : 'var(--border)'}`, borderRadius: '10px', padding: '14px 16px', background: authChoice === 'none' ? 'rgba(108,106,102,0.06)' : 'var(--bg-3)' }}>
+                        <input type="radio" name="authChoice" value="none" checked={authChoice === 'none'} onChange={() => setAuthChoice('none')} style={{ marginTop: '3px', accentColor: 'var(--text-muted)', flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>No Authentication — Free</div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>Escrow and dispute protection still apply. You&apos;ll need your own evidence if a dispute arises.</div>
+                        </div>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', border: `1.5px solid ${authChoice === 'remote' ? 'var(--teal-border)' : 'var(--border)'}`, borderRadius: '10px', padding: '14px 16px', background: authChoice === 'remote' ? 'rgba(13,110,110,0.08)' : 'var(--bg-3)' }}>
+                        <input type="radio" name="authChoice" value="remote" checked={authChoice === 'remote'} onChange={() => setAuthChoice('remote')} style={{ marginTop: '3px', accentColor: 'var(--teal)', flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Remote Photo Auth — ${remoteAuthFee} <span style={{ background: 'rgba(76,175,124,0.15)', color: 'var(--accent-green)', fontSize: '10px', fontFamily: 'DM Mono, monospace', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>Popular</span></div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>Staff review 3 photos of your card in transit — front, back, and sealed package. Pass or full refund.</div>
+                        </div>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', border: `1.5px solid ${authChoice === 'physical' ? 'rgba(201,168,76,0.45)' : 'var(--border)'}`, borderRadius: '10px', padding: '14px 16px', background: authChoice === 'physical' ? 'rgba(201,168,76,0.06)' : 'var(--bg-3)' }}>
+                        <input type="radio" name="authChoice" value="physical" checked={authChoice === 'physical'} onChange={() => setAuthChoice('physical')} style={{ marginTop: '3px', accentColor: 'var(--gold)', flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Physical Auth — ${physicalAuthFee} <span style={{ background: 'rgba(201,168,76,0.12)', color: 'var(--gold)', fontSize: '10px', fontFamily: 'DM Mono, monospace', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>Best Protection</span></div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>Card routed through the Chase Hollow auth center before delivery. Expert physical inspection — grade label, cert number, slab integrity.</div>
+                        </div>
+                      </label>
+                    </div>
+                    {parseFloat(cardPrice) >= (tierConfig?.auth_default_threshold ?? 1000) && (
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--gold)', marginTop: '10px', lineHeight: 1.6 }}>
+                        ⚡ Physical auth pre-selected — recommended for cards over ${(tierConfig?.auth_default_threshold ?? 1000).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
+
+              {/* FREE SHIPPING NOTICE — only when seller self-ships AND buyer chose no auth */}
               {isSelfShipEligible && !addressLoading && !addressEditing && (
                 <div style={{ background: 'rgba(76,175,124,0.06)', border: '1.5px solid rgba(76,175,124,0.3)', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                   <span style={{ fontSize: '20px', flexShrink: 0 }}>📦</span>
                   <div>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-green)', fontWeight: 500, marginBottom: '4px' }}>Free Shipping · No Authentication</div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-green)', fontWeight: 500, marginBottom: '4px' }}>Free Shipping</div>
                     <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      This seller is covering postage — no shipping cost to you. No authentication fee applies — escrow and dispute protection still fully cover your purchase.
+                      This seller covers postage — no shipping cost to you. Add authentication above to include a Chase Hollow label instead.
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* NO AUTH NOTICE — low-value card, buyer pays shipping */}
-              {isNoAuthZone && !isSelfShipEligible && !addressLoading && !addressEditing && (
-                <div style={{ background: 'var(--teal-bg)', border: '1.5px solid var(--teal-border)', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '20px', flexShrink: 0 }}>✓</span>
-                  <div>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--teal)', fontWeight: 500, marginBottom: '4px' }}>No Authentication Required</div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      Cards under ${selfShipMaxValue} don't require authentication. Chase Hollow generates your shipping label — cost shown below. Escrow and dispute protection still apply.
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* AUTH CHOICE CARD — only when optional auth is enabled and card is above no-auth threshold */}
-              {optionalAuthApplies && !isNoAuthZone && !addressLoading && !addressEditing && (
-                <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' }}>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Authentication</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', background: authChoice === 'authenticate' ? 'rgba(13,110,110,0.08)' : 'var(--bg-3)', border: `1.5px solid ${authChoice === 'authenticate' ? 'var(--teal-border)' : 'var(--border)'}`, borderRadius: '10px', padding: '14px 16px' }}>
-                      <input type="radio" name="authChoice" value="authenticate" checked={authChoice === 'authenticate'} onChange={() => setAuthChoice('authenticate')} style={{ marginTop: '3px', accentColor: 'var(--teal)', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Authenticate — ${authFee} <span style={{ background: 'rgba(76,175,124,0.15)', color: 'var(--accent-green)', fontSize: '10px', fontFamily: 'DM Mono, monospace', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>Recommended</span></div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>Chase Hollow staff review photos of your card in transit to verify authenticity before it reaches you.</div>
-                      </div>
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', background: authChoice === 'skip' ? 'rgba(200,75,60,0.06)' : 'var(--bg-3)', border: `1.5px solid ${authChoice === 'skip' ? 'rgba(200,75,60,0.4)' : 'var(--border)'}`, borderRadius: '10px', padding: '14px 16px' }}>
-                      <input type="radio" name="authChoice" value="skip" checked={authChoice === 'skip'} onChange={() => setAuthChoice('skip')} style={{ marginTop: '3px', accentColor: 'var(--accent-red)', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Skip Authentication — Free <span style={{ background: 'rgba(200,75,60,0.15)', color: 'var(--accent-red)', fontSize: '10px', fontFamily: 'DM Mono, monospace', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>Your risk</span></div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>No authentication. Chase Hollow dispute protection is still available, but you&apos;ll need to provide your own evidence if a dispute arises.</div>
-                      </div>
-                    </label>
                   </div>
                 </div>
               )}
@@ -734,7 +743,7 @@ function Checkout() {
                   <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {[
                       { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
-                      { label: isNoAuthZone ? 'Authentication' : (authTier === 'none' ? 'Authentication' : `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`), val: isNoAuthZone ? 'None — low-value card' : (authTier === 'none' ? 'Skipped — Free' : `$${authFee}`) },
+                      { label: authTier === 'none' ? 'Authentication' : `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: authTier === 'none' ? 'Skipped — Free' : `$${authFee}` },
                       { label: 'Shipping & insurance', val: isSelfShipEligible ? 'Free — seller ships' : (balanceLoading ? 'Calculating…' : shippingKnown ? `~$${shippingFeeVal.toFixed(2)}` : 'Est. at checkout') },
                       { label: shippingKnown ? 'Total to lock in escrow' : 'Subtotal (excl. shipping)', val: `$${displayTotal} USDC`, total: true },
                       { label: 'Remaining after purchase', val: usdcBalanceFormatted !== null ? `$${Math.max(0, parseFloat(usdcBalanceFormatted) - parseFloat(displayTotal)).toFixed(2)} USDC` : '—', green: true },
@@ -791,14 +800,14 @@ function Checkout() {
                     { label: 'Card', val: listing ? `${listing.card_name}${listing.set ? ` · ${listing.set}` : ''}` : '—' },
                     { label: 'Grade', val: listing?.grade ? `${listing.grader} ${listing.grade}${listing.cert_number ? ` · Cert #${listing.cert_number}` : ''}` : 'Raw' },
                     { label: 'Seller', val: listing ? `${sellerName} · ${sellerTier.charAt(0).toUpperCase() + sellerTier.slice(1)}${sellerRep ? ` · ${sellerRep.toFixed(2)}★` : ''}` : '—', teal: true },
-                    { label: 'Authentication', val: isNoAuthZone ? '— Not required (low-value card)' : (authTier === 'none' ? '⚠ Skipped by buyer' : '✓ Yes — verified before delivery'), green: !isNoAuthZone && authTier !== 'none' },
+                    { label: 'Authentication', val: authTier === 'none' ? '⚠ Skipped by buyer' : '✓ Yes — verified before delivery', green: authTier !== 'none' },
                   ]
                 },
                 {
                   title: 'Payment Breakdown',
                   rows: [
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}`, gold: true },
-                    { label: isNoAuthZone ? 'Authentication' : authTier === 'none' ? 'Authentication' : `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: isNoAuthZone ? 'None — low-value card' : authTier === 'none' ? 'Skipped — Free' : `$${authFee}` },
+                    { label: authTier === 'none' ? 'Authentication' : `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: authTier === 'none' ? 'Skipped — Free' : `$${authFee}` },
                     { label: 'Shipping & insurance', val: isSelfShipEligible ? 'Free — seller ships' : `~$${shippingFeeVal.toFixed(2)}` },
                     { label: 'Total locked in escrow', val: `$${total} USDC`, gold: true, total: true },
                   ]
@@ -806,7 +815,7 @@ function Checkout() {
                 {
                   title: 'Delivery & Protection',
                   rows: [
-                    { label: 'Auth type', val: isNoAuthZone ? 'None (low-value card — not required)' : authTier === 'none' ? 'None (waived by buyer)' : authTier === 'remote' ? 'Remote Photo Auth' : 'Physical Auth at Chase Hollow' },
+                    { label: 'Auth type', val: authTier === 'none' ? 'None (waived by buyer)' : authTier === 'remote' ? 'Remote Photo Auth' : 'Physical Auth at Chase Hollow' },
                     { label: 'Seller deadline', val: '48hrs (1 extension available)' },
                     { label: 'If seller misses deadline', val: 'Auto-refund · 100% USDC returned', green: true },
                     ...(authTier !== 'none' ? [{ label: authTier === 'remote' ? 'Photo review' : 'Auth window', val: authTier === 'remote' ? 'Reviewed in transit (same day)' : '24–48hrs at Chase Hollow HQ' }] : []),
@@ -866,19 +875,13 @@ function Checkout() {
               {/* Escrow explainer */}
               <div style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {(isNoAuthZone ? [
+                  {[
                     'Funds go to escrow — not to us, not to the seller yet',
                     'Auto-refund if seller misses 48hr shipping deadline',
-                    isSelfShipEligible ? 'No authentication — card ships directly from seller at no charge' : 'No authentication required — Chase Hollow generates your shipping label',
+                    authTier === 'none' ? (isSelfShipEligible ? 'No authentication — card ships directly from seller at no charge' : 'No authentication — Chase Hollow generates your shipping label') : (authTier === 'remote' ? 'Card photo-authenticated by staff during transit' : 'Card physically authenticated by experts before it reaches you'),
                     isSelfShipEligible ? `Escrow auto-releases after ${tierConfig?.self_ship_release_days ?? 14} days — dispute window stays open` : '72hr inspection window after delivery — dispute if needed',
                     'Transaction recorded permanently on Base blockchain',
-                  ] : [
-                    'Funds go to escrow — not to us, not to the seller yet',
-                    'Auto-refund if seller misses 48hr shipping deadline',
-                    authTier === 'remote' ? 'Card photo-authenticated by staff during transit' : 'Card physically authenticated by experts before it reaches you',
-                    '72hr inspection window after delivery — dispute if needed',
-                    'Transaction recorded permanently on Base blockchain',
-                  ]).map((item, i) => (
+                  ].map((item, i) => (
                     <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                       <span style={{ color: 'var(--accent-green)', flexShrink: 0 }}>✓</span>{item}
                     </div>
@@ -938,7 +941,7 @@ function Checkout() {
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '20px' }}>Live tracking · Updates automatically</div>
                 {[
                   { title: 'Escrow Funded', desc: `$${total} USDC locked in smart contract on Base. Transaction confirmed.`, done: true, active: false },
-                  { title: 'Awaiting Shipment', desc: isSelfShipEligible ? `${sellerName} has been notified. They have 48hrs to upload 3 photos and ship directly to your address.` : isNoAuthZone ? `${sellerName} has been notified. They have 48hrs to ship directly to your address.` : `${sellerName} has been notified. They have 48hrs to${authTier === 'remote' ? ' upload 3 photos and' : ''} ship${authTier === 'physical' ? ' to our authentication center' : ' directly to your address'}.`, done: false, active: true, time: '⏱ Ship deadline: 48hrs from now' },
+                  { title: 'Awaiting Shipment', desc: authTier === 'none' ? `${sellerName} has been notified. They have 48hrs to ship directly to your address.` : authTier === 'remote' ? `${sellerName} has been notified. They have 48hrs to upload 3 photos and ship directly to your address.` : `${sellerName} has been notified. They have 48hrs to ship to our authentication center.`, done: false, active: true, time: '⏱ Ship deadline: 48hrs from now' },
                   { title: 'In Transit', desc: 'Card en route to your address.', done: false, active: false },
                   ...(authTier !== 'none' ? [{ title: 'Authentication', desc: 'Expert verifies grade, condition, and cert number match listing exactly.', done: false, active: false }] : []),
                   ...(authTier === 'physical' ? [{ title: 'Shipped to You', desc: `Card ships from auth center to ${buyerAddress?.city ? `${buyerAddress.city}, ${buyerAddress.state}` : 'your address'}.`, done: false, active: false }] : []),

@@ -13,7 +13,8 @@ export async function GET() {
     .select(
       'remote_auth_max_value, physical_auth_max_value, ' +
       'remote_auth_fee, physical_auth_fee, ' +
-      'optional_auth_enabled, optional_auth_max_price'
+      'optional_auth_enabled, optional_auth_max_price, ' +
+      'auth_default_threshold, auth_required_threshold'
     )
     .eq('id', 1)
     .single()
