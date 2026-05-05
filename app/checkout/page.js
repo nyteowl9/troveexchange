@@ -227,7 +227,7 @@ function Checkout() {
   const salesTax         = 0  // TaxJar deferred to ~$50k GMV
   const platformFee      = parseFloat((cardPrice * 0.03).toFixed(2))
   const creatorFee       = parseFloat((cardPrice * 0.005).toFixed(2))
-  const labelACostVal    = isSelfShipEligible ? 0 : (labelACost ?? (cardPrice > remoteAuthMax ? 12 : 0))
+  const labelACostVal    = isSelfShipEligible ? 0 : (labelACost ?? (authTier === 'physical' ? 12 : 0))
   const shippingFeeVal   = isSelfShipEligible ? 0 : (shippingFee ?? 8)
   const sellerPayout     = parseFloat((cardPrice - platformFee - creatorFee - labelACostVal).toFixed(2))
   // Tier 2 (physical): both Label A and Label B are funded through escrow so the Safe can pay for both.
