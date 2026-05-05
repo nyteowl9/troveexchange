@@ -319,6 +319,15 @@ All Phase 2 flows tested end-to-end (April 2026):
 ✓ Deployed to Base Sepolia testnet
 ✓ External audit fixes applied (contract v1.2)
 ✓ End-to-end tested on testnet (real USDC, real labels, real transactions)
+✓ Self-ship flow: seller label choice (own vs CH), Shippo tracking registration,
+    buyer confirm-receipt button, fraud detection (Day 3/7/12 warnings)
+✓ Free_shipping payout fix: label cost encoded as shippingFee in fundOrder so
+    on-chain sellerPayout is correctly reduced (no contract change needed)
+✓ Seller CH label confirmation modal with full payout breakdown
+✓ All address objects include phone fallback (fixes Shippo validation errors)
+✓ 0-bond orders: always call confirmOrder on-chain (was silently skipped)
+✓ Self-ship escrow-release cron: markDelivered → inspection_window → releaseEscrow
+✓ Migrations 035, 036, 037 applied May 2026
 
 □ Deploy contract to Base mainnet
 □ Safe multisig setup (W2/W3/W4 holders TBD)
@@ -357,6 +366,13 @@ orders (id, listing_id, buyer_id, seller_id, auth_tier,
         declared_value, shipping_cost, sales_tax,
         ship_deadline, ship_reminder_sent, strike_applied_at,
         bond_tx_hash, bond_amount, bond_returned_at,
+        ship_method [shippo|self_ship|self_ship_untracked],
+        self_ship_carrier,
+        carrier_scanned_at,
+        self_ship_no_scan_warned_at,
+        self_ship_warned_7d_at,
+        self_ship_warned_12d_at,
+        release_tx_hash,
         status, shipped_at, delivered_at, auto_release_at, released_at,
         return_deadline_at, return_review_deadline_at)
 
@@ -391,6 +407,8 @@ tier_config (singleton — admin editable via /admin → Platform Settings)
   trusted_min_sales, pro_min_sales, elite_min_sales, legend_min_sales
   elite_max_dispute_rate, elite_min_account_age_days, elite_no_dispute_loss_days
   trust_tier_unlocks_at [elite|legend]
+  self_ship_max_value, self_ship_release_days
+  staff_alert_email  -- receives Day-3 no-carrier-scan alerts (migrations 035-037 applied May 2026)
 
 early_access (id, email unique, created_at)
 -- Waitlist signups from /coming-soon page
