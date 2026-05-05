@@ -39,7 +39,7 @@ export async function POST(request) {
 
     const { data: order } = await supabaseAdmin
       .from('orders')
-      .select('id, status, auth_tier, tracking_a, tracking_b, onchain_order_id')
+      .select('id, status, auth_tier, ship_method, tracking_a, tracking_b, onchain_order_id')
       .eq('id', order_id)
       .single()
 
@@ -107,9 +107,55 @@ export async function POST(request) {
         })
       }
 
+      // ── Self-ship specific steps ───────────────────────────────────────────
+
+      case 'self_ship_transit': {
+        // Simulates the Shippo TRANSIT webhook firing for a self-ship in_transit order.
+        // Stamps carrier_scanned_at — used to verify Day-3 no-scan detection works.
+        if (!['self_ship', 'self_ship_untracked'].includes(order.ship_method)) {
+          return NextResponse.json({ error: 'Order is not a self-ship order' }, { status: 400 })
+        }
+        if (order.status !== 'in_transit') {
+          return NextResponse.json({ error: `Expected in_transit, got: ${order.status}` }, { status: 400 })
+        }
+        await supabaseAdmin
+          .from('orders')
+          .update({ carrier_scanned_at: new Date().toISOString() })
+          .eq('id', order_id)
+        return NextResponse.json({ ok: true, note: 'carrier_scanned_at stamped — Day-3 alert will not fire for this order' })
+      }
+
+      case 'self_ship_delivered': {
+        // Simulates DELIVERED for a self-ship order → opens 72hr inspection window.
+        if (!['self_ship', 'self_ship_untracked'].includes(order.ship_method)) {
+          return NextResponse.json({ error: 'Order is not a self-ship order' }, { status: 400 })
+        }
+        if (order.status !== 'in_transit') {
+          return NextResponse.json({ error: `Expected in_transit, got: ${order.status}` }, { status: 400 })
+        }
+        const autoReleaseAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+        await supabaseAdmin
+          .from('orders')
+          .update({
+            status:          'inspection_window',
+            delivered_at:    new Date().toISOString(),
+            auto_release_at: autoReleaseAt,
+            carrier_scanned_at: new Date().toISOString(),
+          })
+          .eq('id', order_id)
+        await callMarkDelivered(order.onchain_order_id)
+        return NextResponse.json({
+          ok: true,
+          prev: 'in_transit',
+          next: 'inspection_window',
+          auto_release_at: autoReleaseAt,
+          note: '72hr inspection window started.',
+        })
+      }
+
       default:
         return NextResponse.json({
-          error: `Unknown step: "${step}". Valid steps: carrier_scan_a, delivered_auth, carrier_scan_b, delivered_buyer`,
+          error: `Unknown step: "${step}". Valid steps: carrier_scan_a, delivered_auth, carrier_scan_b, delivered_buyer, self_ship_transit, self_ship_delivered`,
         }, { status: 400 })
     }
   } catch (err) {

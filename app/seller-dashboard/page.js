@@ -87,6 +87,8 @@ function SellerDashboard() {
   const [selfShipDone, setSelfShipDone]         = useState({})   // { [orderId]: true }
   const [labelLoading, setLabelLoading]     = useState({}) // { [orderId]: true }
   const [labelError, setLabelError]         = useState({}) // { [orderId]: message }
+  const [chLabelConfirm, setChLabelConfirm] = useState(null) // { order, labelCost, sellerPayout, carrier, service, estimatedDays }
+  const [chLabelQuoteLoading, setChLabelQuoteLoading] = useState({}) // { [orderId]: true }
   const [bondLoading, setBondLoading]       = useState({}) // { [orderId]: true }
   const [bondError, setBondError]           = useState({}) // { [orderId]: message }
   const [bondStatus, setBondStatus]         = useState({}) // { [orderId]: status string }
@@ -291,7 +293,7 @@ function SellerDashboard() {
 
   const isNoAuthZone = selfShipThreshold > 0 && parseFloat(price) > 0 && parseFloat(price) <= selfShipThreshold
   const priceIsSelfShipEligible = isNoAuthZone && freeShipping // legacy alias — bond/fee checks
-  const fees = calcFees(price, isNoAuthZone) // seller never pays shipping cost in no-auth zone
+  const fees = calcFees(price, !freeShipping) // seller covers label when free_shipping; buyer pays when not
   const bondRate   = BOND_RATE[profile?.seller_tier] || BOND_RATE.new
   const bondAmount = isNoAuthZone ? null : (price ? (BOND_FLOOR + parseFloat(price) * bondRate).toFixed(2) : null)
 
@@ -506,7 +508,7 @@ function SellerDashboard() {
         description:     formData.description.trim() || null,
         price:           priceNum,
         auth_tier:       authTier,
-        free_shipping:   !!(priceNum <= selfShipMax && freeShipping),
+        free_shipping:   !!freeShipping,
         photos:          uploadedUrls,
         status:          'active',
         expires_at:      expiresAt,
@@ -616,7 +618,7 @@ function SellerDashboard() {
         description:   editFormData.description?.trim() || null,
         price:         priceNum,
         auth_tier:     editAuthTier,
-        free_shipping: !!(priceNum <= editSelfShipMax && editFreeShipping),
+        free_shipping: !!editFreeShipping,
         photos:        allPhotos,
       }).eq('id', editingListingId).eq('seller_id', user.id)
 
@@ -680,7 +682,7 @@ function SellerDashboard() {
     try {
       if (!walletAddress) throw new Error('Connect your wallet first (Bond Wallet section).')
       if (!order.onchain_order_id) throw new Error('Missing on-chain order ID. Contact support.')
-      if (!order.bond_amount)      throw new Error('Bond amount not set on this order.')
+      if (order.bond_amount == null) throw new Error('Bond amount not set on this order.')
 
       // Find the connected wallet matching the seller's stored wallet address
       const wallet = wallets.find(w => w.address?.toLowerCase() === walletAddress.toLowerCase())
@@ -706,24 +708,30 @@ function SellerDashboard() {
 
       const provider = new ethers.BrowserProvider(eip1193)
       const signer   = await provider.getSigner()
-      const bondU    = ethers.parseUnits(parseFloat(order.bond_amount).toFixed(6), 6)
+      const zeroBond = Number(order.bond_amount) === 0
 
-      setBondStatus(prev => ({ ...prev, [order.id]: 'Step 1 of 2 — Approve USDC · confirm in wallet…' }))
-      const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
-      const approveTx = await usdcContract.approve(ESCROW_ADDRESS, bondU, { gasLimit: 100000n })
-      setBondStatus(prev => ({ ...prev, [order.id]: 'Approval submitted — waiting for confirmation…' }))
-      await approveTx.wait()
+      if (!zeroBond) {
+        // Bond > $0: approve USDC first
+        const bondU = ethers.parseUnits(parseFloat(order.bond_amount).toFixed(6), 6)
+        setBondStatus(prev => ({ ...prev, [order.id]: 'Step 1 of 2 — Approve USDC · confirm in wallet…' }))
+        const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
+        const approveTx = await usdcContract.approve(ESCROW_ADDRESS, bondU, { gasLimit: 100000n })
+        setBondStatus(prev => ({ ...prev, [order.id]: 'Approval submitted — waiting for confirmation…' }))
+        await approveTx.wait()
 
-      // Verify allowance is readable — Sepolia RPC can lag a block behind
-      let allowanceConfirmed = false
-      for (let i = 0; i < 5; i++) {
-        const allowance = await usdcContract.allowance(walletAddress, ESCROW_ADDRESS)
-        if (allowance >= bondU) { allowanceConfirmed = true; break }
-        await new Promise(r => setTimeout(r, 1000))
+        // Verify allowance is readable — Sepolia RPC can lag a block behind
+        let allowanceConfirmed = false
+        for (let i = 0; i < 5; i++) {
+          const allowance = await usdcContract.allowance(walletAddress, ESCROW_ADDRESS)
+          if (allowance >= bondU) { allowanceConfirmed = true; break }
+          await new Promise(r => setTimeout(r, 1000))
+        }
+        if (!allowanceConfirmed) throw new Error('USDC approval did not confirm. Please try again.')
+        setBondStatus(prev => ({ ...prev, [order.id]: 'Step 2 of 2 — Post bond · confirm in wallet…' }))
+      } else {
+        setBondStatus(prev => ({ ...prev, [order.id]: 'Confirm order on-chain · confirm in wallet…' }))
       }
-      if (!allowanceConfirmed) throw new Error('USDC approval did not confirm. Please try again.')
 
-      setBondStatus(prev => ({ ...prev, [order.id]: 'Step 2 of 2 — Post bond · confirm in wallet…' }))
       const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
       const confirmTx = await escrowContract.confirmOrder(order.onchain_order_id, { gasLimit: 200000n })
       setBondStatus(prev => ({ ...prev, [order.id]: 'Submitted — waiting for block confirmation…' }))
@@ -740,7 +748,7 @@ function SellerDashboard() {
         throw new Error(err.error || 'Failed to save bond confirmation')
       }
 
-      setBondStatus(prev => ({ ...prev, [order.id]: 'Bond posted ✓' }))
+      setBondStatus(prev => ({ ...prev, [order.id]: zeroBond ? 'Order confirmed ✓' : 'Bond posted ✓' }))
       await fetchData()
     } catch (err) {
       const msg = err?.reason || err?.message || 'Bond posting failed'
@@ -757,6 +765,36 @@ function SellerDashboard() {
       window.open(order.label_a_url, '_blank')
       return
     }
+    // Free-shipping orders: seller pays the label — show cost quote before committing
+    if (order.listing?.free_shipping) {
+      setChLabelQuoteLoading(prev => ({ ...prev, [order.id]: true }))
+      setLabelError(prev => ({ ...prev, [order.id]: null }))
+      try {
+        const res = await fetch('/api/shipping/seller-label-quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: order.id }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Could not get rate')
+        setChLabelConfirm({
+          order,
+          listingPrice:  data.listing_price,
+          platformFee:   data.platform_fee,
+          labelCost:     data.label_cost,
+          sellerPayout:  data.seller_payout,
+          carrier:       data.carrier,
+          service:       data.service,
+          estimatedDays: data.estimated_days,
+        })
+      } catch (err) {
+        setLabelError(prev => ({ ...prev, [order.id]: err.message }))
+      } finally {
+        setChLabelQuoteLoading(prev => ({ ...prev, [order.id]: false }))
+      }
+      return
+    }
+    // Non-free-shipping: buyer already paid shipping at checkout — generate immediately
     setLabelLoading(prev => ({ ...prev, [order.id]: true }))
     setLabelError(prev => ({ ...prev, [order.id]: null }))
     try {
@@ -767,7 +805,29 @@ function SellerDashboard() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Label generation failed')
-      // Refresh orders so the stored label_a_url is picked up
+      await fetchData()
+      window.open(data.label_url, '_blank')
+    } catch (err) {
+      setLabelError(prev => ({ ...prev, [order.id]: err.message }))
+    } finally {
+      setLabelLoading(prev => ({ ...prev, [order.id]: false }))
+    }
+  }
+
+  const handleChLabelConfirm = async () => {
+    if (!chLabelConfirm) return
+    const { order } = chLabelConfirm
+    setLabelLoading(prev => ({ ...prev, [order.id]: true }))
+    setLabelError(prev => ({ ...prev, [order.id]: null }))
+    setChLabelConfirm(null)
+    try {
+      const res = await fetch('/api/shipping/seller-label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Label generation failed')
       await fetchData()
       window.open(data.label_url, '_blank')
     } catch (err) {
@@ -846,7 +906,7 @@ function SellerDashboard() {
             {order.status === 'in_transit'        && (() => {
               const isSelfShip = order.ship_method === 'self_ship' || order.ship_method === 'self_ship_untracked'
               const releaseLine = order.auto_release_at ? ` · Escrow releases ${fmtDate(order.auto_release_at)}` : ''
-              if (isSelfShip && !order.tracking_a) return `Self-shipped (no tracking) · Buyer assumes delivery risk${releaseLine}`
+              if (isSelfShip && !order.tracking_a) return `Self-shipped · No tracking provided${releaseLine}`
               if (order.tracking_a) return <><span>{isSelfShip ? 'Self-shipped · ' : 'In transit · '}</span><a href={(/^1Z/i.test(order.tracking_a) ? `https://www.ups.com/track?tracknum=` : /^9[0-9]{21}$/.test(order.tracking_a) ? `https://tools.usps.com/go/TrackConfirmAction?tLabels=` : `https://www.fedex.com/fedextrack/?trknbr=`) + order.tracking_a} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'none', fontFamily: 'DM Mono, monospace' }}>{order.tracking_a} ↗</a>{isSelfShip ? releaseLine : ''}</>
               return 'In transit · En route'
             })()}
@@ -864,19 +924,22 @@ function SellerDashboard() {
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-amber)', marginBottom: '8px' }}>{bondStatus[order.id]}</div>
           )}
           {order.status === 'awaiting_shipment' && (() => {
-            const isSelfShipEligible = order.auth_tier === 'none'
+            const isFreeShipping = !!order.listing?.free_shipping
             const hasPhotos = order.auth_tier === 'remote' || order.auth_tier === 'none'
             const photosRequired = hasPhotos && !authPhotosDone[order.id]
-            // Bond not required for self-ship eligible orders — escrow + strike system covers it
-            const bondReady = isSelfShipEligible || !!order.bond_tx_hash
-            const canLabel = bondReady && !labelLoading[order.id] && !photosRequired
+            // Bond step always required — even $0-bond orders must call confirmOrder on-chain
+            // so the contract advances from AwaitingConfirmation → Active (required for markDelivered)
+            const zeroBond   = Number(order.bond_amount) === 0
+            const noBondStep = false
+            const bondReady  = !!order.bond_tx_hash
+            const canLabel   = bondReady && !labelLoading[order.id] && !photosRequired
             // Step numbers shift when bond step is hidden
-            const photoStep = isSelfShipEligible ? 'Step 1' : 'Step 2'
-            const shipStep  = isSelfShipEligible ? (hasPhotos ? 'Step 2' : 'Step 1') : (hasPhotos ? 'Step 3' : 'Step 2')
+            const photoStep = noBondStep ? 'Step 1' : 'Step 2'
+            const shipStep  = noBondStep ? (hasPhotos ? 'Step 2' : 'Step 1') : (hasPhotos ? 'Step 3' : 'Step 2')
             return (
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                {/* STEP 1 — Post Bond (hidden for self-ship eligible orders) */}
-                {!isSelfShipEligible && (
+                {/* STEP 1 — Post Bond (hidden when no bond required or self-ship eligible) */}
+                {!noBondStep && (
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: order.bond_tx_hash ? 'var(--accent-green)' : 'var(--accent-amber)', fontWeight: 600 }}>Step 1</span>
@@ -884,7 +947,7 @@ function SellerDashboard() {
                         <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-green)', padding: '8px 14px', background: 'rgba(76,175,124,0.1)', border: '1px solid rgba(76,175,124,0.3)', borderRadius: '8px', whiteSpace: 'nowrap' }}>✓ Bond Posted</span>
                       ) : (
                         <button onClick={() => handlePostBond(order)} disabled={bondLoading[order.id]} style={{ background: 'var(--accent-amber)', border: 'none', color: '#0A0A0B', padding: '8px 16px', fontSize: '12px', fontWeight: 700, borderRadius: '8px', cursor: bondLoading[order.id] ? 'wait' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: bondLoading[order.id] ? 0.7 : 1, whiteSpace: 'nowrap' }}>
-                          {bondLoading[order.id] ? '⏳ Posting…' : `🔒 Post Bond — $${Number(order.bond_amount || 0).toFixed(2)}`}
+                          {bondLoading[order.id] ? '⏳ Confirming…' : zeroBond ? '✓ Confirm Order' : `🔒 Post Bond — $${Number(order.bond_amount || 0).toFixed(2)}`}
                         </button>
                       )}
                     </div>
@@ -906,18 +969,24 @@ function SellerDashboard() {
                   </div>
                 )}
 
-                {/* Ship step — label or self-ship */}
+                {/* Ship step — label choice (free shipping) or CH label only */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: bondReady ? 'var(--teal)' : 'var(--text-muted)', fontWeight: 600 }}>{shipStep}</span>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <button onClick={() => canLabel && handlePrintLabel(order)} disabled={!canLabel} title={photosRequired ? 'Upload 3 auth photos first' : ''} style={{ background: canLabel ? 'var(--teal)' : 'var(--bg-3)', border: `1.5px solid ${canLabel ? 'transparent' : 'var(--border)'}`, color: canLabel ? (theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: canLabel ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: labelLoading[order.id] ? 0.7 : 1, whiteSpace: 'nowrap' }}>
-                      {labelLoading[order.id] ? '⏳ Generating…' : order.label_a_url ? (order.auth_tier === 'physical' ? '🖨 Print Label → Auth Center' : '🖨 Print Label') : (order.auth_tier === 'physical' ? '🖨 Get Label → Auth Center' : '🖨 Get Label')}
-                    </button>
-                    {isSelfShipEligible && order.listing?.free_shipping && !photosRequired && !selfShipDone[order.id] && (
+                    {/* Own label — primary option for free_shipping listings */}
+                    {isFreeShipping && !order.label_a_url && !selfShipDone[order.id] && (
                       <button
-                        onClick={() => { setSelfShipModal({ orderId: order.id, cardName: order.listing?.card_name, price: order.listing?.price }); setSelfShipCarrier(''); setSelfShipTracking('') }}
-                        style={{ background: 'rgba(201,168,76,0.1)', border: '1.5px solid rgba(201,168,76,0.35)', color: 'var(--gold)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
-                        ✉ Self-Ship
+                        onClick={() => { if (canLabel) { setSelfShipModal({ orderId: order.id, cardName: order.listing?.card_name, price: order.listing?.price }); setSelfShipCarrier(''); setSelfShipTracking('') } }}
+                        disabled={!canLabel}
+                        title={photosRequired ? 'Upload 3 auth photos first' : ''}
+                        style={{ background: canLabel ? 'rgba(201,168,76,0.12)' : 'var(--bg-3)', border: `1.5px solid ${canLabel ? 'rgba(201,168,76,0.5)' : 'var(--border)'}`, color: canLabel ? 'var(--gold)' : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: canLabel ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
+                        📦 Use Own Label
+                      </button>
+                    )}
+                    {/* CH label — always for non-free-shipping; secondary option for free_shipping */}
+                    {!selfShipDone[order.id] && (
+                      <button onClick={() => canLabel && handlePrintLabel(order)} disabled={!canLabel || chLabelQuoteLoading[order.id]} title={photosRequired ? 'Upload 3 auth photos first' : ''} style={{ background: canLabel ? (isFreeShipping && !order.label_a_url ? 'var(--bg-3)' : 'var(--teal)') : 'var(--bg-3)', border: `1.5px solid ${canLabel ? (isFreeShipping && !order.label_a_url ? 'rgba(13,110,110,0.5)' : 'transparent') : 'var(--border)'}`, color: canLabel ? (isFreeShipping && !order.label_a_url ? 'var(--teal)' : theme === 'dark' ? '#0A0A0B' : '#fff') : 'var(--text-muted)', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: canLabel ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: (labelLoading[order.id] || chLabelQuoteLoading[order.id]) ? 0.7 : 1, whiteSpace: 'nowrap' }}>
+                        {chLabelQuoteLoading[order.id] ? '⏳ Getting rate…' : labelLoading[order.id] ? '⏳ Generating…' : order.label_a_url ? (order.auth_tier === 'physical' ? '🖨 Print Label → Auth Center' : '🖨 Print Label') : (order.auth_tier === 'physical' ? (isFreeShipping ? '🖨 Use CH Label → Auth Center' : '🖨 Get Label → Auth Center') : (isFreeShipping ? '🖨 Use CH Label' : '🖨 Get Label'))}
                       </button>
                     )}
                   </div>
@@ -1171,6 +1240,64 @@ function SellerDashboard() {
       )}
 
       {/* SELF-SHIP MODAL */}
+      {/* CH LABEL COST CONFIRMATION MODAL — free_shipping orders only */}
+      {chLabelConfirm && (() => {
+        const { order, listingPrice, platformFee, labelCost, sellerPayout, carrier, service, estimatedDays } = chLabelConfirm
+        const row = (label, value, valueStyle = {}) => (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '0.5px solid var(--border)' }}>
+            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', fontWeight: 600, ...valueStyle }}>{value}</span>
+          </div>
+        )
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '400px' }}>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '4px' }}>Payout Breakdown</div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                {order.listing?.card_name} · ${parseFloat(order.listing?.price || 0).toFixed(2)}
+              </div>
+
+              <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '4px 14px', marginBottom: '16px' }}>
+                {row('Sale price', `$${listingPrice.toFixed(2)}`, { color: 'var(--text-primary)' })}
+                {row('Platform fee (3.5%)', `−$${platformFee.toFixed(2)}`, { color: 'var(--text-secondary)' })}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '7px 0', borderBottom: '0.5px solid var(--border)' }}>
+                  <div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Shipping label</div>
+                    {(carrier || service) && (
+                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {[carrier, service].filter(Boolean).join(' · ')}{estimatedDays ? ` · ~${estimatedDays}d` : ''}
+                      </div>
+                    )}
+                  </div>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', fontWeight: 600, color: 'var(--accent-red)', whiteSpace: 'nowrap', flexShrink: 0 }}>−${labelCost.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0 6px' }}>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Your payout</span>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '16px', fontWeight: 700, color: 'var(--accent-green)' }}>${sellerPayout.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
+                Chase Hollow purchases this label on your behalf. The cost is deducted from your settlement when funds are released. The label will open in a new tab.
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={handleChLabelConfirm}
+                  style={{ flex: 1, background: 'var(--teal)', border: 'none', color: '#fff', padding: '10px 0', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 700, borderRadius: '8px', cursor: 'pointer' }}>
+                  Get Label
+                </button>
+                <button
+                  onClick={() => setChLabelConfirm(null)}
+                  style={{ background: 'var(--bg-3)', border: '1.5px solid var(--border)', color: 'var(--text-secondary)', padding: '10px 18px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {selfShipModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '440px' }}>
@@ -1178,8 +1305,8 @@ function SellerDashboard() {
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '18px', lineHeight: 1.6 }}>
               {selfShipModal.cardName} · {fmtUSD(selfShipModal.price)}
             </div>
-            <div style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '8px', padding: '10px 12px', marginBottom: '18px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Ship the card yourself using any carrier. Escrow will auto-release after the timer expires — no delivery webhook needed. If you have tracking, enter it below so the buyer can follow along. Without tracking, the buyer assumes delivery risk.
+            <div style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '8px', padding: '10px 12px', marginBottom: '18px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+              Pack and ship the card using any carrier of your choice. You are responsible for getting it to the buyer safely and on time. Once you confirm below, the buyer's funds will be held until delivery is confirmed or the protected window expires.
             </div>
             <div style={{ marginBottom: '12px' }}>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Carrier (optional)</div>
@@ -1192,14 +1319,20 @@ function SellerDashboard() {
               />
             </div>
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tracking number (optional)</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tracking number</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--gold)', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '4px', padding: '1px 6px', letterSpacing: '0.06em', fontWeight: 600 }}>HIGHLY RECOMMENDED</div>
+              </div>
               <input
                 type="text"
-                placeholder="Leave blank if no tracking"
+                placeholder="Enter tracking number for faster release"
                 value={selfShipTracking}
                 onChange={e => setSelfShipTracking(e.target.value)}
                 style={{ width: '100%', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
               />
+              <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', lineHeight: 1.5 }}>
+                Providing tracking lets the buyer follow their shipment and allows funds to release automatically upon delivery.
+              </div>
             </div>
             {selfShipError[selfShipModal.orderId] && (
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-red)', marginBottom: '10px' }}>{selfShipError[selfShipModal.orderId]}</div>
@@ -1793,18 +1926,18 @@ function SellerDashboard() {
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Price & Fee Calculator</div>
                 <Label text="LISTING PRICE (USDC) *" />
-                <input type="number" placeholder="Minimum $1" value={price} onChange={e => { const v = e.target.value; setPrice(v); if (selfShipThreshold > 0 && parseFloat(v) > selfShipThreshold) setFreeShipping(false) }} onWheel={e => e.target.blur()} style={{ ...inputStyle, marginBottom: parseFloat(price) > 50000 ? '8px' : '14px', fontSize: '18px', fontFamily: 'Playfair Display, serif', borderColor: parseFloat(price) > 50000 ? 'rgba(200,75,60,0.6)' : undefined }} />
+                <input type="number" placeholder="Minimum $1" value={price} onChange={e => setPrice(e.target.value)} onWheel={e => e.target.blur()} style={{ ...inputStyle, marginBottom: parseFloat(price) > 50000 ? '8px' : '14px', fontSize: '18px', fontFamily: 'Playfair Display, serif', borderColor: parseFloat(price) > 50000 ? 'rgba(200,75,60,0.6)' : undefined }} />
                 {parseFloat(price) > 50000 && (
                   <div style={{ background: 'rgba(200,75,60,0.08)', border: '1px solid rgba(200,75,60,0.35)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontWeight: 700 }}>⚠</span> Maximum listing price is $50,000. Please lower your price to publish.
                   </div>
                 )}
-                {isNoAuthZone && (
+                {parseFloat(price) > 0 && parseFloat(price) <= 50000 && (
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: freeShipping ? 'rgba(13,110,110,0.07)' : 'var(--bg-3)', border: `1px solid ${freeShipping ? 'var(--teal-border)' : 'var(--border)'}`, borderRadius: '8px', padding: '10px 14px', marginBottom: '14px' }}>
                     <input type="checkbox" checked={freeShipping} onChange={e => setFreeShipping(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: 'var(--teal)', flexShrink: 0, cursor: 'pointer' }} />
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: freeShipping ? 'var(--teal)' : 'var(--text-primary)' }}>Offer free shipping — you cover postage</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>You ship with your own label. Buyer pays nothing for shipping. Uncheck to let Chase Hollow generate a label (buyer pays shipping).</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: freeShipping ? 'var(--teal)' : 'var(--text-primary)' }}>Offer free shipping — you cover postage <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--accent-amber)', marginLeft: '6px' }}>Recommended — more buyers click free shipping listings</span></div>
+                      {freeShipping && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>After the sale, ship with your own label or request a Chase Hollow label — cost deducted from your payout. Buyer pays nothing for shipping.</div>}
                     </div>
                   </label>
                 )}
@@ -1813,7 +1946,7 @@ function SellerDashboard() {
                     {[
                       { label: 'Your listing price',           val: `$${parseFloat(price).toLocaleString()}` },
                       { label: 'Platform fee (3.5%)',          val: `-$${fees.platform}` },
-                      { label: 'Shipping & insurance (est.)',  val: isNoAuthZone ? (freeShipping ? 'Free — you self-ship (you cover postage)' : 'Buyer pays — Chase Hollow label') : `~$${fees.shipCost}` },
+                      { label: 'Shipping & insurance (est.)',  val: freeShipping ? 'You cover postage' : 'Buyer pays — Chase Hollow label' },
                       { label: 'You receive on settlement',    val: `~$${fees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
@@ -2030,24 +2163,23 @@ function SellerDashboard() {
                     <span style={{ fontWeight: 700 }}>⚠</span> Maximum listing price is $50,000.
                   </div>
                 )}
-                {selfShipThreshold > 0 && parseFloat(editPrice) > 0 && parseFloat(editPrice) <= selfShipThreshold && (
+                {parseFloat(editPrice) > 0 && parseFloat(editPrice) <= 50000 && (
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: editFreeShipping ? 'rgba(13,110,110,0.07)' : 'var(--bg-3)', border: `1px solid ${editFreeShipping ? 'var(--teal-border)' : 'var(--border)'}`, borderRadius: '8px', padding: '10px 14px', marginBottom: '14px' }}>
                     <input type="checkbox" checked={editFreeShipping} onChange={e => setEditFreeShipping(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: 'var(--teal)', flexShrink: 0, cursor: 'pointer' }} />
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: editFreeShipping ? 'var(--teal)' : 'var(--text-primary)' }}>Offer free shipping — you cover postage</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>You ship with your own label. Buyer pays nothing for shipping.</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: editFreeShipping ? 'var(--teal)' : 'var(--text-primary)' }}>Offer free shipping — you cover postage <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--accent-amber)', marginLeft: '6px' }}>Recommended — more buyers click free shipping listings</span></div>
+                      {editFreeShipping && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>After the sale, ship with your own label or request a Chase Hollow label — cost deducted from your payout. Buyer pays nothing for shipping.</div>}
                     </div>
                   </label>
                 )}
                 {editPrice && parseFloat(editPrice) > 0 && parseFloat(editPrice) <= 50000 && (() => {
-                    const editIsSelfShip = selfShipThreshold > 0 && parseFloat(editPrice) <= selfShipThreshold
-                    const editFees = calcFees(editPrice, editIsSelfShip)
+                    const editFees = calcFees(editPrice, !editFreeShipping)
                     return (
                   <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px' }}>
                     {[
                       { label: 'Your listing price',           val: `$${parseFloat(editPrice).toLocaleString()}` },
                       { label: 'Platform fee (3.5%)',          val: `-$${editFees.platform}` },
-                      { label: 'Shipping & insurance (est.)',  val: editIsSelfShip ? (editFreeShipping ? 'Free — you self-ship (you cover postage)' : 'Buyer pays — Chase Hollow label') : `~$${editFees.shipCost}` },
+                      { label: 'Shipping & insurance (est.)',  val: editFreeShipping ? 'You cover postage' : 'Buyer pays — Chase Hollow label' },
                       { label: 'You receive on settlement',    val: `~$${editFees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>

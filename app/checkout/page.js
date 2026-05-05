@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ethers } from 'ethers'
@@ -31,6 +31,8 @@ function Checkout() {
   // Blockchain state
   const [usdcBalance, setUsdcBalance]       = useState(null)
   const [shippingFee, setShippingFee]       = useState(null)
+  const [shippingLoading, setShippingLoading] = useState(false)
+  const authChoiceInitialized               = useRef(false)
   const [labelACost, setLabelACost]         = useState(null)
   const [balanceLoading, setBalanceLoading] = useState(false)
   const [txHash, setTxHash]                 = useState(null)
@@ -155,19 +157,32 @@ function Checkout() {
     fetchStep2Data()
   }, [step, wallet, listingId, listing, walletAddress])
 
+  // Re-fetch shipping estimate when buyer changes auth choice on step 2 (skip initial mount)
+  useEffect(() => {
+    if (!authChoiceInitialized.current) { authChoiceInitialized.current = true; return }
+    if (step !== 2 || !listing || !listingId) return
+    setShippingFee(null)
+    setLabelACost(null)
+    doFetchShipping()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authChoice])
+
   async function doFetchShipping() {
+    setShippingLoading(true)
     try {
       const res = await fetch('/api/checkout/estimate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listing_id: listingId }),
+        body: JSON.stringify({ listing_id: listingId, auth_tier: authTier }),
       })
       const est = await res.json()
-      setShippingFee(est.shipping_fee ?? 8)
+      setShippingFee(est.shipping_fee ?? 0)
       setLabelACost(est.label_a_cost ?? 0)
     } catch {
-      setShippingFee(8)
-      setLabelACost(listing?.price > 300 ? 12 : 0)
+      setShippingFee(authTier === 'physical' ? 8 : 0)
+      setLabelACost(authTier === 'physical' ? 12 : 8)
+    } finally {
+      setShippingLoading(false)
     }
   }
 
@@ -223,21 +238,29 @@ function Checkout() {
   const authRequired     = parseFloat(cardPrice) >= (tierConfig?.auth_required_threshold ?? 5000)
   const authTier         = authRequired ? 'physical' : authChoice
   const authFee          = authTier === 'none' ? 0 : authTier === 'remote' ? remoteAuthFee : physicalAuthFee
-  const isSelfShipEligible = !!listing?.free_shipping && authTier === 'none'
+  // free_shipping=true  → seller covers Label A (self-ship or CH label); buyer pays $0 (+ Label B if physical)
+  // free_shipping=false → buyer pays Label A; physical = buyer pays Label A + Label B
+  const isSelfShipEligible = !!listing?.free_shipping && authTier !== 'physical'
   const salesTax         = 0  // TaxJar deferred to ~$50k GMV
   const platformFee      = parseFloat((cardPrice * 0.03).toFixed(2))
   const creatorFee       = parseFloat((cardPrice * 0.005).toFixed(2))
-  const labelACostVal    = isSelfShipEligible ? 0 : (labelACost ?? (authTier === 'physical' ? 12 : 0))
-  const shippingFeeVal   = isSelfShipEligible ? 0 : (shippingFee ?? 8)
-  const sellerPayout     = parseFloat((cardPrice - platformFee - creatorFee - labelACostVal).toFixed(2))
-  // Tier 2 (physical): both Label A and Label B are funded through escrow so the Safe can pay for both.
-  // Label A is already deducted from sellerPayout; adding it to shippingFee here ensures it reaches the Safe.
-  const shippingFeeForDisplay = isSelfShipEligible ? 0 : (authTier === 'physical' ? labelACostVal + shippingFeeVal : shippingFeeVal)
-  const escrowTotal      = parseFloat((sellerPayout + platformFee + creatorFee + authFee + shippingFeeForDisplay + salesTax).toFixed(2))
-  const total            = escrowTotal.toFixed(2)
+  // Estimated label costs from API — always use the fetched value, including for free_shipping orders.
+  // For free_shipping + non-physical, the label cost is encoded as shippingFee in the contract so the
+  // on-chain sellerPayout is correctly reduced whether the seller uses their own label or a CH label.
+  const labelACostEst  = labelACost ?? (authTier === 'physical' ? 12 : 8)
+  const labelBCostEst  = authTier === 'physical' ? (shippingFee ?? 8) : 0
+  // free_shipping: seller absorbs Label A cost via payout deduction (all auth tiers)
+  const labelACostVal  = !!listing?.free_shipping ? labelACostEst : 0
+  // What buyer pays for shipping (free_shipping = buyer always pays $0 for Label A)
+  const buyerShipping  = !!listing?.free_shipping ? labelBCostEst : (labelACostEst + labelBCostEst)
+  const sellerPayout   = parseFloat((cardPrice - platformFee - creatorFee - labelACostVal).toFixed(2))
+  // Escrow shipping bucket = seller's label reserve + buyer's shipping contribution
+  const shippingFeeForEscrow = labelACostVal + buyerShipping
+  const escrowTotal    = parseFloat((sellerPayout + platformFee + creatorFee + authFee + shippingFeeForEscrow + salesTax).toFixed(2))
+  const total          = escrowTotal.toFixed(2)
 
-  // Display total — clean until shipping is known
-  const shippingKnown = isSelfShipEligible || (shippingFee !== null && !balanceLoading)
+  // Wait for the shipping estimate on all orders — free_shipping orders now include a label reserve
+  const shippingKnown = !balanceLoading && labelACost !== null
   const displayTotal  = shippingKnown
     ? escrowTotal.toFixed(2)
     : parseFloat(cardPrice + authFee).toFixed(2)
@@ -305,15 +328,16 @@ function Checkout() {
       const cardPriceU    = u(cardPrice)
       const platformFeeU  = cardPriceU * 300n / 10000n
       const creatorFeeU   = cardPriceU * 50n / 10000n
-      const labelACostU   = u(labelACostVal)
-      const authFeeU      = u(authFee)
-      const shippingFeeU  = u(shippingFeeVal)
-      const salesTaxU     = u(salesTax)
-      // Tier 2: shippingFee sent to contract = Label A + Label B so the Safe receives both.
-      // Label A is already deducted from sellerPayout; this ensures it reaches the Safe on release.
-      const shippingFeeForContractU = authTier === 'physical' ? labelACostU + shippingFeeU : shippingFeeU
-      const sellerPayoutU = cardPriceU - platformFeeU - creatorFeeU - labelACostU
-      const escrowAmountU = sellerPayoutU + platformFeeU + creatorFeeU + authFeeU + shippingFeeForContractU + salesTaxU
+      const labelACostU    = u(labelACostVal)    // payout deduction for all free_shipping orders
+      const labelACostEstU = u(labelACostEst)    // actual Label A cost for shipping bucket
+      const authFeeU       = u(authFee)
+      const shippingFeeU   = u(labelBCostEst)    // Label B cost
+      const salesTaxU      = u(salesTax)
+      // Shipping bucket = Label A (always, from either seller payout or buyer) + Label B (physical only)
+      // Always encode label cost — for free_shipping orders this is the label reserve deducted from sellerPayout
+      const shippingFeeForContractU = authTier === 'physical' ? labelACostEstU + shippingFeeU : labelACostEstU
+      const sellerPayoutU  = cardPriceU - platformFeeU - creatorFeeU - labelACostU
+      const escrowAmountU  = sellerPayoutU + platformFeeU + creatorFeeU + authFeeU + shippingFeeForContractU + salesTaxU
       const sellerBondUSD = parseFloat(cardPrice) <= selfShipMaxValue ? 0 : calcSellerBond(cardPrice, sellerTier)
       const sellerBondU   = u(sellerBondUSD)
 
@@ -375,7 +399,7 @@ function Checkout() {
           creator_fee:      parseFloat(ethers.formatUnits(creatorFeeU, 6)),
           auth_fee:         authFee,
           bond_amount:      sellerBondUSD,
-          shipping_cost:    shippingFeeVal,
+          shipping_cost:    buyerShipping,
           sales_tax:        salesTax,
           declared_value:   cardPrice,
           onchain_order_id: onchainOrderId,
@@ -566,8 +590,8 @@ function Checkout() {
             <div>
               <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '36px', fontWeight: 300, marginBottom: '6px', color: 'var(--text-primary)' }}>Confirm <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Shipping Address</em></div>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>
-                {isSelfShipEligible
-                  ? 'Confirm your delivery address. No shipping cost — the seller ships directly at no charge.'
+                {buyerShipping === 0
+                  ? 'Confirm your delivery address. No shipping cost — the seller covers it.'
                   : "We'll ship your card here. Confirm it's correct before we calculate your final shipping cost."}
               </p>
 
@@ -722,6 +746,19 @@ function Checkout() {
                 </div>
               )}
 
+              {/* FREE SHIPPING + PHYSICAL AUTH — explain Label B cost */}
+              {!!listing?.free_shipping && authTier === 'physical' && !addressLoading && !addressEditing && (
+                <div style={{ background: 'rgba(201,168,76,0.06)', border: '1.5px solid rgba(201,168,76,0.3)', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '20px', flexShrink: 0 }}>🚚</span>
+                  <div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 500, marginBottom: '4px' }}>Shipping Note</div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                      This listing ships free — the seller covers postage to the auth center. Because you chose Physical Auth, you pay the return leg from the auth center to your door. That cost is shown in your total above.
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* USDC BALANCE CARD — shown once address is confirmed and shipping is loading/loaded */}
               {!addressLoading && !addressEditing && (
                 <div style={{ background: hasSufficientBalance ? 'rgba(76,175,124,0.04)' : 'rgba(200,75,60,0.04)', border: `1.5px solid ${hasSufficientBalance ? 'rgba(76,175,124,0.4)' : 'rgba(200,75,60,0.4)'}`, borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' }}>
@@ -744,7 +781,7 @@ function Checkout() {
                     {[
                       { label: 'Card price', val: `$${cardPrice.toLocaleString()}` },
                       { label: authTier === 'none' ? 'Authentication' : `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: authTier === 'none' ? 'Skipped — Free' : `$${authFee}` },
-                      { label: 'Shipping & insurance', val: isSelfShipEligible ? 'Free — seller ships' : (balanceLoading ? 'Calculating…' : shippingKnown ? `~$${shippingFeeVal.toFixed(2)}` : 'Est. at checkout') },
+                      { label: 'Shipping & insurance', val: buyerShipping === 0 ? 'Free' : (balanceLoading || shippingLoading ? 'Estimating…' : shippingKnown ? `~$${buyerShipping.toFixed(2)}` : 'Estimating…') },
                       { label: shippingKnown ? 'Total to lock in escrow' : 'Subtotal (excl. shipping)', val: `$${displayTotal} USDC`, total: true },
                       { label: 'Remaining after purchase', val: usdcBalanceFormatted !== null ? `$${Math.max(0, parseFloat(usdcBalanceFormatted) - parseFloat(displayTotal)).toFixed(2)} USDC` : '—', green: true },
                     ].map((row, i) => (
@@ -808,7 +845,7 @@ function Checkout() {
                   rows: [
                     { label: 'Card price', val: `$${cardPrice.toLocaleString()}`, gold: true },
                     { label: authTier === 'none' ? 'Authentication' : `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: authTier === 'none' ? 'Skipped — Free' : `$${authFee}` },
-                    { label: 'Shipping & insurance', val: isSelfShipEligible ? 'Free — seller ships' : `~$${shippingFeeVal.toFixed(2)}` },
+                    { label: 'Shipping & insurance', val: buyerShipping === 0 ? 'Free' : (balanceLoading || shippingLoading ? 'Estimating…' : shippingKnown ? `~$${buyerShipping.toFixed(2)}` : 'Estimating…') },
                     { label: 'Total locked in escrow', val: `$${total} USDC`, gold: true, total: true },
                   ]
                 },
@@ -994,7 +1031,7 @@ function Checkout() {
               {[
                 { label: 'Card price', val: `$${cardPrice}` },
                 { label: authTier === 'none' ? 'Authentication' : `Auth fee (${authTier === 'remote' ? 'Remote Photo' : 'Physical'})`, val: authTier === 'none' ? 'Skipped — Free' : `$${authFee}` },
-                { label: 'Shipping & insurance', val: shippingKnown ? `~$${shippingFeeVal.toFixed(2)}` : 'Est. at checkout' },
+                { label: 'Shipping & insurance', val: buyerShipping === 0 ? 'Free' : (shippingLoading ? 'Estimating…' : shippingKnown ? `~$${buyerShipping.toFixed(2)}` : 'Estimating…') },
               ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '0.5px solid var(--border)' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>

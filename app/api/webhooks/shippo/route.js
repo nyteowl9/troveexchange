@@ -41,9 +41,10 @@ export async function POST(request) {
     // ── TRANSIT (first carrier scan) ──────────────────────────
     if (event === 'track_updated' && status === 'TRANSIT') {
       if (label === 'A' && order.status === 'awaiting_shipment') {
+        // Normal CH-label flow: first scan advances status to in_transit
         await supabaseAdmin
           .from('orders')
-          .update({ status: 'in_transit', shipped_at: new Date().toISOString() })
+          .update({ status: 'in_transit', shipped_at: new Date().toISOString(), carrier_scanned_at: new Date().toISOString() })
           .eq('id', order.id)
         try {
           const { emailBuyerSellerShipped } = await import('@/lib/emails')
@@ -52,6 +53,13 @@ export async function POST(request) {
         } catch (err) {
           console.error('[webhooks/shippo] emailBuyerSellerShipped failed:', err)
         }
+      } else if (label === 'A' && order.status === 'in_transit' && !order.carrier_scanned_at) {
+        // Self-ship order: already in_transit from seller self-reporting; stamp first real carrier scan.
+        // This is the proof-of-shipment signal we use for Day-3 fraud detection.
+        await supabaseAdmin
+          .from('orders')
+          .update({ carrier_scanned_at: new Date().toISOString() })
+          .eq('id', order.id)
       }
       // Label C transit — buyer shipped the return, no status change needed
       // (awaiting_return is sufficient until delivered)
@@ -256,6 +264,7 @@ async function handleAuthFailDelivery(order) {
     zip:     buyer.zip,
     country: buyer.country || 'US',
     email:   buyer.email,
+    phone:   buyer.phone  || '2085550100',
   }
   const sellerAddr = {
     name:    seller.full_name,
@@ -265,6 +274,7 @@ async function handleAuthFailDelivery(order) {
     state:   seller.state,
     zip:     seller.zip,
     country: seller.country || 'US',
+    phone:   seller.phone  || '2085550100',
   }
 
   let labelCUrl, trackingC

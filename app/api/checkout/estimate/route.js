@@ -18,7 +18,7 @@ import { shippo, AUTH_CENTER_ADDRESS } from '@/lib/shippo'
  */
 export async function POST(request) {
   try {
-    const { listing_id } = await request.json()
+    const { listing_id, auth_tier } = await request.json()
     if (!listing_id) {
       return NextResponse.json({ error: 'listing_id required' }, { status: 400 })
     }
@@ -54,13 +54,14 @@ export async function POST(request) {
     const seller  = listing.seller
     const buyerZip = buyerRes.data?.zip || '90210' // fallback for estimate
 
-    const isTier2 = listing.price > 300
+    // Use buyer's auth choice — physical auth can be selected on any price point
+    const isTier2 = auth_tier === 'physical'
 
     if (!seller?.street1 || !seller?.city || !seller?.zip) {
       // Seller address not set — return a flat estimate
       return NextResponse.json({
-        shipping_fee: isTier2 ? 15 : 8,
-        label_a_cost: isTier2 ? 12 : 0,
+        shipping_fee: isTier2 ? 15 : 0,
+        label_a_cost: isTier2 ? 12 : 8,
         estimated_days: 3,
         estimated: true,
       })
@@ -130,25 +131,24 @@ export async function POST(request) {
         estimated_days: (labelA.days || 2) + (labelB.days || 2),
       })
     } else {
-      // Tier 1: single label, seller → buyer
+      // Tier none/remote: single label seller → buyer; buyer pays $0, seller covers via payout deduction
       const buyerAddr = {
         name: 'Buyer', street1: '1 Main St', city: 'Anytown',
         state: 'CA', zip: buyerZip, country: 'US',
       }
       const label = await cheapest(sellerAddress, buyerAddr)
       return NextResponse.json({
-        shipping_fee: label.fee,
-        label_a_cost: 0,
+        shipping_fee: 0,
+        label_a_cost: label.fee,
         estimated_days: label.days,
       })
     }
   } catch (err) {
     console.error('[checkout/estimate]', err)
     // Return flat fallback rather than blocking checkout
-    // label_a_cost is 0 — can't determine tier safely here
     return NextResponse.json({
-      shipping_fee: 8,
-      label_a_cost: 0,
+      shipping_fee: auth_tier === 'physical' ? 8 : 0,
+      label_a_cost: 8,
       estimated_days: 3,
       estimated: true,
     })

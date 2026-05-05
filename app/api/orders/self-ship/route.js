@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { shippo } from '@/lib/shippo'
+
+// Map common carrier names to Shippo carrier codes for tracking registration
+function toShippoCarrier(raw) {
+  const s = raw.toLowerCase().replace(/[\s.]+/g, '')
+  if (s.startsWith('usps') || s.includes('postal')) return 'usps'
+  if (s.startsWith('ups'))                             return 'ups'
+  if (s.startsWith('fedex'))                           return 'fedex'
+  if (s.includes('dhl'))                               return 'dhl_express'
+  if (s.includes('lasership'))                         return 'lasership'
+  if (s.includes('amazon'))                            return 'amazon'
+  return s
+}
 
 // POST /api/orders/self-ship
 // Body: { order_id, carrier, tracking_number? }
@@ -20,7 +33,7 @@ export async function POST(request) {
       .from('orders')
       .select(`
         id, status, seller_id, listing_id, ship_method,
-        listing:listing_id (price, card_name),
+        listing:listing_id (price, card_name, free_shipping),
         buyer:buyer_id (email, full_name)
       `)
       .eq('id', order_id)
@@ -43,7 +56,7 @@ export async function POST(request) {
     const releaseDays = parseInt(config?.self_ship_release_days ?? 14)
     const listingPrice = parseFloat(order.listing?.price ?? 0)
 
-    if (listingPrice > maxValue) {
+    if (!order.listing?.free_shipping && listingPrice > maxValue) {
       return NextResponse.json(
         { error: `Self-ship is only available for orders up to $${maxValue.toFixed(2)}` },
         { status: 400 }
@@ -70,6 +83,15 @@ export async function POST(request) {
       .eq('id', order_id)
 
     if (updateError) throw updateError
+
+    // Register tracking with Shippo so delivery webhooks fire for self-ship orders
+    // (Shippo only webhooks labels it generated — this bridges the gap for own-label orders)
+    if (tracking && carrier) {
+      shippo.trackingStatus.create({
+        carrier: toShippoCarrier(carrier),
+        trackingNumber: tracking,
+      }).catch(err => console.error('[self-ship] Shippo tracking registration failed:', err))
+    }
 
     // Notify buyer (non-blocking) — augment order with tracking/carrier we just saved
     try {

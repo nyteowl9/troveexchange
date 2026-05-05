@@ -21,8 +21,9 @@ export async function POST(request) {
       .from('orders')
       .select(`
         *,
-        seller:seller_id (full_name, street1, street2, city, state, zip, country, email),
-        buyer:buyer_id  (full_name, street1, street2, city, state, zip, country, email)
+        listing:listing_id (free_shipping),
+        seller:seller_id (full_name, street1, street2, city, state, zip, country, email, phone),
+        buyer:buyer_id  (full_name, street1, street2, city, state, zip, country, email, phone)
       `)
       .eq('id', order_id)
       .single()
@@ -49,6 +50,7 @@ export async function POST(request) {
       zip:     order.seller.zip,
       country: order.seller.country || 'US',
       email:   order.seller.email,
+      phone:   order.seller.phone  || '2085550100',
     }
 
     let addressTo
@@ -67,6 +69,7 @@ export async function POST(request) {
         zip:     order.buyer.zip,
         country: order.buyer.country || 'US',
         email:   order.buyer.email,
+        phone:   order.buyer.phone  || '2085550100',
       }
     }
 
@@ -115,13 +118,22 @@ export async function POST(request) {
       return NextResponse.json({ error: `Label purchase failed: ${msgs || transaction.status}` }, { status: 500 })
     }
 
-    // Save label URL + tracking to order
+    const labelCost = parseFloat(parseFloat(bestRate.amount).toFixed(2))
+
+    // Save label URL + tracking to order.
+    // For free_shipping orders the buyer paid $0 shipping but the seller chose a CH label —
+    // record the actual label cost in shipping_cost for DB accounting and email breakdown.
+    const dbUpdate = {
+      label_a_url: transaction.labelUrl,
+      tracking_a:  transaction.trackingNumber,
+    }
+    if (order.listing?.free_shipping) {
+      dbUpdate.shipping_cost = labelCost
+    }
+
     await supabaseAdmin
       .from('orders')
-      .update({
-        label_a_url: transaction.labelUrl,
-        tracking_a:  transaction.trackingNumber,
-      })
+      .update(dbUpdate)
       .eq('id', order_id)
 
     return NextResponse.json({

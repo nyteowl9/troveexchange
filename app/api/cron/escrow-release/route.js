@@ -19,6 +19,7 @@ export async function GET(request) {
   // Two categories of orders ready to release:
   // 1. inspection_window orders whose 72hr buyer window has elapsed
   // 2. in_transit self-ship orders (no delivery webhook) with elapsed auto_release_at timer
+  //    → these need markDelivered first, then releaseEscrow on the NEXT cron cycle
   const [windowRes, selfShipRes] = await Promise.all([
     supabaseAdmin
       .from('orders')
@@ -27,12 +28,27 @@ export async function GET(request) {
       .lte('auto_release_at', now.toISOString()),
     supabaseAdmin
       .from('orders')
-      .select(`*, buyer:buyer_id (email, full_name), seller:seller_id (email, full_name), listing:listing_id (card_name, price)`)
+      .select('id, onchain_order_id, buyer_id, seller_id')
       .eq('status', 'in_transit')
       .in('ship_method', ['self_ship', 'self_ship_untracked'])
       .lte('auto_release_at', now.toISOString()),
   ])
-  const orders = [...(windowRes.data || []), ...(selfShipRes.data || [])]
+
+  // Self-ship orders: call markDelivered → transition to inspection_window (72hr window)
+  // releaseEscrow fires on the next cron cycle once the window elapses
+  for (const order of selfShipRes.data || []) {
+    try {
+      await callMarkDelivered(order.onchain_order_id)
+      const autoReleaseAt = new Date(now.getTime() + 72 * 60 * 60 * 1000).toISOString()
+      await supabaseAdmin
+        .from('orders')
+        .update({ status: 'inspection_window', delivered_at: now.toISOString(), auto_release_at: autoReleaseAt })
+        .eq('id', order.id)
+      results.released++ // count as "processed" for monitoring
+    } catch (err) {
+      results.errors.push({ order_id: order.id, error: `markDelivered: ${err.message}` })
+    }
+  }
 
   // Set up operator wallet — used to call releaseEscrow() on-chain
   let escrowContract = null
@@ -44,7 +60,7 @@ export async function GET(request) {
     ], operatorWallet)
   }
 
-  for (const order of orders || []) {
+  for (const order of windowRes.data || []) {
     try {
       // ── 1. On-chain release ────────────────────────────────
       // Skip if order was created before Phase 3 (no onchain_order_id stored)

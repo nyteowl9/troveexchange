@@ -79,6 +79,8 @@ export default function BuyerDashboard() {
   const [chatOrder, setChatOrder]         = useState(null)
   const [releasingId, setReleasingId]     = useState(null)
   const [releaseError, setReleaseError]   = useState(null)
+  const [confirmingReceiptId, setConfirmingReceiptId] = useState(null)
+  const [confirmReceiptError, setConfirmReceiptError] = useState({})
 
   // Review modal state
   const [reviewModal, setReviewModal]     = useState(null) // { orderId, cardName, sellerId }
@@ -199,6 +201,25 @@ export default function BuyerDashboard() {
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [user, fetchData])
+
+  const handleConfirmReceipt = async (orderId) => {
+    setConfirmingReceiptId(orderId)
+    setConfirmReceiptError(prev => ({ ...prev, [orderId]: null }))
+    try {
+      const res = await fetch('/api/orders/buyer-confirm-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to confirm receipt')
+      await fetchData()
+    } catch (err) {
+      setConfirmReceiptError(prev => ({ ...prev, [orderId]: err.message }))
+    } finally {
+      setConfirmingReceiptId(null)
+    }
+  }
 
   const handleRelease = async (order) => {
     setReleasingId(order.id)
@@ -577,7 +598,17 @@ export default function BuyerDashboard() {
               )
             })()}
             {(order.ship_method === 'self_ship' || order.ship_method === 'self_ship_untracked') && order.status === 'in_transit' && (
-              <button onClick={() => { setDisputeOrderId(order.id); setDisputeGateStep('gate'); setActiveSection('disputes') }} style={btn({ border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)' })}>Raise Dispute</button>
+              <>
+                <button
+                  onClick={() => handleConfirmReceipt(order.id)}
+                  disabled={confirmingReceiptId === order.id}
+                  style={btn({ background: 'var(--accent-green)', border: 'none', color: '#fff', fontWeight: 600, opacity: confirmingReceiptId === order.id ? 0.6 : 1, cursor: confirmingReceiptId === order.id ? 'not-allowed' : 'pointer' })}
+                >
+                  {confirmingReceiptId === order.id ? 'Confirming…' : '✓ I Received This'}
+                </button>
+                <button onClick={() => { setDisputeOrderId(order.id); setDisputeGateStep('gate'); setActiveSection('disputes') }} style={btn({ border: '1.5px solid rgba(200,75,60,0.4)', color: 'var(--accent-red)' })}>Raise Dispute</button>
+                {confirmReceiptError[order.id] && <div style={{ width: '100%', fontSize: '11px', color: 'var(--accent-red)', marginTop: '4px', fontFamily: 'DM Mono, monospace' }}>{confirmReceiptError[order.id]}</div>}
+              </>
             )}
             {order.status === 'awaiting_return' && order.label_c_url && (
               <a href={order.label_c_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>

@@ -59,6 +59,7 @@ export async function POST(request) {
       zip: order.buyer.zip,
       country: order.buyer.country || 'US',
       email: order.buyer.email,
+      phone: order.buyer.phone  || '2085550100',
     }
     const sellerAddr = {
       name: order.seller.full_name,
@@ -69,6 +70,7 @@ export async function POST(request) {
       zip: order.seller.zip,
       country: order.seller.country || 'US',
       email: order.seller.email,
+      phone: order.seller.phone  || '2085550100',
     }
 
     // Validate address completeness before calling Shippo

@@ -45,6 +45,7 @@ export async function PATCH(req) {
     'auth_default_threshold', 'auth_required_threshold',
     'shipping_handling_pct',
     'self_ship_max_value', 'self_ship_release_days',
+    'staff_alert_email',
   ]
   const updates = {}
   for (const key of allowed) {

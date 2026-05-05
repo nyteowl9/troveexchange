@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { resend, FROM } from '@/lib/resend'
-import { emailSellerStrikeApplied } from '@/lib/emails'
+import { emailSellerStrikeApplied, emailBuyerSelfShipDay7, emailBuyerSelfShipDay12, emailStaffSelfShipNoScan } from '@/lib/emails'
 
 // GET /api/cron/strike-check
 // Schedule: every hour (0 * * * *)
@@ -13,7 +13,14 @@ export async function GET(request) {
   }
 
   const now = new Date()
-  const results = { reminded: 0, struck: 0, errors: [] }
+  const results = { reminded: 0, struck: 0, self_ship_no_scan_alerted: 0, self_ship_warned: 0, errors: [] }
+
+  const { data: tierConfig } = await supabaseAdmin
+    .from('tier_config')
+    .select('staff_alert_email')
+    .eq('id', 1)
+    .single()
+  const staffAlertEmail = tierConfig?.staff_alert_email || null
 
   // ── 1. Send 24-hour reminders ─────────────────────────────────────────────
   // Orders where deadline is 20–28 hours away and reminder not yet sent
@@ -182,6 +189,87 @@ export async function GET(request) {
       results.struck++
     } catch (err) {
       results.errors.push({ order_id: order.id, phase: 'strike', error: err.message })
+    }
+  }
+
+  // ── 3. Self-ship no-carrier-scan alert (Day 3) ───────────────────────────
+  // For tracked self-ship orders that have been in_transit 3+ days with no
+  // Shippo TRANSIT webhook (carrier_scanned_at is null). Staff investigate —
+  // could be a fake tracking number or unshipped package. One-shot per order.
+  const day3Cutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+
+  const { data: noScanOrders } = await supabaseAdmin
+    .from('orders')
+    .select(`
+      id, shipped_at, auto_release_at, tracking_a, self_ship_carrier
+    `)
+    .eq('status', 'in_transit')
+    .eq('ship_method', 'self_ship')           // tracked-only — untracked has no number to verify
+    .is('carrier_scanned_at', null)
+    .is('self_ship_no_scan_warned_at', null)
+    .lte('shipped_at', day3Cutoff.toISOString())
+
+  for (const order of noScanOrders || []) {
+    try {
+      await supabaseAdmin
+        .from('orders')
+        .update({ self_ship_no_scan_warned_at: now.toISOString() })
+        .eq('id', order.id)
+      await emailStaffSelfShipNoScan({ order, staffEmail: staffAlertEmail })
+      results.self_ship_no_scan_alerted++
+    } catch (err) {
+      results.errors.push({ order_id: order.id, phase: 'no_scan_alert', error: err.message })
+    }
+  }
+
+  // ── 4. Self-ship delivery warnings ────────────────────────────────────────
+  // Find in_transit self-ship orders past Day 7 (soft check) or Day 12 (urgent)
+  // that haven't received confirmed delivery and haven't been warned yet.
+  // These fire on separate columns so both emails can send independently.
+  const day7Cutoff  = new Date(now.getTime() - 7  * 24 * 60 * 60 * 1000)
+  const day12Cutoff = new Date(now.getTime() - 12 * 24 * 60 * 60 * 1000)
+
+  const { data: selfShipOrders } = await supabaseAdmin
+    .from('orders')
+    .select(`
+      id, shipped_at, auto_release_at, tracking_a, self_ship_carrier,
+      self_ship_warned_7d_at, self_ship_warned_12d_at,
+      buyer:buyer_id (email)
+    `)
+    .eq('status', 'in_transit')
+    .in('ship_method', ['self_ship', 'self_ship_untracked'])
+    .lte('shipped_at', day7Cutoff.toISOString())
+
+  for (const order of selfShipOrders || []) {
+    const shippedAt = new Date(order.shipped_at)
+
+    // Day-12 urgent warning — runs first so it doesn't fire day-7 the same hour
+    if (!order.self_ship_warned_12d_at && shippedAt <= day12Cutoff) {
+      try {
+        await supabaseAdmin
+          .from('orders')
+          .update({ self_ship_warned_12d_at: now.toISOString() })
+          .eq('id', order.id)
+        await emailBuyerSelfShipDay12({ to: order.buyer.email, order })
+        results.self_ship_warned++
+      } catch (err) {
+        results.errors.push({ order_id: order.id, phase: 'self_ship_day12', error: err.message })
+      }
+      continue
+    }
+
+    // Day-7 soft check-in
+    if (!order.self_ship_warned_7d_at) {
+      try {
+        await supabaseAdmin
+          .from('orders')
+          .update({ self_ship_warned_7d_at: now.toISOString() })
+          .eq('id', order.id)
+        await emailBuyerSelfShipDay7({ to: order.buyer.email, order })
+        results.self_ship_warned++
+      } catch (err) {
+        results.errors.push({ order_id: order.id, phase: 'self_ship_day7', error: err.message })
+      }
     }
   }
 

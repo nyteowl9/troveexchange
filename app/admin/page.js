@@ -1466,6 +1466,19 @@ export default function AdminPanel() {
                       </div>
                     </div>
 
+                    {/* Staff alert email */}
+                    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Staff Alert Email</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.6 }}>
+                        Receives internal alerts — e.g. self-ship orders with no carrier scan after 3 days. Leave blank to disable.
+                      </div>
+                      <input type="email" value={tierConfigEdit?.staff_alert_email ?? ''}
+                        onChange={e => setTierConfigEdit(p => ({ ...p, staff_alert_email: e.target.value }))}
+                        placeholder="staff@chasehollow.com"
+                        style={{ width: '100%', maxWidth: '320px', background: 'var(--bg-3)', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
                     {/* Strike auto-clear */}
                     <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '14px' }}>
                       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Strike Auto-Clear</div>
