@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 
-const LAUNCH_DATE = new Date('2026-05-21T09:00:00-06:00')
+const LAUNCH_DATE = new Date('2026-06-01T09:00:00-06:00')
 
 const PRIZES = [
   {
@@ -92,7 +92,7 @@ function EmailForm({ id = 'hero', buttonLabel = 'Get Early Access', pill = false
           <div style={{ fontSize: '28px', marginBottom: '8px' }}>🎉</div>
           <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#C9A84C', marginBottom: '6px' }}><em>You're in the draw!</em></div>
           <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: '#B8B4AC', lineHeight: 1.6 }}>
-            Winner announced <strong style={{ color: '#F0EDE6' }}>May 21</strong> on{' '}
+            Winner announced <strong style={{ color: '#F0EDE6' }}>June 1</strong> on{' '}
             <a href="https://x.com/chasehollowtcg" target="_blank" rel="noopener noreferrer" style={{ color: '#C9A84C', textDecoration: 'none' }}>@chasehollowtcg</a>
           </div>
         </div>
@@ -459,7 +459,7 @@ export default function ComingSoon() {
               {[
                 { n: '01', title: 'Enter your email', body: 'Sign up for Chase Hollow beta access. Your email is your entry — one per person, automatically entered in every weekly draw.' },
                 { n: '02', title: 'Follow on X',       body: 'Follow @chasehollowtcg for winner announcements. Winners are contacted via X DM or email within 48hrs of each draw.' },
-                { n: '03', title: 'Win & get shipped', body: 'Weekly winners drawn until launch day — May 21. Your prize ships directly to you, sealed and insured.' },
+                { n: '03', title: 'Win & get shipped', body: 'Weekly winners drawn until launch day — June 1. Your prize ships directly to you, sealed and insured.' },
               ].map(step => (
                 <div key={step.n} className="step-card" style={{ background: '#0A0A0B', border: '1.5px solid #2A2A32', borderRadius: '14px', padding: '28px 22px' }}>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '26px', color: 'rgba(201,168,76,0.2)', fontWeight: 500, marginBottom: '14px', lineHeight: 1 }}>{step.n}</div>

@@ -70,7 +70,7 @@ Owner bypass: visit /api/preview?secret=<PREVIEW_SECRET>
   PREVIEW_SECRET env var set in Vercel
 
 To disable redirect: remove the coming-soon block in middleware.js
-Countdown target: 2026-05-21 (set in app/coming-soon/page.js LAUNCH_DATE)
+Countdown target: 2026-06-01 (set in app/coming-soon/page.js LAUNCH_DATE)
 ```
 
 ## Shared Components
@@ -286,6 +286,12 @@ physicalAuthFee      = 25     // USDC
 ✓ Two-tier auth model in UI
 ✓ Cloudflare set up (DDoS, WAF, CDN)
 ✓ Live at chasehollow.com
+
+Cloudflare WAF Skip rule (placed First):
+  Field: URI Path · Operator: starts with · Value: /api/
+  Skips: all custom rules, rate limiting, managed rules, Super Bot Fight Mode
+  Required for all /api/* routes to reach Vercel — without this rule,
+  Cloudflare returns a 403 HTML page and clients see JSON parse errors.
 ```
 
 ### Phase 2 — Backend ✅ COMPLETE (April 2026)
