@@ -17,11 +17,11 @@ export async function GET(_request, { params }) {
     const game     = listing.game || ''
     const rawUrl   = listing.photos?.[0] || null
 
-    // Pre-fetch photo as base64 so Satori never makes outbound requests
+    // Pre-fetch photo as base64 — 5s timeout so a slow Supabase URL can't hang the route
     let photoSrc = null
     if (rawUrl) {
       try {
-        const res = await fetch(rawUrl)
+        const res = await fetch(rawUrl, { signal: AbortSignal.timeout(5000) })
         if (res.ok) {
           const buf  = await res.arrayBuffer()
           const mime = res.headers.get('content-type') || 'image/jpeg'
@@ -34,19 +34,7 @@ export async function GET(_request, { params }) {
     }
 
     const nameFontSize = cardName.length > 35 ? 40 : cardName.length > 22 ? 50 : 62
-
-    // Load fonts — fail gracefully
-    let cormorantFont, dmMonoFont
-    try {
-      ;[cormorantFont, dmMonoFont] = await Promise.all([
-        fetchGoogleFont('Cormorant+Garamond:ital,wght@1,400'),
-        fetchGoogleFont('DM+Mono:wght@400'),
-      ])
-    } catch {}
-
-    const fonts = []
-    if (cormorantFont) fonts.push({ name: 'Cormorant', data: cormorantFont, weight: 400, style: 'italic' })
-    if (dmMonoFont)    fonts.push({ name: 'DMMono',    data: dmMonoFont,    weight: 400, style: 'normal' })
+    const fonts = [] // system fonts only — no external fetch risk
 
     return new ImageResponse(
       (
@@ -159,14 +147,3 @@ export async function GET(_request, { params }) {
   }
 }
 
-async function fetchGoogleFont(family) {
-  const css = await fetch(
-    `https://fonts.googleapis.com/css2?family=${family}&display=swap`,
-    { headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36' } }
-  ).then(r => r.text())
-
-  const matches = [...css.matchAll(/src: url\((.+?)\) format\('woff2'\)/g)]
-  const url = matches.at(-1)?.[1]
-  if (!url) throw new Error(`woff2 url not found for ${family}`)
-  return fetch(url).then(r => r.arrayBuffer())
-}
