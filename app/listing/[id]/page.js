@@ -36,6 +36,8 @@ export default function ListingPage() {
   const [showTierInfo, setShowTierInfo] = useState(false)
   const [tierConfig, setTierConfig] = useState(null)
   const [selfShipMaxValue, setSelfShipMaxValue] = useState(100)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareDownloading, setShareDownloading] = useState(false)
 
   useEffect(() => {
     fetch('/api/checkout/config').then(r => r.ok ? r.json() : null).then(d => d && setTierConfig(d)).catch(() => {})
@@ -203,6 +205,70 @@ export default function ListingPage() {
               🔒 Continue to Checkout
             </Link>
             <button onClick={() => setShowBuyModal(false)} style={btn({ width: '100%', padding: '12px', borderRadius: '10px' })}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* SHARE MODAL */}
+      {showShareModal && listing && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 500, backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '480px', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+            <button onClick={() => setShowShareModal(false)} style={{ position: 'absolute', top: '14px', right: '14px', width: '30px', height: '30px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '15px' }}>✕</button>
+
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '4px' }}>Share <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Listing</em></div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Save the image or post straight to X</div>
+            </div>
+
+            {/* Card image preview */}
+            <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1.5px solid var(--border)', width: '100%', aspectRatio: '1', position: 'relative' }}>
+              <img
+                src={`/api/og/listing/${id}`}
+                alt={`${listing.card_name} share image`}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+              <button
+                onClick={async () => {
+                  setShareDownloading(true)
+                  try {
+                    const res  = await fetch(`/api/og/listing/${id}`)
+                    const blob = await res.blob()
+                    const url  = URL.createObjectURL(blob)
+                    const a    = document.createElement('a')
+                    a.href     = url
+                    a.download = `${listing.card_name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-chase-hollow.png`
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                    URL.revokeObjectURL(url)
+                  } finally {
+                    setShareDownloading(false)
+                  }
+                }}
+                disabled={shareDownloading}
+                style={{ flex: 1, background: 'var(--bg-3)', border: '1.5px solid var(--border)', color: 'var(--text-primary)', padding: '13px', fontSize: '13px', fontWeight: 600, borderRadius: '10px', cursor: shareDownloading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: shareDownloading ? 0.6 : 1 }}
+              >
+                {shareDownloading ? 'Saving…' : '⬇ Save Image'}
+              </button>
+              <button
+                onClick={() => {
+                  const text = `${listing.card_name} — listed on @chasehollowtcg\nAuthenticated TCG marketplace on Base 🔒`
+                  const url  = `https://chasehollow.com/listing/${id}`
+                  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank', 'width=600,height=420')
+                }}
+                style={{ flex: 1, background: '#000', border: '1.5px solid #333', color: '#fff', padding: '13px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+              >
+                𝕏 Share to X
+              </button>
+            </div>
+
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.6 }}>
+              Sharing the listing URL on X will also auto-attach this image
+            </div>
           </div>
         </div>
       )}
@@ -467,6 +533,16 @@ export default function ListingPage() {
                   <span>{item.text}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Share listing */}
+            <div style={{ padding: '0 20px 20px' }}>
+              <button
+                onClick={() => setShowShareModal(true)}
+                style={{ width: '100%', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-muted)', padding: '11px', fontSize: '12px', fontWeight: 500, borderRadius: '10px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}
+              >
+                <span style={{ fontSize: '14px' }}>↗</span> Share Listing
+              </button>
             </div>
 
           </div>
