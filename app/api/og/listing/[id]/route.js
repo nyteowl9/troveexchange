@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
-export async function GET(request, { params }) {
+export async function GET(_request, { params }) {
   const { id } = await params
 
   const { data: listing } = await supabaseAdmin
@@ -14,7 +14,25 @@ export async function GET(request, { params }) {
 
   const cardName = listing.card_name || 'Listing'
   const game     = listing.game || ''
-  const photoUrl = listing.photos?.[0] || null
+  const rawUrl   = listing.photos?.[0] || null
+
+  // Pre-fetch the card photo server-side and embed as base64 so Satori never
+  // needs to make an outbound request (external fetches inside ImageResponse
+  // often time out or fail due to CORS/network restrictions).
+  let photoSrc = null
+  if (rawUrl) {
+    try {
+      const res = await fetch(rawUrl)
+      if (res.ok) {
+        const buf         = await res.arrayBuffer()
+        const mime        = res.headers.get('content-type') || 'image/jpeg'
+        const b64         = Buffer.from(buf).toString('base64')
+        photoSrc          = `data:${mime};base64,${b64}`
+      }
+    } catch (err) {
+      console.error('[og/listing] photo prefetch failed:', err.message)
+    }
+  }
 
   // Font size scales with card name length
   const nameFontSize = cardName.length > 35 ? 40 : cardName.length > 22 ? 50 : 62
@@ -78,9 +96,9 @@ export async function GET(request, { params }) {
           }} />
 
           {/* Card frame */}
-          {photoUrl ? (
+          {photoSrc ? (
             <img
-              src={photoUrl}
+              src={photoSrc}
               style={{
                 width: '340px', height: '476px',
                 objectFit: 'contain',
