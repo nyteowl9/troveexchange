@@ -3,15 +3,20 @@ import path from 'path'
 import sharp from 'sharp'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
-// ── Frame position ────────────────────────────────────────────────────────────
+// ── Card frame position ───────────────────────────────────────────────────────
+// Increase FRAME_TOP to move the card down; FRAME_H controls card size.
+// The card will naturally overlap the pedestal — that's correct (it sits on it).
 const FRAME_LEFT = 545
-const FRAME_TOP  = 100   // ↑ increase to move card down in the frame
+const FRAME_TOP  = 175   // ← increase to push card further down
 const FRAME_W    = 415
-const FRAME_H    = 540   // = frame bottom (~640) minus FRAME_TOP
+const FRAME_H    = 590   // keep tall so card stays the same size
 
-// ── Text column ───────────────────────────────────────────────────────────────
+// ── Text layout ───────────────────────────────────────────────────────────────
 const TEXT_X        = 45
-const TITLE_START_Y = 465  // lower = higher on image; raise this to push text up
+const TITLE_START_Y = 465
+
+// ── USDC icon size ────────────────────────────────────────────────────────────
+const USDC_ICON_SIZE = 52   // px — coin diameter
 
 export async function GET(_request, { params }) {
   const { id } = await params
@@ -35,14 +40,14 @@ export async function GET(_request, { params }) {
   const priceNum = price ? parseFloat(price) : null
   const priceStr = priceNum != null ? `$${priceNum.toLocaleString()}` : null
 
-  // ── Background template ───────────────────────────────────────────────────
+  // ── Background ────────────────────────────────────────────────────────────
   const bgPath = path.join(process.cwd(), 'public/images/share-bg.png')
   if (!fs.existsSync(bgPath)) {
-    return new Response('Background template missing — place share-bg.png in public/images/', { status: 500 })
+    return new Response('Background template missing — add share-bg.png to public/images/', { status: 500 })
   }
   const bgBuffer = fs.readFileSync(bgPath)
 
-  // ── Card photo composite ──────────────────────────────────────────────────
+  // ── Card photo ────────────────────────────────────────────────────────────
   const composites = []
   const rawUrl = photos?.[0]
   if (rawUrl) {
@@ -56,6 +61,19 @@ export async function GET(_request, { params }) {
           .toBuffer()
         composites.push({ input: cardResized, top: FRAME_TOP, left: FRAME_LEFT })
       }
+    } catch {}
+  }
+
+  // ── USDC logo ─────────────────────────────────────────────────────────────
+  let usdcLogoBuffer = null
+  const usdcPath = path.join(process.cwd(), 'public/images/usdc.svg')
+  if (fs.existsSync(usdcPath)) {
+    try {
+      const svgRaw = fs.readFileSync(usdcPath)
+      usdcLogoBuffer = await sharp(svgRaw)
+        .resize(USDC_ICON_SIZE, USDC_ICON_SIZE)
+        .png()
+        .toBuffer()
     } catch {}
   }
 
@@ -87,7 +105,7 @@ export async function GET(_request, { params }) {
     y += 32
   }
 
-  // Set name — slightly larger than game
+  // Set name
   if (cardSet) {
     parts.push(
       `<text x="${TEXT_X}" y="${y}" font-family="Arial,sans-serif" font-size="26" font-weight="600" fill="#B8B4AC">${esc(cardSet)}</text>`
@@ -97,51 +115,41 @@ export async function GET(_request, { params }) {
 
   y += 20
 
-  // "LISTING PRICE" label
+  // LISTING PRICE label
   parts.push(
     `<text x="${TEXT_X}" y="${y}" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#C9A84C" letter-spacing="3">LISTING PRICE</text>`
   )
   y += 60
 
-  // Price + USDC coin
+  // Price text + USDC logo + USDC label
   if (priceStr) {
     const priceFontSize = 66
     const usdcFontSize  = 38
-    const coinR         = 28
 
-    // Vertically center coin and USDC text on the cap-height midpoint of the price text
-    const capMid  = Math.round(priceFontSize * 0.37)   // midpoint above baseline
-    const coinCy  = y - capMid
-    const usdcY   = coinCy + Math.round(usdcFontSize * 0.37)  // baseline so text centres on coinCy
-
-    // Price text
+    // Price value
     parts.push(
       `<text x="${TEXT_X}" y="${y}" font-family="Arial,sans-serif" font-size="${priceFontSize}" font-weight="700" fill="#C9A84C">${esc(priceStr)}</text>`
     )
 
-    // Position coin to the right of price text
-    const priceW = priceStr.length * priceFontSize * 0.58
-    const coinCx = Math.round(TEXT_X + priceW + 22)
+    // Horizontal position: right of price text
+    const priceTextW = priceStr.length * priceFontSize * 0.58
+    const iconLeft   = Math.round(TEXT_X + priceTextW + 16)
 
-    // Official-style USDC coin: blue circle + C-arc + vertical bar
-    const cr  = (coinR * 0.58).toFixed(2)
-    const sw  = (coinR * 0.17).toFixed(2)
-    const sx  = (coinCx + coinR * 0.707).toFixed(2)
-    const sy  = (coinCy - coinR * 0.707).toFixed(2)
-    const ex  = sx
-    const ey  = (coinCy + coinR * 0.707).toFixed(2)
-    const vx  = coinCx.toFixed(2)
-    const vy1 = (coinCy - coinR * 0.72).toFixed(2)
-    const vy2 = (coinCy + coinR * 0.72).toFixed(2)
+    // Vertical position: icon centred on the cap-height of the price text
+    const capMid  = Math.round(priceFontSize * 0.37)
+    const iconTop = y - capMid - Math.round(USDC_ICON_SIZE / 2)
 
-    parts.push(`<circle cx="${coinCx}" cy="${coinCy}" r="${coinR}" fill="#2775CA"/>`)
-    // 270° arc (C opening to the right)
-    parts.push(`<path d="M ${sx},${sy} A ${cr},${cr} 0 1,0 ${ex},${ey}" fill="none" stroke="white" stroke-width="${sw}" stroke-linecap="round"/>`)
-    // Vertical bar
-    parts.push(`<line x1="${vx}" y1="${vy1}" x2="${vx}" y2="${vy2}" stroke="white" stroke-width="${sw}" stroke-linecap="round"/>`)
+    if (usdcLogoBuffer) {
+      // Composite the real USDC logo image (added by caller after SVG overlay)
+      // Store position info for after the SVG parts loop
+      composites.__usdcIcon = { input: usdcLogoBuffer, top: Math.max(0, iconTop), left: iconLeft }
+    }
 
-    // "USDC" label next to coin, vertically centred
-    const usdcX = coinCx + coinR + 12
+    // "USDC" text to the right of the icon
+    const usdcX  = iconLeft + USDC_ICON_SIZE + 10
+    const usdcCy = iconTop + Math.round(USDC_ICON_SIZE / 2)             // icon vertical centre
+    const usdcY  = usdcCy + Math.round(usdcFontSize * 0.37)             // text baseline at that centre
+
     parts.push(
       `<text x="${usdcX}" y="${usdcY}" font-family="Arial,sans-serif" font-size="${usdcFontSize}" font-weight="700" fill="#FFFFFF">USDC</text>`
     )
@@ -152,7 +160,14 @@ export async function GET(_request, { params }) {
   )
   composites.push({ input: svgBuffer, top: 0, left: 0 })
 
-  // ── Final composite ───────────────────────────────────────────────────────
+  // Add USDC icon on top of text (needs to be after SVG so it isn't covered)
+  if (composites.__usdcIcon) {
+    const icon = composites.__usdcIcon
+    delete composites.__usdcIcon
+    composites.push(icon)
+  }
+
+  // ── Final output ──────────────────────────────────────────────────────────
   const result = await sharp(bgBuffer)
     .resize(1080, 1080, { fit: 'fill' })
     .composite(composites)
