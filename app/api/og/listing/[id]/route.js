@@ -77,11 +77,14 @@ export async function GET(_request, { params }) {
     } catch {}
   }
 
-  // ── Title sizing ──────────────────────────────────────────────────────────
-  const titleFontSize = mainTitle.length > 30 ? 40 : mainTitle.length > 20 ? 46 : 52
-  const titleMaxChars = Math.floor(420 / (titleFontSize * 0.58))
-  const titleLines    = wrapText(mainTitle, titleMaxChars)
-  const titleLineH    = Math.round(titleFontSize * 1.28)
+  // ── Title sizing — shrink font until title fits in 3 lines ───────────────
+  let titleFontSize = mainTitle.length > 30 ? 40 : mainTitle.length > 20 ? 46 : 52
+  let titleLines    = wrapText(mainTitle, Math.floor(420 / (titleFontSize * 0.58)))
+  while (titleLines.length > 3 && titleFontSize > 24) {
+    titleFontSize -= 2
+    titleLines = wrapText(mainTitle, Math.floor(420 / (titleFontSize * 0.58)))
+  }
+  const titleLineH = Math.round(titleFontSize * 1.28)
 
   // ── SVG text overlay ──────────────────────────────────────────────────────
   let y = TITLE_START_Y
