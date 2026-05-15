@@ -3,16 +3,15 @@ import path from 'path'
 import sharp from 'sharp'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
-// ── Frame position constants ─────────────────────────────────────────────────
-// Adjust these to move/resize where the card photo lands in the gold frame.
-const FRAME_LEFT = 545   // px from left edge of 1080px canvas
-const FRAME_TOP  = 48    // px from top edge
-const FRAME_W    = 415   // width of the card photo area
-const FRAME_H    = 592   // height of the card photo area
+// ── Frame position ────────────────────────────────────────────────────────────
+const FRAME_LEFT = 545
+const FRAME_TOP  = 100   // ↑ increase to move card down in the frame
+const FRAME_W    = 415
+const FRAME_H    = 540   // = frame bottom (~640) minus FRAME_TOP
 
-// ── Text layout constants ────────────────────────────────────────────────────
-const TEXT_X        = 45   // left margin for all text
-const TITLE_START_Y = 515  // where the card name starts (below "NEW LISTING")
+// ── Text column ───────────────────────────────────────────────────────────────
+const TEXT_X        = 45
+const TITLE_START_Y = 465  // lower = higher on image; raise this to push text up
 
 export async function GET(_request, { params }) {
   const { id } = await params
@@ -29,7 +28,6 @@ export async function GET(_request, { params }) {
   const cardSet  = listing.set || ''
   const isGraded = listing_type === 'graded' && grader
 
-  // Build the main card title line
   const mainTitle = isGraded
     ? `${card_name} ${grader}${grade}`
     : card_name || 'Listing'
@@ -37,21 +35,21 @@ export async function GET(_request, { params }) {
   const priceNum = price ? parseFloat(price) : null
   const priceStr = priceNum != null ? `$${priceNum.toLocaleString()}` : null
 
-  // ── Load background template ─────────────────────────────────────────────
+  // ── Background template ───────────────────────────────────────────────────
   const bgPath = path.join(process.cwd(), 'public/images/share-bg.png')
   if (!fs.existsSync(bgPath)) {
     return new Response('Background template missing — place share-bg.png in public/images/', { status: 500 })
   }
   const bgBuffer = fs.readFileSync(bgPath)
 
-  // ── Fetch + resize card photo ─────────────────────────────────────────────
+  // ── Card photo composite ──────────────────────────────────────────────────
   const composites = []
   const rawUrl = photos?.[0]
   if (rawUrl) {
     try {
       const res = await fetch(rawUrl, { signal: AbortSignal.timeout(5000) })
       if (res.ok) {
-        const buf        = await res.arrayBuffer()
+        const buf         = await res.arrayBuffer()
         const cardResized = await sharp(Buffer.from(buf))
           .resize(FRAME_W, FRAME_H, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
           .png()
@@ -61,79 +59,100 @@ export async function GET(_request, { params }) {
     } catch {}
   }
 
-  // ── Build SVG text overlay ────────────────────────────────────────────────
-  const titleFontSize  = mainTitle.length > 30 ? 36 : mainTitle.length > 20 ? 42 : 48
-  const titleMaxChars  = Math.floor(420 / (titleFontSize * 0.58))
-  const titleLines     = wrapText(mainTitle, titleMaxChars)
-  const titleLineH     = Math.round(titleFontSize * 1.28)
+  // ── Title sizing ──────────────────────────────────────────────────────────
+  const titleFontSize = mainTitle.length > 30 ? 40 : mainTitle.length > 20 ? 46 : 52
+  const titleMaxChars = Math.floor(420 / (titleFontSize * 0.58))
+  const titleLines    = wrapText(mainTitle, titleMaxChars)
+  const titleLineH    = Math.round(titleFontSize * 1.28)
 
+  // ── SVG text overlay ──────────────────────────────────────────────────────
   let y = TITLE_START_Y
-  const textParts = []
+  const parts = []
 
-  // Card name (white bold)
+  // Card title — white bold
   for (const line of titleLines) {
-    textParts.push(
-      `<text x="${TEXT_X}" y="${y}" font-family="Arial, sans-serif" font-size="${titleFontSize}" font-weight="700" fill="#FFFFFF">${esc(line)}</text>`
+    parts.push(
+      `<text x="${TEXT_X}" y="${y}" font-family="Arial,sans-serif" font-size="${titleFontSize}" font-weight="700" fill="#FFFFFF">${esc(line)}</text>`
     )
     y += titleLineH
   }
 
-  y += 28 // gap after title
+  y += 26
 
   // Game name
   if (game) {
-    textParts.push(
-      `<text x="${TEXT_X}" y="${y}" font-family="Arial, sans-serif" font-size="22" fill="#B8B4AC">${esc(game)}</text>`
+    parts.push(
+      `<text x="${TEXT_X}" y="${y}" font-family="Arial,sans-serif" font-size="22" fill="#B8B4AC">${esc(game)}</text>`
     )
     y += 32
   }
 
-  // Set name
+  // Set name — slightly larger than game
   if (cardSet) {
-    textParts.push(
-      `<text x="${TEXT_X}" y="${y}" font-family="Arial, sans-serif" font-size="22" fill="#B8B4AC">${esc(cardSet)}</text>`
+    parts.push(
+      `<text x="${TEXT_X}" y="${y}" font-family="Arial,sans-serif" font-size="26" font-weight="600" fill="#B8B4AC">${esc(cardSet)}</text>`
     )
-    y += 32
+    y += 36
   }
 
-  y += 24 // gap before price section
+  y += 20
 
   // "LISTING PRICE" label
-  textParts.push(
-    `<text x="${TEXT_X}" y="${y}" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#C9A84C" letter-spacing="3">LISTING PRICE</text>`
+  parts.push(
+    `<text x="${TEXT_X}" y="${y}" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#C9A84C" letter-spacing="3">LISTING PRICE</text>`
   )
-  y += 58
+  y += 60
 
-  // Price value + USDC coin
+  // Price + USDC coin
   if (priceStr) {
     const priceFontSize = 66
-    textParts.push(
-      `<text x="${TEXT_X}" y="${y}" font-family="Arial, sans-serif" font-size="${priceFontSize}" font-weight="700" fill="#C9A84C">${esc(priceStr)}</text>`
+    const usdcFontSize  = 38
+    const coinR         = 28
+
+    // Vertically center coin and USDC text on the cap-height midpoint of the price text
+    const capMid  = Math.round(priceFontSize * 0.37)   // midpoint above baseline
+    const coinCy  = y - capMid
+    const usdcY   = coinCy + Math.round(usdcFontSize * 0.37)  // baseline so text centres on coinCy
+
+    // Price text
+    parts.push(
+      `<text x="${TEXT_X}" y="${y}" font-family="Arial,sans-serif" font-size="${priceFontSize}" font-weight="700" fill="#C9A84C">${esc(priceStr)}</text>`
     )
 
-    // Estimate width of price text to position USDC icon
-    const priceTextW = priceStr.length * priceFontSize * 0.58
-    const coinCx     = TEXT_X + priceTextW + 32
-    const coinCy     = y - 20
-    const coinR      = 22
+    // Position coin to the right of price text
+    const priceW = priceStr.length * priceFontSize * 0.58
+    const coinCx = Math.round(TEXT_X + priceW + 22)
 
-    // USDC coin (blue circle with $ sign)
-    textParts.push(`<circle cx="${coinCx}" cy="${coinCy}" r="${coinR}" fill="#2775CA"/>`)
-    textParts.push(
-      `<text x="${coinCx}" y="${coinCy + 8}" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#FFFFFF">$</text>`
-    )
-    // "USDC" label
-    textParts.push(
-      `<text x="${coinCx + coinR + 10}" y="${y}" font-family="Arial, sans-serif" font-size="30" font-weight="600" fill="#FFFFFF">USDC</text>`
+    // Official-style USDC coin: blue circle + C-arc + vertical bar
+    const cr  = (coinR * 0.58).toFixed(2)
+    const sw  = (coinR * 0.17).toFixed(2)
+    const sx  = (coinCx + coinR * 0.707).toFixed(2)
+    const sy  = (coinCy - coinR * 0.707).toFixed(2)
+    const ex  = sx
+    const ey  = (coinCy + coinR * 0.707).toFixed(2)
+    const vx  = coinCx.toFixed(2)
+    const vy1 = (coinCy - coinR * 0.72).toFixed(2)
+    const vy2 = (coinCy + coinR * 0.72).toFixed(2)
+
+    parts.push(`<circle cx="${coinCx}" cy="${coinCy}" r="${coinR}" fill="#2775CA"/>`)
+    // 270° arc (C opening to the right)
+    parts.push(`<path d="M ${sx},${sy} A ${cr},${cr} 0 1,0 ${ex},${ey}" fill="none" stroke="white" stroke-width="${sw}" stroke-linecap="round"/>`)
+    // Vertical bar
+    parts.push(`<line x1="${vx}" y1="${vy1}" x2="${vx}" y2="${vy2}" stroke="white" stroke-width="${sw}" stroke-linecap="round"/>`)
+
+    // "USDC" label next to coin, vertically centred
+    const usdcX = coinCx + coinR + 12
+    parts.push(
+      `<text x="${usdcX}" y="${usdcY}" font-family="Arial,sans-serif" font-size="${usdcFontSize}" font-weight="700" fill="#FFFFFF">USDC</text>`
     )
   }
 
   const svgBuffer = Buffer.from(
-    `<svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">${textParts.join('')}</svg>`
+    `<svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">${parts.join('')}</svg>`
   )
   composites.push({ input: svgBuffer, top: 0, left: 0 })
 
-  // ── Composite and return ──────────────────────────────────────────────────
+  // ── Final composite ───────────────────────────────────────────────────────
   const result = await sharp(bgBuffer)
     .resize(1080, 1080, { fit: 'fill' })
     .composite(composites)
@@ -149,9 +168,9 @@ export async function GET(_request, { params }) {
 }
 
 function wrapText(text, maxChars) {
-  const words = text.split(' ')
-  const lines = []
-  let current = ''
+  const words   = text.split(' ')
+  const lines   = []
+  let   current = ''
   for (const word of words) {
     const test = current ? `${current} ${word}` : word
     if (test.length > maxChars && current) {
