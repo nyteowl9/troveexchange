@@ -1,155 +1,174 @@
-import { ImageResponse } from 'next/og'
+import fs from 'fs'
+import path from 'path'
+import sharp from 'sharp'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+
+// ── Frame position constants ─────────────────────────────────────────────────
+// Adjust these to move/resize where the card photo lands in the gold frame.
+const FRAME_LEFT = 545   // px from left edge of 1080px canvas
+const FRAME_TOP  = 48    // px from top edge
+const FRAME_W    = 415   // width of the card photo area
+const FRAME_H    = 592   // height of the card photo area
+
+// ── Text layout constants ────────────────────────────────────────────────────
+const TEXT_X        = 45   // left margin for all text
+const TITLE_START_Y = 515  // where the card name starts (below "NEW LISTING")
 
 export async function GET(_request, { params }) {
   const { id } = await params
 
   const { data: listing } = await supabaseAdmin
     .from('listings')
-    .select('card_name, game, photos')
+    .select('card_name, game, set, photos, price, listing_type, grade, grader')
     .eq('id', id)
     .single()
 
   if (!listing) return new Response('Not found', { status: 404 })
 
-  const cardName = listing.card_name || 'Listing'
-  const game     = listing.game     || ''
-  const rawUrl   = listing.photos?.[0] || null
+  const { card_name, game, photos, price, listing_type, grade, grader } = listing
+  const cardSet  = listing.set || ''
+  const isGraded = listing_type === 'graded' && grader
 
-  // Pre-fetch photo as base64 — 5s timeout so Satori never makes outbound requests
-  let photoSrc = null
+  // Build the main card title line
+  const mainTitle = isGraded
+    ? `${card_name} ${grader}${grade}`
+    : card_name || 'Listing'
+
+  const priceNum = price ? parseFloat(price) : null
+  const priceStr = priceNum != null ? `$${priceNum.toLocaleString()}` : null
+
+  // ── Load background template ─────────────────────────────────────────────
+  const bgPath = path.join(process.cwd(), 'public/images/share-bg.png')
+  if (!fs.existsSync(bgPath)) {
+    return new Response('Background template missing — place share-bg.png in public/images/', { status: 500 })
+  }
+  const bgBuffer = fs.readFileSync(bgPath)
+
+  // ── Fetch + resize card photo ─────────────────────────────────────────────
+  const composites = []
+  const rawUrl = photos?.[0]
   if (rawUrl) {
     try {
       const res = await fetch(rawUrl, { signal: AbortSignal.timeout(5000) })
       if (res.ok) {
-        const buf  = await res.arrayBuffer()
-        const mime = res.headers.get('content-type') || 'image/jpeg'
-        photoSrc   = `data:${mime};base64,${Buffer.from(buf).toString('base64')}`
+        const buf        = await res.arrayBuffer()
+        const cardResized = await sharp(Buffer.from(buf))
+          .resize(FRAME_W, FRAME_H, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+          .png()
+          .toBuffer()
+        composites.push({ input: cardResized, top: FRAME_TOP, left: FRAME_LEFT })
       }
     } catch {}
   }
 
-  const nameFontSize = cardName.length > 35 ? 38 : cardName.length > 22 ? 48 : 58
+  // ── Build SVG text overlay ────────────────────────────────────────────────
+  const titleFontSize  = mainTitle.length > 30 ? 36 : mainTitle.length > 20 ? 42 : 48
+  const titleMaxChars  = Math.floor(420 / (titleFontSize * 0.58))
+  const titleLines     = wrapText(mainTitle, titleMaxChars)
+  const titleLineH     = Math.round(titleFontSize * 1.28)
 
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: '1080px',
-          height: '1080px',
-          background: '#0A0A0B',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingTop: '60px',
-          paddingBottom: '60px',
-          paddingLeft: '60px',
-          paddingRight: '60px',
-        }}
-      >
-        {/* Top bar */}
-        <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <span style={{ fontSize: '20px', color: '#C9A84C', marginRight: '10px' }}>◆</span>
-            <span style={{ fontSize: '20px', color: '#C9A84C', letterSpacing: '0.14em', fontWeight: 700 }}>
-              CHASE HOLLOW
-            </span>
-          </div>
-          <span style={{ fontSize: '10px', color: '#2E2E36', letterSpacing: '0.18em' }}>
-            AUTHENTICATED MARKETPLACE
-          </span>
-        </div>
+  let y = TITLE_START_Y
+  const textParts = []
 
-        {/* Card image — centred, grows to fill space */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexGrow: 1, justifyContent: 'center' }}>
-          {photoSrc ? (
-            <img
-              src={photoSrc}
-              width={340}
-              height={476}
-              style={{
-                borderRadius: '12px',
-                borderWidth: '2px',
-                borderStyle: 'solid',
-                borderColor: 'rgba(201,168,76,0.55)',
-                background: '#111114',
-                objectFit: 'contain',
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: '340px',
-                height: '476px',
-                borderRadius: '12px',
-                borderWidth: '2px',
-                borderStyle: 'solid',
-                borderColor: 'rgba(201,168,76,0.22)',
-                background: '#111114',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span style={{ fontSize: '72px', color: '#C9A84C' }}>◆</span>
-            </div>
-          )}
+  // Card name (white bold)
+  for (const line of titleLines) {
+    textParts.push(
+      `<text x="${TEXT_X}" y="${y}" font-family="Arial, sans-serif" font-size="${titleFontSize}" font-weight="700" fill="#FFFFFF">${esc(line)}</text>`
+    )
+    y += titleLineH
+  }
 
-          {/* Pedestal */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '4px' }}>
-            <div style={{ width: '400px', height: '2px', background: 'linear-gradient(to right, #0A0A0B, #C9A84C, #0A0A0B)' }} />
-            <div style={{ width: '270px', height: '1px', marginTop: '6px', background: 'linear-gradient(to right, #0A0A0B, rgba(201,168,76,0.35), #0A0A0B)' }} />
-          </div>
-        </div>
+  y += 28 // gap after title
 
-        {/* Card name + game */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '40px' }}>
-          <div
-            style={{
-              fontSize: `${nameFontSize}px`,
-              color: '#F0EDE6',
-              lineHeight: 1.15,
-              fontStyle: 'italic',
-              textAlign: 'center',
-              maxWidth: '960px',
-            }}
-          >
-            {cardName}
-          </div>
-          {game ? (
-            <div
-              style={{
-                fontSize: '13px',
-                color: '#C9A84C',
-                letterSpacing: '0.22em',
-                marginTop: '16px',
-                textTransform: 'uppercase',
-              }}
-            >
-              {game}
-            </div>
-          ) : null}
-        </div>
+  // Game name
+  if (game) {
+    textParts.push(
+      `<text x="${TEXT_X}" y="${y}" font-family="Arial, sans-serif" font-size="22" fill="#B8B4AC">${esc(game)}</text>`
+    )
+    y += 32
+  }
 
-        {/* Bottom bar */}
-        <div
-          style={{
-            display: 'flex',
-            width: '100%',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingTop: '22px',
-            borderTopWidth: '1px',
-            borderTopStyle: 'solid',
-            borderTopColor: '#1A1A22',
-          }}
-        >
-          <span style={{ fontSize: '11px', color: '#3A3A42', letterSpacing: '0.1em' }}>chasehollow.com</span>
-          <span style={{ fontSize: '11px', color: '#3A3A42', letterSpacing: '0.1em' }}>@chasehollowtcg</span>
-        </div>
-      </div>
-    ),
-    { width: 1080, height: 1080 }
+  // Set name
+  if (cardSet) {
+    textParts.push(
+      `<text x="${TEXT_X}" y="${y}" font-family="Arial, sans-serif" font-size="22" fill="#B8B4AC">${esc(cardSet)}</text>`
+    )
+    y += 32
+  }
+
+  y += 24 // gap before price section
+
+  // "LISTING PRICE" label
+  textParts.push(
+    `<text x="${TEXT_X}" y="${y}" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#C9A84C" letter-spacing="3">LISTING PRICE</text>`
   )
+  y += 58
+
+  // Price value + USDC coin
+  if (priceStr) {
+    const priceFontSize = 66
+    textParts.push(
+      `<text x="${TEXT_X}" y="${y}" font-family="Arial, sans-serif" font-size="${priceFontSize}" font-weight="700" fill="#C9A84C">${esc(priceStr)}</text>`
+    )
+
+    // Estimate width of price text to position USDC icon
+    const priceTextW = priceStr.length * priceFontSize * 0.58
+    const coinCx     = TEXT_X + priceTextW + 32
+    const coinCy     = y - 20
+    const coinR      = 22
+
+    // USDC coin (blue circle with $ sign)
+    textParts.push(`<circle cx="${coinCx}" cy="${coinCy}" r="${coinR}" fill="#2775CA"/>`)
+    textParts.push(
+      `<text x="${coinCx}" y="${coinCy + 8}" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#FFFFFF">$</text>`
+    )
+    // "USDC" label
+    textParts.push(
+      `<text x="${coinCx + coinR + 10}" y="${y}" font-family="Arial, sans-serif" font-size="30" font-weight="600" fill="#FFFFFF">USDC</text>`
+    )
+  }
+
+  const svgBuffer = Buffer.from(
+    `<svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">${textParts.join('')}</svg>`
+  )
+  composites.push({ input: svgBuffer, top: 0, left: 0 })
+
+  // ── Composite and return ──────────────────────────────────────────────────
+  const result = await sharp(bgBuffer)
+    .resize(1080, 1080, { fit: 'fill' })
+    .composite(composites)
+    .png()
+    .toBuffer()
+
+  return new Response(result, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=3600',
+    },
+  })
+}
+
+function wrapText(text, maxChars) {
+  const words = text.split(' ')
+  const lines = []
+  let current = ''
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word
+    if (test.length > maxChars && current) {
+      lines.push(current)
+      current = word
+    } else {
+      current = test
+    }
+  }
+  if (current) lines.push(current)
+  return lines
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
