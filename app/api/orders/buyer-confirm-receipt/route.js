@@ -69,6 +69,6 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, auto_release_at: autoReleaseAt })
   } catch (err) {
     console.error('[buyer-confirm-receipt]', err)
-    return NextResponse.json({ error: err.message || 'Failed to confirm receipt' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to confirm receipt' }, { status: 500 })
   }
 }

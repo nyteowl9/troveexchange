@@ -37,6 +37,6 @@ export async function PUT(request) {
     return NextResponse.json({ url: publicUrl })
   } catch (err) {
     console.error('[messages/upload]', err)
-    return NextResponse.json({ error: err.message || 'Upload failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 }

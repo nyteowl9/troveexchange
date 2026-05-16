@@ -33,7 +33,7 @@ export async function PUT(request) {
     return NextResponse.json({ url: publicUrl })
   } catch (err) {
     console.error('[auth-inspection/upload]', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error'}, { status: 500 })
   }
 }
 
@@ -175,6 +175,6 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, status: newStatus ?? order.status })
   } catch (err) {
     console.error('[auth-inspection/submit]', err)
-    return NextResponse.json({ error: err.message || 'Inspection submit failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Inspection submit failed' }, { status: 500 })
   }
 }

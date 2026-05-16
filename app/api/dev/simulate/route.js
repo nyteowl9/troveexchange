@@ -160,6 +160,6 @@ export async function POST(request) {
     }
   } catch (err) {
     console.error('[dev/simulate]', err)
-    return NextResponse.json({ error: err.message || 'Simulation failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Simulation failed' }, { status: 500 })
   }
 }

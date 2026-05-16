@@ -61,7 +61,9 @@ export async function GET(_request, { params }) {
           .toBuffer()
         composites.push({ input: cardResized, top: FRAME_TOP, left: FRAME_LEFT })
       }
-    } catch {}
+    } catch (err) {
+      console.error('[og/listing] card photo fetch/resize failed:', err)
+    }
   }
 
   // ── USDC logo ─────────────────────────────────────────────────────────────
@@ -74,7 +76,9 @@ export async function GET(_request, { params }) {
         .resize(USDC_ICON_SIZE, USDC_ICON_SIZE)
         .png()
         .toBuffer()
-    } catch {}
+    } catch (err) {
+      console.error('[og/listing] USDC logo resize failed:', err)
+    }
   }
 
   // ── Title sizing — shrink font until title fits in 3 lines ───────────────

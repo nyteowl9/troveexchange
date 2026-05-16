@@ -48,12 +48,12 @@ export async function POST(request) {
 
     if (error) {
       console.error('[profile/update]', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Internal error'}, { status: 500 })
     }
 
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[profile/update]', err)
-    return NextResponse.json({ error: err.message || 'Update failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Update failed' }, { status: 500 })
   }
 }

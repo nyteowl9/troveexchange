@@ -63,6 +63,6 @@ export async function PATCH(req) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Internal error'}, { status: 500 })
   return NextResponse.json(data)
 }

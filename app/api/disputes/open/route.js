@@ -35,7 +35,7 @@ export async function PUT(request) {
     return NextResponse.json({ url: publicUrl })
   } catch (err) {
     console.error('[disputes/open PUT]', err)
-    return NextResponse.json({ error: err.message || 'Upload failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 }
 
@@ -134,6 +134,6 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, dispute_id: dispute.id })
   } catch (err) {
     console.error('[disputes/open]', err)
-    return NextResponse.json({ error: err.message || 'Failed to open dispute' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to open dispute' }, { status: 500 })
   }
 }

@@ -65,6 +65,6 @@ export async function GET(request) {
     return NextResponse.json({ inspections: enriched })
   } catch (err) {
     console.error('[auth-inspection/completed]', err)
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

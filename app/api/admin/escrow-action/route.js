@@ -167,6 +167,6 @@ export async function POST(request) {
 
   } catch (err) {
     console.error('[admin/escrow-action]', err)
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

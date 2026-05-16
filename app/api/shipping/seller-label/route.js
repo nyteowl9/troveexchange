@@ -143,6 +143,6 @@ export async function POST(request) {
 
   } catch (err) {
     console.error('[seller-label]', err)
-    return NextResponse.json({ error: err.message || 'Label generation failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Label generation failed' }, { status: 500 })
   }
 }

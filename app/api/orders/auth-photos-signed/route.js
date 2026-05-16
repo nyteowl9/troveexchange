@@ -49,6 +49,6 @@ export async function GET(request) {
     return NextResponse.json({ inspections: enriched })
   } catch (err) {
     console.error('[auth-photos-signed]', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error'}, { status: 500 })
   }
 }

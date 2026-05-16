@@ -29,7 +29,7 @@ export async function GET() {
       .in('status', ['auth_review', 'auth_passed', 'return_received', 'in_transit'])
       .order('shipped_at', { ascending: true })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return NextResponse.json({ error: 'Internal error'}, { status: 500 })
 
     const rows = (data || []).filter(o =>
       o.status === 'auth_review' ||
@@ -98,6 +98,6 @@ export async function GET() {
     })
   } catch (err) {
     console.error('[auth-inspection/queue]', err)
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

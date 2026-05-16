@@ -27,7 +27,7 @@ export async function POST(req, { params }) {
 
   if (action === 'recalculate') {
     const { error } = await supabase.rpc('recalculate_user_tier', { p_user_id: id })
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return NextResponse.json({ error: 'Internal error'}, { status: 500 })
     const { data } = await supabase.from('users').select('seller_tier').eq('id', id).single()
     return NextResponse.json({ seller_tier: data?.seller_tier })
   }
@@ -38,7 +38,7 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Invalid tier' }, { status: 400 })
     }
     const { error } = await supabase.from('users').update({ seller_tier: tier }).eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return NextResponse.json({ error: 'Internal error'}, { status: 500 })
     return NextResponse.json({ seller_tier: tier })
   }
 

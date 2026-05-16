@@ -44,7 +44,7 @@ export async function POST(req, { params }) {
     })
     .eq('id', id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Internal error'}, { status: 500 })
 
   // Recalculate tier for the seller (if dispute was a loss)
   if (dispute.outcome === 'buyer_wins') {

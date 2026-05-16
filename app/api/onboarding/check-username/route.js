@@ -18,7 +18,9 @@ export async function GET(req) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     currentUserId = user?.id || null
-  } catch {}
+  } catch (err) {
+    console.error('[onboarding/check-username] auth lookup failed:', err)
+  }
 
   let query = supabaseAdmin
     .from('users')

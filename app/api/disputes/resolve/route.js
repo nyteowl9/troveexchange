@@ -238,7 +238,7 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, txHash })
   } catch (err) {
     console.error('[disputes/resolve]', err)
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
 

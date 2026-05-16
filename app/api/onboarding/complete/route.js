@@ -53,12 +53,12 @@ export async function POST(request) {
 
     if (error) {
       console.error('[onboarding/complete]', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Internal error'}, { status: 500 })
     }
 
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[onboarding/complete]', err)
-    return NextResponse.json({ error: err.message || 'Onboarding failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Onboarding failed' }, { status: 500 })
   }
 }

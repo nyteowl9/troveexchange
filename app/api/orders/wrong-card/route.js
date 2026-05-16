@@ -59,6 +59,6 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, new_deadline: newDeadline })
   } catch (err) {
     console.error('[orders/wrong-card]', err)
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

@@ -106,6 +106,6 @@ export async function GET(request) {
     return NextResponse.json({ disputes: enriched, stats, role: profile.role, full_name: profile.full_name })
   } catch (err) {
     console.error('[disputes/list]', err)
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

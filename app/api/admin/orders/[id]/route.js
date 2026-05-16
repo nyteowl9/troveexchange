@@ -79,6 +79,6 @@ export async function GET(request, { params }) {
     })
   } catch (err) {
     console.error('[admin/orders/id]', err)
-    return NextResponse.json({ error: err.message || 'Failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed' }, { status: 500 })
   }
 }

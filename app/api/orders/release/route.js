@@ -76,6 +76,6 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, status: 'released' })
   } catch (err) {
     console.error('[orders/release]', err)
-    return NextResponse.json({ error: err.message || 'Release failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Release failed' }, { status: 500 })
   }
 }

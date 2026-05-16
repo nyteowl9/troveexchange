@@ -12,7 +12,8 @@ export async function GET() {
       .from('early_access')
       .select('*', { count: 'exact', head: true })
     return Response.json({ count: count || 0 })
-  } catch {
+  } catch (err) {
+    console.error('[giveaway] count failed:', err)
     return Response.json({ count: 0 })
   }
 }

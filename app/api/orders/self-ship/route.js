@@ -115,6 +115,6 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, ship_method: shipMethod, auto_release_at: autoReleaseAt })
   } catch (err) {
     console.error('[self-ship]', err)
-    return NextResponse.json({ error: err.message || 'Failed to mark as self-shipped' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to mark as self-shipped' }, { status: 500 })
   }
 }

@@ -63,6 +63,6 @@ export async function POST(request) {
 
   } catch (err) {
     console.error('[upload-auth-photos]', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error'}, { status: 500 })
   }
 }

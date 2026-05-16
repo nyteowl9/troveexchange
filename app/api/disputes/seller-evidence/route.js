@@ -39,7 +39,7 @@ export async function PUT(request) {
     return NextResponse.json({ url: publicUrl })
   } catch (err) {
     console.error('[disputes/seller-evidence PUT]', err)
-    return NextResponse.json({ error: err.message || 'Upload failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 }
 
@@ -86,6 +86,6 @@ export async function POST(request) {
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[disputes/seller-evidence]', err)
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

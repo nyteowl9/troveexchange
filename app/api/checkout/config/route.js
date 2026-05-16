@@ -19,6 +19,6 @@ export async function GET() {
     .eq('id', 1)
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Internal error'}, { status: 500 })
   return NextResponse.json(data)
 }

@@ -112,11 +112,13 @@ export async function POST(request) {
           </div>
         `,
       })
-    } catch { /* non-blocking */ }
+    } catch (err) {
+      console.error('[support/submit] auto-reply email failed:', err)
+    }
 
     return NextResponse.json({ ok: true, ticketId: ticket.id })
   } catch (err) {
     console.error('[support/submit]', err)
-    return NextResponse.json({ error: err.message || 'Submission failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Submission failed' }, { status: 500 })
   }
 }

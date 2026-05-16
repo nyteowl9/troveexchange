@@ -55,6 +55,6 @@ export async function GET(request) {
     return NextResponse.json({ orders: rows, total: count })
   } catch (err) {
     console.error('[admin/orders]', err)
-    return NextResponse.json({ error: err.message || 'Failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed' }, { status: 500 })
   }
 }
