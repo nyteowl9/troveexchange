@@ -29,10 +29,12 @@ async function main() {
   // Read current values
   const currentPlatform = await escrow.platformFeeBps()
   const currentCreator  = await escrow.creatorFeeBps()
-  console.log(`\nCurrent: platformFeeBps=${currentPlatform} (${currentPlatform / 100}%) · creatorFeeBps=${currentCreator} (${currentCreator / 100}%)`)
+  const cp = Number(currentPlatform)
+  const cc = Number(currentCreator)
+  console.log(`\nCurrent: platformFeeBps=${cp} (${cp / 100}%) · creatorFeeBps=${cc} (${cc / 100}%)`)
   console.log(`Target:  platformFeeBps=${PLATFORM_FEE_BPS} (${PLATFORM_FEE_BPS / 100}%) · creatorFeeBps=${CREATOR_FEE_BPS} (${CREATOR_FEE_BPS / 100}%)`)
 
-  if (currentPlatform === BigInt(PLATFORM_FEE_BPS) && currentCreator === BigInt(CREATOR_FEE_BPS)) {
+  if (cp === PLATFORM_FEE_BPS && cc === CREATOR_FEE_BPS) {
     console.log('\n✓ Already at target values — no change needed.')
     return
   }
@@ -43,9 +45,9 @@ async function main() {
   console.log('✓ setFeeBps confirmed')
 
   // Verify
-  const newPlatform = await escrow.platformFeeBps()
-  const newCreator  = await escrow.creatorFeeBps()
-  console.log(`\nVerified: platformFeeBps=${newPlatform} · creatorFeeBps=${newCreator}`)
+  const newPlatform = Number(await escrow.platformFeeBps())
+  const newCreator  = Number(await escrow.creatorFeeBps())
+  console.log(`\nVerified: platformFeeBps=${newPlatform} (${newPlatform/100}%) · creatorFeeBps=${newCreator} (${newCreator/100}%)`)
 }
 
 main().catch(e => { console.error(e); process.exit(1) })
