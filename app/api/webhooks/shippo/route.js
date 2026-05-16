@@ -13,43 +13,56 @@ import { createShippoLabel } from '@/lib/shippo'
 // Label D: auth center → seller (Tier 2 dispute return — triggers on-chain resolveDispute)
 export async function POST(request) {
   try {
-    // ── Signature verification ────────────────────────────────────────────
-    // Without this, anyone with a tracking number can POST a fake DELIVERED
-    // event and trigger on-chain escrow release / refund.
+    // ── Authentication ─────────────────────────────────────────────────────
+    // Shippo's basic dashboard doesn't expose HMAC signing, so we use a
+    // shared secret in the URL: configure Shippo with a webhook URL like
+    //   https://chasehollow.com/api/webhooks/shippo?token=<random>
+    // and set SHIPPO_WEBHOOK_TOKEN to the same value in Vercel.
     //
-    // Mainnet:   secret is REQUIRED — hard-fail if missing or signature bad.
-    // Testnet:   if secret is set → verify; if not set → log warning + allow.
-    const secret    = process.env.SHIPPO_WEBHOOK_SECRET
-    const isTestnet = process.env.NEXT_PUBLIC_CHAIN_ID === '84532'
-    const rawBody   = await request.text()
+    // If SHIPPO_WEBHOOK_SECRET is also set, we'll prefer HMAC signature
+    // verification (for higher-tier Shippo accounts that do sign).
+    //
+    // Mainnet:   token (or HMAC) REQUIRED — hard-fail if missing/wrong.
+    // Testnet:   if neither is configured → log warning + allow.
+    const expectedToken = process.env.SHIPPO_WEBHOOK_TOKEN
+    const hmacSecret    = process.env.SHIPPO_WEBHOOK_SECRET
+    const isTestnet     = process.env.NEXT_PUBLIC_CHAIN_ID === '84532'
+    const rawBody       = await request.text()
 
-    if (!secret) {
-      if (!isTestnet) {
-        console.error('[webhooks/shippo] SHIPPO_WEBHOOK_SECRET not configured — refusing to process on mainnet')
-        return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
-      }
-      console.warn('[webhooks/shippo] No SHIPPO_WEBHOOK_SECRET — accepting unsigned request (testnet only)')
-    } else {
-      // Shippo signs the raw body with HMAC-SHA256. Try common header names.
+    let authMethod = null
+
+    if (hmacSecret) {
       const sigHeader = request.headers.get('shippo-signature')
                      || request.headers.get('x-shippo-signature')
                      || request.headers.get('shippo-api-signature')
                      || ''
-      const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex')
-
-      let valid = false
+      const expected = crypto.createHmac('sha256', hmacSecret).update(rawBody).digest('hex')
       try {
-        // Constant-time compare (both must be same length hex strings)
-        if (sigHeader && sigHeader.length === expected.length) {
-          valid = crypto.timingSafeEqual(Buffer.from(sigHeader, 'hex'), Buffer.from(expected, 'hex'))
+        if (sigHeader && sigHeader.length === expected.length &&
+            crypto.timingSafeEqual(Buffer.from(sigHeader, 'hex'), Buffer.from(expected, 'hex'))) {
+          authMethod = 'hmac'
         }
-      } catch {
-        valid = false
-      }
+      } catch { /* invalid hex */ }
+    }
 
-      if (!valid) {
-        console.error('[webhooks/shippo] Invalid signature — rejecting')
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    if (!authMethod && expectedToken) {
+      const url = new URL(request.url)
+      const providedToken = url.searchParams.get('token')
+      if (providedToken && providedToken === expectedToken) {
+        authMethod = 'token'
+      }
+    }
+
+    if (!authMethod) {
+      if (!hmacSecret && !expectedToken) {
+        if (!isTestnet) {
+          console.error('[webhooks/shippo] Neither SHIPPO_WEBHOOK_SECRET nor SHIPPO_WEBHOOK_TOKEN configured — refusing on mainnet')
+          return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
+        }
+        console.warn('[webhooks/shippo] No webhook auth configured — accepting unsigned request (testnet only)')
+      } else {
+        console.error('[webhooks/shippo] Auth check failed — rejecting')
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
     }
 
