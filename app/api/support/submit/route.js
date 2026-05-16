@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { createClient } from '@/lib/supabase-server'
+import { rateLimit } from '@/lib/rate-limit'
 
 const CATEGORY_LABELS = {
   order: 'Order Issue', payment: 'Payment / Escrow', shipping: 'Shipping / Tracking',
@@ -13,6 +14,14 @@ const CATEGORY_LABELS = {
 // Creates a row in support_tickets + initial message, then emails support@chasehollow.com.
 export async function POST(request) {
   try {
+    const rl = rateLimit(request, { route: 'support-submit', windowMs: 60_000, max: 3 })
+    if (rl.limited) {
+      return NextResponse.json(
+        { error: 'Too many submissions — please wait and try again.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+      )
+    }
+
     const { name, email, orderId, category, subject, message } = await request.json()
 
     if (!name?.trim() || !email?.trim() || !category || !subject?.trim() || !message?.trim()) {

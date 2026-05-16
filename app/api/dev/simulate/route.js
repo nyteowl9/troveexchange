@@ -24,11 +24,16 @@ import { callMarkDelivered } from '@/lib/escrow'
 //   auth pass/fail  →  /authenticator page  →  POST /api/auth-inspection/submit
 //   label B         →  /authenticator page  →  POST /api/shipping/label (label B)
 //   buyer release   →  /buyer-dashboard     →  POST /api/orders/release
-const ALLOWED = process.env.DEV_SIMULATE === 'true'
+// Belt-and-suspenders: this route MUST be impossible to enable in production.
+// Even if DEV_SIMULATE=true gets accidentally set in Vercel, the chain ID
+// check ensures it only ever runs against the testnet contract.
+const ALLOWED =
+  process.env.DEV_SIMULATE === 'true' &&
+  process.env.NEXT_PUBLIC_CHAIN_ID === '84532'   // Base Sepolia only
 
 export async function POST(request) {
   if (!ALLOWED) {
-    return NextResponse.json({ error: 'DEV_SIMULATE is not enabled. Set DEV_SIMULATE=true in .env.local' }, { status: 403 })
+    return NextResponse.json({ error: 'Simulation endpoint disabled' }, { status: 403 })
   }
 
   try {

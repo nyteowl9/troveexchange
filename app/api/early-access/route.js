@@ -1,11 +1,20 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { rateLimit } from '@/lib/rate-limit'
 
 // POST /api/early-access
 // Body: { email }
-// Public — no auth required.
+// Public — no auth required. Rate-limited per IP to prevent email spam.
 export async function POST(request) {
   try {
+    const rl = rateLimit(request, { route: 'early-access', windowMs: 60_000, max: 5 })
+    if (rl.limited) {
+      return NextResponse.json(
+        { error: 'Too many requests — please wait and try again.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+      )
+    }
+
     const { email } = await request.json()
     if (!email?.trim()) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
