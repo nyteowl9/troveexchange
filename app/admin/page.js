@@ -12,6 +12,7 @@ export default function AdminPanel() {
   const [tierConfigEdit, setTierConfigEdit] = useState(null)
   const [tierConfigSaving, setTierConfigSaving] = useState(false)
   const [tierConfigMsg, setTierConfigMsg] = useState(null)
+  const [tierConfigError, setTierConfigError] = useState(null)
 
   // Users state
   const [userSearch, setUserSearch] = useState('')
@@ -226,6 +227,7 @@ export default function AdminPanel() {
   }
 
   async function loadTierConfig() {
+    setTierConfigError(null)
     try {
       const { supabase } = await import('@/lib/supabase')
       const { data: { session } } = await supabase.auth.getSession()
@@ -234,10 +236,19 @@ export default function AdminPanel() {
       })
       if (res.ok) {
         const data = await res.json()
-        setTierConfig(data)
-        setTierConfigEdit({ ...data })
+        if (data) {
+          setTierConfig(data)
+          setTierConfigEdit({ ...data })
+        } else {
+          setTierConfigError('tier_config row not found in database (id=1)')
+        }
+      } else {
+        const body = await res.text()
+        setTierConfigError(`HTTP ${res.status}: ${body}`)
       }
-    } catch {}
+    } catch (e) {
+      setTierConfigError(e?.message || 'Unknown error')
+    }
   }
 
   async function saveTierConfig() {
@@ -1306,7 +1317,14 @@ export default function AdminPanel() {
                 </div>
 
                 {!tierConfigEdit ? (
-                  <div style={{ padding: '24px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>Loading…</div>
+                  <div style={{ padding: '24px', textAlign: 'center', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: tierConfigError ? 'var(--accent-red)' : 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                    {tierConfigError ? `Error: ${tierConfigError}` : 'Loading…'}
+                    {tierConfigError && (
+                      <button onClick={loadTierConfig} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', padding: '6px 16px', borderRadius: '6px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                        Retry
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
