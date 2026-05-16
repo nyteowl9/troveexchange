@@ -13,6 +13,7 @@ export default function AdminPanel() {
   const [tierConfigSaving, setTierConfigSaving] = useState(false)
   const [tierConfigMsg, setTierConfigMsg] = useState(null)
   const [tierConfigError, setTierConfigError] = useState(null)
+  const [safeModal, setSafeModal] = useState(null)   // { title, contractFn, params, note }
 
   // Users state
   const [userSearch, setUserSearch] = useState('')
@@ -510,6 +511,48 @@ export default function AdminPanel() {
 
 
       {/* ACTION MODAL */}
+      {/* ── Safe Instruction Modal ─────────────────────────────── */}
+      {safeModal && (
+        <div onClick={() => setSafeModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 600, backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-2)', border: '1.5px solid #3C7DC8', borderRadius: '16px', padding: '28px', maxWidth: '560px', width: '100%', position: 'relative' }}>
+            <button onClick={() => setSafeModal(null)} style={{ position: 'absolute', top: '14px', right: '14px', width: '28px', height: '28px', borderRadius: '50%', border: '1.5px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px' }}>✕</button>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '0.14em', color: '#3C7DC8', marginBottom: '8px' }}>SAFE MULTISIG · CONTRACT CHANGE</div>
+            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '16px' }}>{safeModal.title}</div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Contract Address</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--teal)', background: 'var(--bg-3)', padding: '8px 10px', borderRadius: '8px', wordBreak: 'break-all' }}>
+                  {process.env.NEXT_PUBLIC_ESCROW_ADDRESS || '(NEXT_PUBLIC_ESCROW_ADDRESS not set)'}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Function</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-primary)', background: 'var(--bg-3)', padding: '8px 10px', borderRadius: '8px' }}>{safeModal.contractFn}</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Parameters</div>
+                <pre style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--gold)', background: 'var(--bg-3)', padding: '8px 10px', borderRadius: '8px', margin: 0, whiteSpace: 'pre-wrap' }}>{safeModal.params}</pre>
+              </div>
+              {safeModal.note && (
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>{safeModal.note}</div>
+              )}
+              <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '12px' }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Steps</div>
+                <ol style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.9, margin: 0, paddingLeft: '18px' }}>
+                  <li>Go to <a href="https://app.safe.global" target="_blank" rel="noreferrer" style={{ color: 'var(--teal)' }}>app.safe.global</a> → load your Safe wallet</li>
+                  <li>New Transaction → <strong style={{ color: 'var(--text-primary)' }}>Transaction Builder</strong></li>
+                  <li>Paste the contract address above</li>
+                  <li>Paste this ABI fragment: <code style={{ background: 'var(--bg-3)', padding: '1px 4px', borderRadius: '3px' }}>{'[{"inputs":[...],"name":"' + safeModal.contractFn.split('(')[0] + '","type":"function"}]'}</code></li>
+                  <li>Select the function, fill in the parameters above</li>
+                  <li>Submit — requires 3-of-4 Safe signatures</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showActionModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 500, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: `1.5px solid ${showActionModal.color || 'var(--border)'}`, borderRadius: '16px', padding: '28px', maxWidth: '480px', width: '100%' }}>
@@ -1261,51 +1304,111 @@ export default function AdminPanel() {
               <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Platform <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Settings</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Core parameters · Changes logged on-chain where applicable</div>
 
+              {/* ── Fee Structure ─────────────────────────────────────── */}
               {[
                 {
-                  title: 'Fee Structure', items: [
-                    { label: 'Platform fee', val: '3%', editable: false, note: 'Smart contract state variable · Change via 3-of-4 Safe multisig transaction · ~$0.04 gas · No redeployment needed' },
-                    { label: 'Auth fee — Remote Photo', val: tierConfig ? `$${tierConfig.remote_auth_fee} per card` : '—', editable: true },
-                    { label: 'Auth fee — Physical', val: tierConfig ? `$${tierConfig.physical_auth_fee} per card` : '—', editable: true },
-                    { label: 'Shipping — Tier 1 (buyer pays)', val: 'Live Shippo rate + handling%', editable: false, note: 'Seller ships direct to buyer · 1 label · buyer pays' },
-                    { label: 'Shipping — Tier 2 (split)', val: 'Live Shippo rate + handling%', editable: false, note: 'Label A: seller → auth center (deducted from seller payout) · Label B: auth center → buyer (buyer pays)' },
-                    { label: 'Dispute bond', val: '0.5% of order value', editable: false, note: 'Smart contract state variable · Change via 3-of-4 Safe multisig transaction' },
-                  ]
+                  title: 'Fee Structure',
+                  items: [
+                    {
+                      label: 'Platform fee',
+                      val: '3% (300 bps) on-chain — target 3.5%',
+                      badge: 'contract',
+                      safe: {
+                        title: 'Set Platform Fee to 3.5%',
+                        contractFn: 'setFeeBps(uint256 platformFeeBps, uint256 creatorFeeBps)',
+                        params: 'platformFeeBps = 350   // 3.5%\ncreatorFeeBps  =  50   // 0.5% creator affiliate',
+                        note: 'Sets both fees in one call. Contract currently deployed at 300 bps (3%). Call setFeeBps(350, 50) to match business design.',
+                      },
+                    },
+                    {
+                      label: 'Creator affiliate fee',
+                      val: '0.5% (50 bps) on-chain',
+                      badge: 'contract',
+                      safe: {
+                        title: 'Change Creator Fee',
+                        contractFn: 'setFeeBps(uint256 platformFeeBps, uint256 creatorFeeBps)',
+                        params: 'platformFeeBps = 350\ncreatorFeeBps  =  50   // change this value',
+                        note: 'Must be called together with platformFeeBps. Max 200 bps (2%).',
+                      },
+                    },
+                    { label: 'Auth fee — Remote Photo', val: tierConfig ? `$${tierConfig.remote_auth_fee} per card` : '—', badge: 'supabase', note: 'Edit in Seller Tier Thresholds ↓' },
+                    { label: 'Auth fee — Physical', val: tierConfig ? `$${tierConfig.physical_auth_fee} per card` : '—', badge: 'supabase', note: 'Edit in Seller Tier Thresholds ↓' },
+                    { label: 'Shipping — CH label (handling %)', val: tierConfig ? `${tierConfig.shipping_handling_pct ?? 15}% markup on Shippo rate` : '—', badge: 'supabase', note: 'Edit in Seller Tier Thresholds ↓' },
+                    { label: 'Shipping — Tier 1 logic', val: '1 label · seller → buyer · buyer pays', badge: 'code', note: 'Hardcoded label chain · no config needed' },
+                    { label: 'Shipping — Tier 2 logic', val: '2 labels · seller → auth → buyer · buyer pays label B', badge: 'code', note: 'Hardcoded label chain · no config needed' },
+                  ],
                 },
                 {
-                  title: 'Timing Parameters', items: [
-                    { label: 'Seller ship deadline', val: '48 hours', editable: false, note: 'Smart contract state variable · Change via 3-of-4 Safe multisig transaction' },
-                    { label: 'Buyer inspection window', val: '72 hours after delivery', editable: false, note: 'Smart contract state variable · Change via 3-of-4 Safe multisig transaction' },
-                    { label: 'Bond return window', val: '5–7 business days', editable: true },
-                    { label: 'Dispute response deadline', val: '48 hours for seller', editable: true },
-                  ]
+                  title: 'Timing Parameters',
+                  items: [
+                    {
+                      label: 'Seller ship deadline',
+                      val: '48 hours',
+                      badge: 'contract',
+                      safe: {
+                        title: 'Change Seller Ship Deadline',
+                        contractFn: 'setSellerShipDeadline(uint256 seconds)',
+                        params: '172800   // 48 hours (48 × 3600)',
+                        note: 'Maximum 168 hours (7 days). Deadline resets if seller misses it — cron applies strike.',
+                      },
+                    },
+                    {
+                      label: 'Buyer inspection window',
+                      val: '72 hours after delivery',
+                      badge: 'contract',
+                      safe: {
+                        title: 'Change Buyer Inspection Window',
+                        contractFn: 'setBuyerInspectWindow(uint256 seconds)',
+                        params: '259200   // 72 hours (72 × 3600)',
+                        note: 'Maximum 168 hours. Auto-release cron runs hourly and releases when this window expires.',
+                      },
+                    },
+                    { label: 'Bond return window', val: '5–7 business days (operational SLA)', badge: 'policy', note: 'Bond-return cron runs daily after settlement · not a configurable parameter' },
+                    { label: 'Dispute response deadline', val: '48 hours for seller', badge: 'policy', note: 'Hardcoded in dispute flow · seller loses dispute if no response in 48hrs' },
+                  ],
                 },
                 {
-                  title: 'Bond Tiers', items: [
-                    { label: 'New seller (0–9 sales)', val: '4%', editable: true },
-                    { label: 'Trusted (10–99 sales)', val: '3%', editable: true },
-                    { label: 'Pro (100–499 sales)', val: '2%', editable: true },
-                    { label: 'Elite (500–2,499 sales)', val: '1%', editable: true },
-                    { label: 'Legend (2,500+ sales)', val: '1%', editable: true },
-                  ]
+                  title: 'Seller Bond Rates',
+                  items: [
+                    { label: 'New seller (0–9 sales)', val: '4% + $20 floor', badge: 'code', note: 'BOND_BPS.new = 400 in lib/escrow.js · requires code change' },
+                    { label: 'Trusted (10–99 sales)', val: '3% + $20 floor', badge: 'code', note: 'BOND_BPS.trusted = 300 in lib/escrow.js · requires code change' },
+                    { label: 'Pro (100–499 sales)', val: '2% + $20 floor', badge: 'code', note: 'BOND_BPS.pro = 200 in lib/escrow.js · requires code change' },
+                    { label: 'Elite (500–2,499 sales)', val: '1% + $20 floor', badge: 'code', note: 'BOND_BPS.elite = 100 in lib/escrow.js · requires code change' },
+                    { label: 'Legend (2,500+ sales)', val: '1% + $20 floor', badge: 'code', note: 'BOND_BPS.legend = 100 in lib/escrow.js · requires code change' },
+                    { label: 'Bond floor (min USDC)', val: tierConfig ? `$${tierConfig.min_bond_floor_usd}` : '—', badge: 'supabase', note: 'Edit in Seller Tier Thresholds ↓' },
+                    { label: 'Strike 2 penalty', val: 'Bond jumps to 4% regardless of tier', badge: 'code', note: 'Hardcoded in strike-check cron and dispute routes' },
+                  ],
                 },
               ].map((section, si) => (
                 <div key={si} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
                   <div style={{ padding: '12px 18px', borderBottom: '0.5px solid var(--border)', fontFamily: 'DM Mono, monospace', fontSize: '10px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.06em' }}>{section.title}</div>
-                  {section.items.map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '12px 18px', borderBottom: i < section.items.length - 1 ? '0.5px solid var(--border)' : 'none', flexWrap: 'wrap', gap: '8px' }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '2px' }}>{item.label}</div>
-                        {item.note && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>{item.note}</div>}
+                  {section.items.map((item, i) => {
+                    const badgeStyle = {
+                      contract: { bg: 'rgba(60,125,200,0.12)', color: '#3C7DC8', text: 'CONTRACT' },
+                      supabase: { bg: 'rgba(77,198,124,0.12)', color: '#4CAF7C', text: 'SUPABASE' },
+                      code:     { bg: 'rgba(108,106,102,0.15)', color: '#6C6A66', text: 'CODE CONST' },
+                      policy:   { bg: 'rgba(201,168,76,0.1)', color: '#C9A84C', text: 'POLICY' },
+                    }[item.badge] || {}
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', padding: '12px 18px', borderBottom: i < section.items.length - 1 ? '0.5px solid var(--border)' : 'none', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ flex: 1, minWidth: '200px' }}>
+                          <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '2px' }}>{item.label}</div>
+                          {item.note && <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)' }}>{item.note}</div>}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', color: 'var(--gold)' }}>{item.val}</div>
+                          {badgeStyle.text && (
+                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', padding: '2px 6px', borderRadius: '4px', background: badgeStyle.bg, color: badgeStyle.color }}>{badgeStyle.text}</span>
+                          )}
+                          {item.safe && (
+                            <button onClick={() => setSafeModal(item.safe)} style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--teal)', padding: '4px 10px', border: '1px solid var(--teal-border)', borderRadius: '6px', background: 'var(--teal-bg)', cursor: 'pointer' }}>
+                              Edit via Safe →
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '18px', color: 'var(--gold)', fontWeight: 300, marginRight: '12px' }}>{item.val}</div>
-                      {item.editable ? (
-                        <button style={btn({ fontSize: '10px', padding: '5px 10px' })}>Edit</button>
-                      ) : (
-                        <a href="https://app.safe.global" target="_blank" rel="noreferrer" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--teal)', padding: '4px 8px', border: '1px solid var(--teal-border)', borderRadius: '6px', textDecoration: 'none', background: 'var(--teal-bg)' }}>Edit via Safe →</a>
-                      )}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ))}
 
