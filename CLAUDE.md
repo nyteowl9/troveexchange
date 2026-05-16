@@ -264,8 +264,9 @@ Guardian address: 0x14721FdF...78B3 (set in contract)
 
 ## Smart Contract Parameters (Changeable — No Redeployment)
 ```solidity
-platformFeeBps       = 350    // 3.5% · cap 1000
-creatorFeeBps        = 50     // 0.5% · cap 200
+platformFeeBps       = 300    // 3% to Chase Hollow · fees are additive · cap 1000
+creatorFeeBps        = 50     // 0.5% to creator wallet (or Safe if no creator) · cap 200
+// Total deducted from seller = 300 + 50 = 350 bps = 3.5%
 sellerShipDeadline   = 48hrs  // cap 168hrs
 buyerInspectWindow   = 72hrs  // cap 168hrs
 maxListingValue      = 50000  // USDC
