@@ -1298,15 +1298,36 @@ function SellerDashboard() {
         )
       })()}
 
-      {selfShipModal && (
+      {selfShipModal && (() => {
+        const ssPrice    = parseFloat(selfShipModal.price) || 0
+        const ssFee      = ssPrice * 0.035
+        const ssPayout   = ssPrice - ssFee
+        return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '440px' }}>
             <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '6px' }}>Self-Ship Order</div>
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '18px', lineHeight: 1.6 }}>
               {selfShipModal.cardName} · {fmtUSD(selfShipModal.price)}
             </div>
+
+            {/* Payout breakdown */}
+            <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '4px 14px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '0.5px solid var(--border)' }}>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sale price</span>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>${ssPrice.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '0.5px solid var(--border)' }}>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Platform fee (3.5%)</span>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>−${ssFee.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0 6px' }}>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Your payout</span>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '16px', fontWeight: 700, color: 'var(--accent-green)' }}>${ssPayout.toFixed(2)}</span>
+              </div>
+            </div>
+
             <div style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '8px', padding: '10px 12px', marginBottom: '18px', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-              Pack and ship the card using any carrier of your choice. You are responsible for getting it to the buyer safely and on time. Once you confirm below, the buyer's funds will be held until delivery is confirmed or the protected window expires.
+              Pack and ship the card using any carrier of your choice. <strong style={{ color: 'var(--text-primary)' }}>Shipping label is your own expense</strong> — paid separately when you buy postage. Once you confirm below, the buyer's funds will be held until delivery is confirmed or the protected window expires.
             </div>
             <div style={{ marginBottom: '12px' }}>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Carrier (optional)</div>
@@ -1353,7 +1374,8 @@ function SellerDashboard() {
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* AUTH PHOTO UPLOAD MODAL */}
       {photoOrderId && (
