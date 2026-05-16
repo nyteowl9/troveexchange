@@ -66,6 +66,16 @@ export async function POST(request) {
 
       if (chainError) {
         console.error(`[admin/escrow-action] owner=${user.id} order=${order_id} action=${action} CHAIN FAILED — NOT updating DB. err=${chainError}`)
+        await supabaseAdmin.from('admin_audit_log').insert({
+          actor_id:    user.id,
+          action:      `escrow.${action}`,
+          target_type: 'order',
+          target_id:   order_id,
+          payload:     { onchain_order_id: order.onchain_order_id, status_before: order.status },
+          tx_hash:     txHash,
+          chain_error: chainError,
+          ok:          false,
+        })
         return NextResponse.json({ ok: false, txHash, chainError, dbUpdated: false }, { status: 502 })
       }
 
@@ -96,6 +106,16 @@ export async function POST(request) {
 
       if (chainError) {
         console.error(`[admin/escrow-action] owner=${user.id} order=${order_id} action=${action} CHAIN FAILED — NOT updating DB. err=${chainError}`)
+        await supabaseAdmin.from('admin_audit_log').insert({
+          actor_id:    user.id,
+          action:      `escrow.${action}`,
+          target_type: 'order',
+          target_id:   order_id,
+          payload:     { onchain_order_id: order.onchain_order_id, status_before: order.status },
+          tx_hash:     txHash,
+          chain_error: chainError,
+          ok:          false,
+        })
         return NextResponse.json({ ok: false, txHash, chainError, dbUpdated: false }, { status: 502 })
       }
 
@@ -124,7 +144,17 @@ export async function POST(request) {
       }
     }
 
-    // Log the manual action to console (no audit table yet)
+    // Persistent audit log
+    await supabaseAdmin.from('admin_audit_log').insert({
+      actor_id:    user.id,
+      action:      `escrow.${action}`,
+      target_type: 'order',
+      target_id:   order_id,
+      payload:     { onchain_order_id: order.onchain_order_id, status_before: order.status },
+      tx_hash:     txHash,
+      ok:          true,
+    })
+
     console.log(`[admin/escrow-action] owner=${user.id} order=${order_id} action=${action} txHash=${txHash}`)
 
     return NextResponse.json({

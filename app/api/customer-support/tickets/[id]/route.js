@@ -17,17 +17,19 @@ export async function GET(request, { params }) {
   const auth = await requireStaff()
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
+  const { id } = await params
+
   const { data: ticket, error } = await supabaseAdmin
     .from('support_tickets')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
   if (error || !ticket) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const { data: messages } = await supabaseAdmin
     .from('support_ticket_messages')
     .select('id, from_staff, staff_id, message, created_at')
-    .eq('ticket_id', params.id)
+    .eq('ticket_id', id)
     .order('created_at', { ascending: true })
 
   let linkedUser = null
@@ -44,11 +46,12 @@ export async function GET(request, { params }) {
 }
 
 // PATCH /api/customer-support/tickets/[id]
-// Body: { status } — update ticket status.
+// Body: { status, priority } — update ticket fields.
 export async function PATCH(request, { params }) {
   const auth = await requireStaff()
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
+  const { id } = await params
   const { status, priority } = await request.json()
   const updates = { updated_at: new Date().toISOString() }
   if (status)   updates.status   = status
@@ -57,8 +60,11 @@ export async function PATCH(request, { params }) {
   const { error } = await supabaseAdmin
     .from('support_tickets')
     .update(updates)
-    .eq('id', params.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    .eq('id', id)
+  if (error) {
+    console.error('[customer-support/PATCH]', error)
+    return NextResponse.json({ error: 'Failed to update ticket' }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true })
 }
@@ -69,29 +75,33 @@ export async function POST(request, { params }) {
   const auth = await requireStaff()
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
+  const { id } = await params
   const { message } = await request.json()
   if (!message?.trim()) return NextResponse.json({ error: 'message required' }, { status: 400 })
 
   // Insert message
   const { error: msgErr } = await supabaseAdmin.from('support_ticket_messages').insert({
-    ticket_id:  params.id,
+    ticket_id:  id,
     from_staff: true,
     staff_id:   auth.user.id,
     message:    message.trim(),
   })
-  if (msgErr) return NextResponse.json({ error: msgErr.message }, { status: 500 })
+  if (msgErr) {
+    console.error('[customer-support/POST]', msgErr)
+    return NextResponse.json({ error: 'Failed to post message' }, { status: 500 })
+  }
 
   // Update ticket timestamp + set to pending (waiting on user)
   await supabaseAdmin.from('support_tickets')
     .update({ updated_at: new Date().toISOString(), status: 'pending' })
-    .eq('id', params.id)
+    .eq('id', id)
 
   // Email the user
   try {
     const { data: ticket } = await supabaseAdmin
       .from('support_tickets')
       .select('email, name, subject')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (ticket?.email) {

@@ -8,8 +8,12 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url)
   const secret = searchParams.get('secret')
   const clear  = searchParams.get('clear') === '1'
-  const bypassSecret = process.env.PREVIEW_SECRET || 'ch-preview-2026'
+  const bypassSecret = process.env.PREVIEW_SECRET
 
+  // Hard-fail if not configured — never fall back to a hardcoded literal.
+  if (!bypassSecret) {
+    return NextResponse.json({ error: 'Preview not configured' }, { status: 500 })
+  }
   if (secret !== bypassSecret) {
     return NextResponse.json({ error: 'Invalid secret' }, { status: 401 })
   }

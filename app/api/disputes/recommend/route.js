@@ -5,6 +5,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 // POST /api/disputes/recommend
 // Body: { dispute_id, recommendation: 'buyer_wins' | 'seller_wins', notes }
 // Auth: staff or owner only.
+// Writes recommendation + notes to `staff_notes` (separate from `notes` which
+// is reserved for owner override_reason during resolve).
 export async function POST(request) {
   try {
     const supabase = await createClient()
@@ -24,9 +26,22 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid recommendation' }, { status: 400 })
     }
 
+    // Verify dispute exists and is still open — staff cannot overwrite
+    // an already-resolved dispute's audit trail.
+    const { data: dispute } = await supabaseAdmin
+      .from('disputes')
+      .select('id, outcome')
+      .eq('id', dispute_id)
+      .single()
+
+    if (!dispute) return NextResponse.json({ error: 'Dispute not found' }, { status: 404 })
+    if (dispute.outcome && dispute.outcome !== 'pending') {
+      return NextResponse.json({ error: `Dispute already resolved (outcome: ${dispute.outcome})` }, { status: 409 })
+    }
+
     const { error } = await supabaseAdmin
       .from('disputes')
-      .update({ staff_recommendation: recommendation, notes: notes || null })
+      .update({ staff_recommendation: recommendation, staff_notes: notes || null })
       .eq('id', dispute_id)
 
     if (error) throw error
