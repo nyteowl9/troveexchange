@@ -54,15 +54,25 @@ export async function POST(request) {
         const wallet  = new ethers.Wallet(operatorKey, provider)
         const escrow  = new ethers.Contract(escrowAddr, ['function releaseEscrow(bytes32 orderId) external'], wallet)
         const tx = await escrow.releaseEscrow(order.onchain_order_id, { gasLimit: 300000n })
-        await tx.wait()
-        txHash = tx.hash
+        const receipt = await tx.wait()
+        if (!receipt || receipt.status === 0) {
+          chainError = `Transaction reverted (tx: ${tx.hash})`
+        } else {
+          txHash = tx.hash
+        }
       } catch (err) {
         chainError = err.message
+      }
+
+      if (chainError) {
+        console.error(`[admin/escrow-action] owner=${user.id} order=${order_id} action=${action} CHAIN FAILED — NOT updating DB. err=${chainError}`)
+        return NextResponse.json({ ok: false, txHash, chainError, dbUpdated: false }, { status: 502 })
       }
 
       await supabaseAdmin.from('orders').update({
         status:      'released',
         released_at: new Date().toISOString(),
+        release_tx_hash: txHash,
       }).eq('id', order_id)
 
     } else {
@@ -74,10 +84,19 @@ export async function POST(request) {
         const wallet = new ethers.Wallet(resolverKey, provider)
         const escrow = new ethers.Contract(escrowAddr, ['function resolveDispute(bytes32,bool) external'], wallet)
         const tx = await escrow.resolveDispute(order.onchain_order_id, buyerWins, { gasLimit: 300000n })
-        await tx.wait()
-        txHash = tx.hash
+        const receipt = await tx.wait()
+        if (!receipt || receipt.status === 0) {
+          chainError = `Transaction reverted (tx: ${tx.hash})`
+        } else {
+          txHash = tx.hash
+        }
       } catch (err) {
         chainError = err.message
+      }
+
+      if (chainError) {
+        console.error(`[admin/escrow-action] owner=${user.id} order=${order_id} action=${action} CHAIN FAILED — NOT updating DB. err=${chainError}`)
+        return NextResponse.json({ ok: false, txHash, chainError, dbUpdated: false }, { status: 502 })
       }
 
       const newOrderStatus = buyerWins ? 'refunded' : 'released'
@@ -106,14 +125,14 @@ export async function POST(request) {
     }
 
     // Log the manual action to console (no audit table yet)
-    console.log(`[admin/escrow-action] owner=${user.id} order=${order_id} action=${action} txHash=${txHash} chainError=${chainError}`)
+    console.log(`[admin/escrow-action] owner=${user.id} order=${order_id} action=${action} txHash=${txHash}`)
 
     return NextResponse.json({
       ok:          true,
       txHash,
-      chainError:  chainError || null,
+      chainError:  null,
       dbUpdated:   true,
-      warning:     chainError ? 'DB was updated but on-chain call failed — check chain state manually' : null,
+      warning:     null,
     })
 
   } catch (err) {

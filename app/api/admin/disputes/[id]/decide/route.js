@@ -63,7 +63,16 @@ export async function POST(req, { params }) {
 
   // ── Seller wins — execute on-chain immediately ─────────────
   if (decision === 'seller_wins') {
-    const txHash = await callResolveDispute(order.onchain_order_id, false)
+    let txHash
+    try {
+      txHash = await callResolveDispute(order.onchain_order_id, false)
+    } catch (err) {
+      console.error('[admin/disputes/decide] callResolveDispute failed:', err.message, 'order:', order.id)
+      return NextResponse.json({
+        error: 'On-chain resolveDispute failed — dispute not committed. Please retry.',
+        chainError: err.message,
+      }, { status: 502 })
+    }
 
     await supabase
       .from('disputes')
@@ -142,7 +151,10 @@ async function callResolveDispute(onchainOrderId, buyerWins) {
   )
 
   const tx = await escrow.resolveDispute(onchainOrderId, buyerWins)
-  await tx.wait()
+  const receipt = await tx.wait()
+  if (!receipt || receipt.status === 0) {
+    throw new Error(`resolveDispute reverted (tx: ${tx.hash})`)
+  }
   return tx.hash
 }
 
