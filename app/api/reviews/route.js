@@ -1,19 +1,21 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { createClient } from '@/lib/supabase-server'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 // POST /api/reviews
-// Body: { order_id, reviewer_id, rating, comment }
-// reviewer_role is derived server-side from the order (buyer or seller)
+// Body: { order_id, rating, comment }
+// reviewer_id is derived from the authenticated session (NEVER trusted from the body).
+// reviewer_role is derived server-side from the order (buyer or seller).
 export async function POST(req) {
   try {
-    const { order_id, reviewer_id, rating, comment } = await req.json()
+    // ── Auth ──────────────────────────────────────────────────────────────
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    if (!order_id || !reviewer_id || !rating) {
+    const { order_id, rating, comment } = await req.json()
+
+    if (!order_id || !rating) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
     if (rating < 1 || rating > 5 || !Number.isInteger(Number(rating))) {
@@ -21,7 +23,7 @@ export async function POST(req) {
     }
 
     // Load the order — must be released (settled)
-    const { data: order, error: orderErr } = await supabase
+    const { data: order, error: orderErr } = await supabaseAdmin
       .from('orders')
       .select('id, buyer_id, seller_id, status')
       .eq('id', order_id)
@@ -34,7 +36,8 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Reviews only allowed after order is settled' }, { status: 403 })
     }
 
-    // Determine reviewer_role and reviewed_id
+    // Determine reviewer_role and reviewed_id from authenticated user
+    const reviewer_id = user.id
     let reviewer_role, reviewed_id
     if (reviewer_id === order.buyer_id) {
       reviewer_role = 'buyer'
@@ -47,7 +50,7 @@ export async function POST(req) {
     }
 
     // Insert review (unique constraint handles duplicate prevention)
-    const { error: insertErr } = await supabase
+    const { error: insertErr } = await supabaseAdmin
       .from('reviews')
       .insert({ order_id, reviewer_id, reviewed_id, reviewer_role, rating: Number(rating), comment: comment?.trim() || null })
 
@@ -55,11 +58,12 @@ export async function POST(req) {
       if (insertErr.code === '23505') {
         return NextResponse.json({ error: 'Review already submitted for this order' }, { status: 409 })
       }
-      throw insertErr
+      console.error('[reviews] insert error:', insertErr)
+      return NextResponse.json({ error: 'Failed to submit review' }, { status: 500 })
     }
 
     // Recalculate scores for the reviewed user
-    await supabase.rpc('update_review_scores', { p_user_id: reviewed_id })
+    await supabaseAdmin.rpc('update_review_scores', { p_user_id: reviewed_id })
 
     return NextResponse.json({ success: true })
   } catch (err) {

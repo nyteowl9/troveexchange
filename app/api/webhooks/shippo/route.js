@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ethers } from 'ethers'
 import { callMarkDelivered } from '@/lib/escrow'
@@ -12,7 +13,39 @@ import { createShippoLabel } from '@/lib/shippo'
 // Label D: auth center → seller (Tier 2 dispute return — triggers on-chain resolveDispute)
 export async function POST(request) {
   try {
-    const body = await request.json()
+    // ── Signature verification ────────────────────────────────────────────
+    // Without this, anyone with a tracking number can POST a fake DELIVERED
+    // event and trigger on-chain escrow release / refund.
+    const secret = process.env.SHIPPO_WEBHOOK_SECRET
+    if (!secret) {
+      console.error('[webhooks/shippo] SHIPPO_WEBHOOK_SECRET not configured')
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
+    }
+
+    const rawBody  = await request.text()
+    // Shippo signs the raw body with HMAC-SHA256. Try common header names.
+    const sigHeader = request.headers.get('shippo-signature')
+                   || request.headers.get('x-shippo-signature')
+                   || request.headers.get('shippo-api-signature')
+                   || ''
+    const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex')
+
+    let valid = false
+    try {
+      // Constant-time compare (both must be same length hex strings)
+      if (sigHeader && sigHeader.length === expected.length) {
+        valid = crypto.timingSafeEqual(Buffer.from(sigHeader, 'hex'), Buffer.from(expected, 'hex'))
+      }
+    } catch {
+      valid = false
+    }
+
+    if (!valid) {
+      console.error('[webhooks/shippo] Invalid signature — rejecting')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
+
+    const body = JSON.parse(rawBody)
     const { event, data } = body
 
     if (!event || !data) {

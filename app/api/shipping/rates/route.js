@@ -5,11 +5,17 @@ import { createClient } from '@/lib/supabase-server'
 // POST /api/shipping/rates
 // Body: { order_id, buyer_zip }
 // Returns: { rate, rate_with_handling, service, estimated_days }
+//
+// Auth required — caller must be the buyer or seller of the order.
+// Otherwise an unauthenticated caller could spam Shippo (paid API).
 export async function POST(request) {
   try {
-    const { order_id, buyer_zip } = await request.json()
-
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { order_id, buyer_zip } = await request.json()
+    if (!order_id) return NextResponse.json({ error: 'order_id required' }, { status: 400 })
 
     // Get order + seller address
     const { data: order, error: orderError } = await supabase
@@ -24,6 +30,11 @@ export async function POST(request) {
 
     if (orderError || !order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    // Caller must be a party to this order
+    if (order.buyer_id !== user.id && order.seller_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const seller = order.seller
