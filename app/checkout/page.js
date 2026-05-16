@@ -968,7 +968,12 @@ function Checkout() {
                 <div style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 500 }}>Transaction Hash · On-Chain Confirmation</div>
                 <div style={{ color: 'var(--accent-green)', wordBreak: 'break-all', lineHeight: 1.6 }}>{txHash || '—'}</div>
                 {txHash && (
-                  <a href={`https://sepolia.basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--teal)', fontSize: '10px', marginTop: '4px', display: 'block', textDecoration: 'none' }}>View on Basescan →</a>
+                  <a
+                    href={`https://${process.env.NEXT_PUBLIC_CHAIN_ID === '84532' ? 'sepolia.' : ''}basescan.org/tx/${txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--teal)', fontSize: '10px', marginTop: '4px', display: 'block', textDecoration: 'none' }}
+                  >View on Basescan →</a>
                 )}
               </div>
 

@@ -50,7 +50,8 @@ export async function POST(request) {
 
     const autoReleaseAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
 
-    await supabaseAdmin
+    // Status guard prevents two concurrent confirms from both setting delivered_at
+    const { data: updated } = await supabaseAdmin
       .from('orders')
       .update({
         status:          'inspection_window',
@@ -58,6 +59,12 @@ export async function POST(request) {
         auto_release_at: autoReleaseAt,
       })
       .eq('id', order.id)
+      .eq('status', 'in_transit')
+      .select('id')
+
+    if (!updated?.length) {
+      return NextResponse.json({ error: 'Order status changed (already confirmed)' }, { status: 409 })
+    }
 
     return NextResponse.json({ ok: true, auto_release_at: autoReleaseAt })
   } catch (err) {

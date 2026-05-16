@@ -515,8 +515,8 @@ function SellerDashboard() {
       }
 
       const { error } = await supabase.from('listings').insert(payload)
-      console.log('[listing insert]', { error, payload })
       if (error) {
+        console.error('[listing insert]', error)
         setSubmitError(`Failed to publish listing: ${error.message} (code: ${error.code})`)
       } else {
         photos.forEach(p => URL.revokeObjectURL(p.preview))

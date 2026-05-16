@@ -41,6 +41,7 @@ export default function AdminPanel() {
   const [strikeRemoving, setStrikeRemoving]   = useState({})
   const [recentOrders, setRecentOrders]       = useState([])
   const [overviewStats, setOverviewStats]     = useState(null)
+  const [dashboardStats, setDashboardStats]   = useState(null)   // escrow + financials aggregates
 
   // Escrow action modal
   const [escrowModal, setEscrowModal]         = useState(null)  // order object
@@ -54,6 +55,7 @@ export default function AdminPanel() {
     if (activeSection === 'orders') fetchAdminOrders()
     if (activeSection === 'strikes') loadStrikes()
     if (activeSection === 'flagged-buyers') loadFlaggedBuyers()
+    if ((activeSection === 'financials' || activeSection === 'escrow') && !dashboardStats) loadOverview()
   }, [activeSection])
 
   useEffect(() => {
@@ -135,13 +137,21 @@ export default function AdminPanel() {
     try {
       const session = await getSession()
       const headers = { Authorization: `Bearer ${session?.access_token}` }
-      const res = await fetch(`/api/admin/orders?limit=6&offset=0`, { headers })
-      if (res.ok) {
-        const data = await res.json()
+      const [ordersRes, statsRes] = await Promise.all([
+        fetch(`/api/admin/orders?limit=6&offset=0`, { headers }),
+        fetch(`/api/admin/dashboard-stats`, { headers }),
+      ])
+      if (ordersRes.ok) {
+        const data = await ordersRes.json()
         setRecentOrders((data.orders || []).slice(0, 6))
         setOverviewStats({ totalOrders: data.total || 0 })
       }
-    } catch {}
+      if (statsRes.ok) {
+        setDashboardStats(await statsRes.json())
+      }
+    } catch (err) {
+      console.error('[admin/loadOverview]', err)
+    }
   }
 
   async function fetchAdminOrders(q = adminOrdersSearch, status = adminOrdersStatus) {
@@ -735,10 +745,9 @@ export default function AdminPanel() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)' }}>Platform <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Overview</em></div>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Thursday, April 7 2025 · All systems operational</div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button style={btn()}>Export Report</button>
                   <button onClick={() => setActiveSection('decisions')} style={{ background: pendingDecisions.length > 0 ? 'var(--accent-red)' : 'var(--teal)', border: 'none', color: '#fff', padding: '8px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {pendingDecisions.length > 0 && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fff', display: 'inline-block', animation: 'pulse 2s ease infinite' }} />}
                     {pendingDecisions.length} Decision{pendingDecisions.length !== 1 ? 's' : ''} Pending
@@ -809,7 +818,7 @@ export default function AdminPanel() {
                     { label: 'Smart Contract (Base)', status: 'Operational', green: true },
                     { label: 'Supabase Database', status: 'Operational', green: true },
                     { label: 'Authentication Center', status: 'Operational', green: true },
-                    { label: 'EasyPost Webhooks', status: 'Operational', green: true },
+                    { label: 'Shippo Webhooks', status: 'Operational', green: true },
                     { label: 'Resend Email', status: 'Operational', green: true },
                     { label: 'Vercel Edge Network', status: 'Operational', green: true },
                   ].map((item, i) => (
@@ -824,19 +833,23 @@ export default function AdminPanel() {
                 </div>
                 <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Escrow Summary</div>
-                  {[
-                    { label: 'Total in escrow', val: '$312,400', gold: true },
-                    { label: 'Active orders', val: '47' },
-                    { label: 'Avg order value', val: '$6,647' },
-                    { label: 'Largest order', val: '$36,000 · PSA 10 Charizard' },
-                    { label: 'Auto-releasing today', val: '3 orders · $11,200', amber: true },
-                    { label: 'Dispute holds', val: '$13,000 · 2 disputes' },
-                  ].map((item, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: i < 5 ? '0.5px solid var(--border)' : 'none' }}>
-                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{item.label}</span>
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: item.gold ? 'var(--gold)' : item.amber ? 'var(--accent-amber)' : 'var(--text-primary)', fontWeight: 500 }}>{item.val}</span>
-                    </div>
-                  ))}
+                  {(() => {
+                    const e = dashboardStats?.escrow
+                    const items = e ? [
+                      { label: 'Total in escrow',     val: fmtUSD(e.totalLocked), gold: true },
+                      { label: 'Active orders',       val: e.activeCount.toString() },
+                      { label: 'Avg order value',     val: e.activeCount > 0 ? fmtUSD(e.avgOrder) : '—' },
+                      { label: 'Largest order',       val: e.largest ? `${fmtUSD(e.largest.amount)} · ${e.largest.cardName}` : '—' },
+                      { label: 'Auto-releasing today', val: e.releasingToday.count > 0 ? `${e.releasingToday.count} order${e.releasingToday.count !== 1 ? 's' : ''} · ${fmtUSD(e.releasingToday.amount)}` : '—', amber: e.releasingToday.count > 0 },
+                      { label: 'Dispute holds',       val: e.disputeHolds.count > 0 ? `${fmtUSD(e.disputeHolds.amount)} · ${e.disputeHolds.count} dispute${e.disputeHolds.count !== 1 ? 's' : ''}` : '—' },
+                    ] : Array(6).fill({ label: 'Loading…', val: '—' })
+                    return items.map((item, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: i < 5 ? '0.5px solid var(--border)' : 'none' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{item.label}</span>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: item.gold ? 'var(--gold)' : item.amber ? 'var(--accent-amber)' : 'var(--text-primary)', fontWeight: 500 }}>{item.val}</span>
+                      </div>
+                    ))
+                  })()}
                 </div>
               </div>
             </div>
@@ -877,7 +890,6 @@ export default function AdminPanel() {
                         <button onClick={() => setShowActionModal({ title: 'Approve Appeal — Remove Strike', description: 'The strike will be removed from the seller\'s account.', note: d.staffNote, action: 'Confirm — Remove Strike', actionColor: 'var(--accent-green)', color: 'rgba(76,175,124,0.4)' })} style={{ background: 'transparent', border: '1.5px solid rgba(76,175,124,0.4)', color: 'var(--accent-green)', padding: '10px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Approve Appeal — Remove Strike</button>
                       </>
                     )}
-                    <button style={btn({ padding: '10px 16px' })}>View Full Case</button>
                   </div>
                 </div>
               ))}
@@ -1238,20 +1250,25 @@ export default function AdminPanel() {
               <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Platform <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Financials</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>All figures in USDC · On-chain · Base network</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
-                {[
-                  { label: 'All-Time Volume', val: '$2.84M', sub: 'Gross card sales', color: 'var(--gold)' },
-                  { label: 'All-Time Fees (3%)', val: '$85,200', sub: 'Platform revenue', color: 'var(--accent-green)' },
-                  { label: 'April Volume', val: '$284,000', sub: '$8,520 platform fee', color: 'var(--text-primary)' },
-                  { label: 'Treasury Balance', val: '$142,400', sub: 'Accumulated fees · Safe multisig', color: 'var(--gold)' },
-                  { label: 'Bonds In-Flight', val: '$18,240', sub: 'Across all active orders', color: 'var(--accent-amber)' },
-                  { label: 'Auth Revenue', val: '$4,200', sub: '168 auth fees · $25 each', color: 'var(--accent-green)' },
-                ].map((m, i) => (
-                  <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: m.color }}>{m.val}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
-                  </div>
-                ))}
+                {(() => {
+                  const f = dashboardStats?.financials
+                  const monthLabel = new Date().toLocaleDateString('en-US', { month: 'long' })
+                  const items = f ? [
+                    { label: 'All-Time Volume',  val: fmtUSD(f.allTimeVolume),  sub: 'Gross released sales', color: 'var(--gold)' },
+                    { label: 'All-Time Fees',     val: fmtUSD(f.allTimeFees),    sub: 'Platform revenue (3%)', color: 'var(--accent-green)' },
+                    { label: `${monthLabel} Volume`, val: fmtUSD(f.monthVolume), sub: `${fmtUSD(f.monthFees)} platform fee`, color: 'var(--text-primary)' },
+                    { label: 'Treasury Balance', val: '—', sub: 'Query Safe wallet directly', color: 'var(--text-muted)' },
+                    { label: 'Bonds In-Flight',  val: fmtUSD(f.bondsInFlight),  sub: 'Across all active orders', color: 'var(--accent-amber)' },
+                    { label: 'Auth Revenue',      val: fmtUSD(f.allTimeAuthFees), sub: `${f.authFeeCount} auth fee${f.authFeeCount !== 1 ? 's' : ''}`, color: 'var(--accent-green)' },
+                  ] : Array(6).fill({ label: 'Loading…', val: '—', sub: '', color: 'var(--text-muted)' })
+                  return items.map((m, i) => (
+                    <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: m.color }}>{m.val}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'DM Mono, monospace' }}>{m.sub}</div>
+                    </div>
+                  ))
+                })()}
               </div>
               <div style={{ background: 'rgba(232,168,56,0.06)', border: '1px solid rgba(232,168,56,0.25)', borderRadius: '10px', padding: '14px 18px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 ⚠ Treasury withdrawals require 3-of-4 multisig approval (W1 + W2 + W3). Any withdrawal over $50,000 requires 4-of-4. Use <a href="https://app.safe.global" target="_blank" rel="noreferrer" style={{ color: 'var(--teal)', textDecoration: 'none' }}>Safe Dashboard →</a> to initiate.
@@ -1265,17 +1282,23 @@ export default function AdminPanel() {
               <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '30px', fontWeight: 300, color: 'var(--text-primary)', marginBottom: '6px' }}>Escrow <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>Monitor</em></div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>Live view of all USDC locked in smart contract · Base network</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[
-                  { label: 'Total Locked', val: '$312,400', color: 'var(--gold)' },
-                  { label: 'Auto-Releasing Today', val: '$11,200', color: 'var(--accent-amber)' },
-                  { label: 'Dispute Holds', val: '$13,000', color: 'var(--accent-red)' },
-                  { label: 'Contract Address', val: '0x8f2a...d91c', color: 'var(--teal)' },
-                ].map((m, i) => (
-                  <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
-                    <div style={{ fontFamily: i === 3 ? 'DM Mono, monospace' : 'Playfair Display, serif', fontSize: i === 3 ? '13px' : '26px', fontWeight: 300, color: m.color }}>{m.val}</div>
-                  </div>
-                ))}
+                {(() => {
+                  const e = dashboardStats?.escrow
+                  const addr = dashboardStats?.contract?.address
+                  const shortAddr = addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : '—'
+                  const items = [
+                    { label: 'Total Locked',          val: e ? fmtUSD(e.totalLocked) : '—',                    color: 'var(--gold)' },
+                    { label: 'Auto-Releasing Today',  val: e ? fmtUSD(e.releasingToday.amount) : '—',          color: 'var(--accent-amber)' },
+                    { label: 'Dispute Holds',         val: e ? fmtUSD(e.disputeHolds.amount) : '—',            color: 'var(--accent-red)' },
+                    { label: 'Contract Address',      val: shortAddr,                                          color: 'var(--teal)' },
+                  ]
+                  return items.map((m, i) => (
+                    <div key={i} style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>{m.label}</div>
+                      <div style={{ fontFamily: i === 3 ? 'DM Mono, monospace' : 'Playfair Display, serif', fontSize: i === 3 ? '13px' : '26px', fontWeight: 300, color: m.color }} title={i === 3 ? addr : undefined}>{m.val}</div>
+                    </div>
+                  ))
+                })()}
               </div>
               <div style={{ background: 'var(--bg-2)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '18px' }}>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 500 }}>Emergency Controls — Owner Only</div>
@@ -1288,12 +1311,19 @@ export default function AdminPanel() {
                     { label: 'Force Release — Single Order', color: 'var(--accent-amber)' },
                     { label: 'Emergency Pause All', color: 'var(--accent-red)' },
                   ].map((action, i) => (
-                    <button key={i} style={{ background: 'transparent', border: `1.5px solid ${action.color}`, color: action.color, padding: '9px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: 0.7 }}>
+                    <button
+                      key={i}
+                      disabled
+                      title="Not executable from this UI — use Safe Transaction Builder at app.safe.global with the contract address shown above."
+                      style={{ background: 'transparent', border: `1.5px solid ${action.color}`, color: action.color, padding: '9px 16px', fontSize: '12px', fontWeight: 600, borderRadius: '8px', cursor: 'not-allowed', fontFamily: 'DM Sans, sans-serif', opacity: 0.4 }}
+                    >
                       🔒 {action.label}
                     </button>
                   ))}
                 </div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginTop: '10px' }}>Emergency actions require 4-of-4 Safe multisig · Use Safe dashboard at app.safe.global</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-muted)', marginTop: '10px' }}>
+                  Emergency actions are NOT executable from this admin UI. Use Safe Transaction Builder at <a href="https://app.safe.global" target="_blank" rel="noreferrer" style={{ color: 'var(--teal)' }}>app.safe.global</a> with the contract address above. Requires 4-of-4 Safe multisig signatures.
+                </div>
               </div>
             </div>
           )}

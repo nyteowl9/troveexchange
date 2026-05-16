@@ -77,12 +77,18 @@ export async function POST(request) {
     if (tracking) updates.tracking_a = tracking
     if (carrier)  updates.self_ship_carrier = carrier.trim()
 
-    const { error: updateError } = await supabaseAdmin
+    // Status guard prevents two concurrent self-ship POSTs from both succeeding
+    const { data: updated, error: updateError } = await supabaseAdmin
       .from('orders')
       .update(updates)
       .eq('id', order_id)
+      .eq('status', 'awaiting_shipment')
+      .select('id')
 
     if (updateError) throw updateError
+    if (!updated?.length) {
+      return NextResponse.json({ error: 'Order is not awaiting shipment (already shipped or status changed)' }, { status: 409 })
+    }
 
     // Register tracking with Shippo so delivery webhooks fire for self-ship orders
     // (Shippo only webhooks labels it generated — this bridges the gap for own-label orders)
