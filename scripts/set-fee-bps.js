@@ -10,6 +10,7 @@
  */
 
 const { ethers } = require('hardhat')
+require('dotenv').config({ path: '.env.local' })   // escrow address lives here
 
 // ── Target values ─────────────────────────────────────────────────────────────
 const PLATFORM_FEE_BPS = 350   // 3.5%  (was 300 = 3% at deploy time)
