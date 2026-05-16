@@ -33,6 +33,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Claude Code local settings — may contain inline secrets in saved
+# permission rules (e.g. curl commands with API keys). Never commit.
+.claude/settings.json
+.claude/settings.local.json
+
 # vercel
 .vercel
 
