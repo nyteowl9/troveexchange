@@ -41,12 +41,24 @@ export async function POST(request) {
     if (tx_hash) updateFields.release_tx_hash = tx_hash
 
     // Status guard prevents double-execution if two clicks race
-    const { data: updated, error: updateErr } = await supabaseAdmin
+    let { data: updated, error: updateErr } = await supabaseAdmin
       .from('orders')
       .update(updateFields)
       .eq('id', order_id)
       .eq('status', 'inspection_window')
       .select('id')
+
+    // If release_tx_hash column doesn't exist yet, retry without it
+    if (updateErr?.code === '42703') {
+      console.warn('[orders/release] release_tx_hash column missing — applying migration 040 is required. Retrying without tx_hash.')
+      delete updateFields.release_tx_hash
+      ;({ data: updated, error: updateErr } = await supabaseAdmin
+        .from('orders')
+        .update(updateFields)
+        .eq('id', order_id)
+        .eq('status', 'inspection_window')
+        .select('id'))
+    }
 
     if (updateErr || !updated?.length) {
       console.error('[orders/release] DB update failed or status raced:', updateErr, 'order:', order_id)
