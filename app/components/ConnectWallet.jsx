@@ -64,15 +64,31 @@ export function useWalletConnection() {
 }
 
 export default function ConnectWalletButton({ label = 'Connect Wallet', style = {} }) {
-  const { ready, walletAddress, connect } = useWalletConnection()
+  const { ready, walletAddress, wallet, connect } = useWalletConnection()
   if (!ready) return null
-  if (walletAddress) {
+
+  const liveAddress = wallet?.address?.toLowerCase() ?? null
+  const isLive = liveAddress && liveAddress === walletAddress?.toLowerCase()
+
+  // Saved + live wallet matches → connected chip (no click needed)
+  if (walletAddress && isLive) {
     return (
       <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-secondary)', padding: '8px 14px', border: '1px solid var(--border)', borderRadius: '8px', ...style }}>
         {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
       </div>
     )
   }
+
+  // Saved but disconnected → Reconnect button
+  if (walletAddress) {
+    return (
+      <button onClick={connect} title={`Saved: ${walletAddress.slice(0,6)}...${walletAddress.slice(-4)} (not currently connected)`} style={{ background: 'var(--accent-amber)', color: '#0A0A0B', border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '13px', fontWeight: 700, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', ...style }}>
+        Reconnect Wallet
+      </button>
+    )
+  }
+
+  // No saved wallet → Connect
   return (
     <button onClick={connect} style={{ background: 'var(--gold)', color: '#0A0A0B', border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '13px', fontWeight: 700, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', ...style }}>
       {label}
