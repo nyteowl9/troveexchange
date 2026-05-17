@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { callReleaseEscrow } from '@/lib/escrow'
 
 // POST /api/orders/release
-// Body: { order_id }
-// Auth: buyer of this order only
+// Body: { order_id, tx_hash? }
+// Auth: buyer of this order only.
 // Order must be in inspection_window status.
-// Calls on-chain releaseEscrow FIRST, then marks DB released only on success.
+//
+// The on-chain releaseEscrow() call is made client-side BEFORE this route is
+// invoked — contract requires msg.sender == order.buyer, so the buyer's wallet
+// signs it. This route just updates the DB record (status + tx_hash) and
+// fires emails. Status guard prevents double-execution.
 export async function POST(request) {
   try {
-    const { order_id } = await request.json()
+    const { order_id, tx_hash } = await request.json()
     if (!order_id) return NextResponse.json({ error: 'order_id required' }, { status: 400 })
 
     const supabase = await createClient()
@@ -33,30 +36,21 @@ export async function POST(request) {
       return NextResponse.json({ error: `Order is not in inspection_window (got: ${order.status})` }, { status: 400 })
     }
 
-    // ── Call chain FIRST — abort if it fails to avoid stranding seller funds ──
-    const chainResult = await callReleaseEscrow(order.onchain_order_id)
-    if (!chainResult.ok) {
-      console.error('[orders/release] on-chain release failed:', chainResult.error, 'order:', order_id)
-      return NextResponse.json({
-        error: 'On-chain release failed — please try again. If this persists, contact support.',
-        chainError: chainResult.error,
-      }, { status: 502 })
-    }
-
     const now = new Date().toISOString()
+    const updateFields = { status: 'released', released_at: now }
+    if (tx_hash) updateFields.release_tx_hash = tx_hash
 
     // Status guard prevents double-execution if two clicks race
     const { data: updated, error: updateErr } = await supabaseAdmin
       .from('orders')
-      .update({ status: 'released', released_at: now, release_tx_hash: chainResult.txHash })
+      .update(updateFields)
       .eq('id', order_id)
       .eq('status', 'inspection_window')
       .select('id')
 
     if (updateErr || !updated?.length) {
-      // Chain succeeded but DB update lost the race — chain is source of truth.
-      // Log loudly so we can reconcile manually.
-      console.error('[orders/release] CRITICAL: chain released but DB not updated. order:', order_id, 'tx:', chainResult.txHash, 'err:', updateErr)
+      console.error('[orders/release] DB update failed or status raced:', updateErr, 'order:', order_id)
+      return NextResponse.json({ error: 'Failed to update order status' }, { status: 500 })
     }
 
     // Increment seller total_sales + recalculate tier

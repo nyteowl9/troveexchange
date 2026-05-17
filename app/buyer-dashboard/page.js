@@ -252,7 +252,11 @@ export default function BuyerDashboard() {
         const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
         const tx = await escrowContract.releaseEscrow(order.onchain_order_id, { gasLimit: 300000n })
         setReleaseStatus('Submitted — waiting for block confirmation…')
-        await tx.wait()
+        const receipt = await tx.wait()
+        if (!receipt || receipt.status === 0) {
+          throw new Error(`On-chain release reverted (tx: ${tx.hash}). The order may not be in Delivered state on-chain — markDelivered may have failed.`)
+        }
+        order.__releaseTxHash = tx.hash
         setReleaseStatus(null)
       }
 
@@ -260,7 +264,7 @@ export default function BuyerDashboard() {
       const res = await fetch('/api/orders/release', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: order.id }),
+        body: JSON.stringify({ order_id: order.id, tx_hash: order.__releaseTxHash }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Release failed')
