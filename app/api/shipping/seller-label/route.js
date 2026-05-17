@@ -17,7 +17,7 @@ export async function POST(request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // Fetch order — only the seller of this order may call this
-    const { data: order } = await supabaseAdmin
+    const { data: order, error: orderErr } = await supabaseAdmin
       .from('orders')
       .select(`
         *,
@@ -28,7 +28,14 @@ export async function POST(request) {
       .eq('id', order_id)
       .single()
 
-    if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    if (orderErr) {
+      console.error('[seller-label] order query error:', orderErr, 'order_id:', order_id)
+      return NextResponse.json({ error: 'Order lookup failed', _debug: orderErr.message }, { status: 500 })
+    }
+    if (!order) {
+      console.error('[seller-label] order not found:', order_id)
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
     if (order.seller_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     if (order.status !== 'awaiting_shipment') {
       return NextResponse.json({ error: 'Order is not awaiting shipment' }, { status: 400 })
