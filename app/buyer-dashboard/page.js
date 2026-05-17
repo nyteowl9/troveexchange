@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import ChatModal from '@/app/components/ChatModal'
-import { useWalletConnection } from '@/app/components/ConnectWallet'
+import ConnectWalletButton, { useWalletConnection } from '@/app/components/ConnectWallet'
 import { useWallets } from '@privy-io/react-auth'
 import { ethers } from 'ethers'
 import { ESCROW_ADDRESS, ESCROW_ABI } from '@/lib/escrow'
@@ -774,7 +774,8 @@ export default function BuyerDashboard() {
                   <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '32px', fontWeight: 300, color: 'var(--text-primary)' }}>Welcome back, <em style={{ fontStyle: 'italic', color: 'var(--gold)' }}>{profile?.username || 'Collector'}</em></div>
                   <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{tierLabel} Buyer · {historyOrders.length} purchases · Member since {fmtDate(profile?.joined_at)}</div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <ConnectWalletButton />
                   <Link href="/marketplace" style={{ textDecoration: 'none' }}>
                     <button style={btn({ background: 'var(--teal)', border: 'none', color: theme === 'dark' ? '#0A0A0B' : '#fff', fontWeight: 600 })}>Browse Marketplace</button>
                   </Link>
