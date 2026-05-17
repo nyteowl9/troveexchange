@@ -24,6 +24,8 @@ export async function POST(request) {
       .from('orders')
       .select(`
         id, status, buyer_id, seller_id, onchain_order_id,
+        platform_fee, creator_fee, shipping_cost,
+        listing:listing_id (price),
         buyer:buyer_id (email, full_name),
         seller:seller_id (email, full_name)
       `)
@@ -68,11 +70,26 @@ export async function POST(request) {
     // Increment seller total_sales + recalculate tier
     await supabaseAdmin.rpc('increment_total_sales_and_recalculate', { p_user_id: order.seller_id })
 
+    // Compute the payout breakdown for the seller email (matches cron)
+    const listingPrice = parseFloat(order.listing?.price || 0)
+    const platformFee  = parseFloat(order.platform_fee   || 0)
+    const creatorFee   = parseFloat(order.creator_fee    || 0)
+    const totalFee     = platformFee + creatorFee || listingPrice * 0.035
+    const shippingCost = parseFloat(order.shipping_cost  || 0)
+    const sellerPayout = Math.max(0, listingPrice - totalFee - shippingCost)
+
     // Emails (non-blocking)
     try {
       const { emailBuyerFundsReleased, emailSellerFundsReleased, emailReviewRequest } = await import('@/lib/emails')
       if (order.buyer?.email)  await emailBuyerFundsReleased({ to: order.buyer.email, order })
-      if (order.seller?.email) await emailSellerFundsReleased({ to: order.seller.email, order })
+      if (order.seller?.email) await emailSellerFundsReleased({
+        to: order.seller.email,
+        order,
+        listingPrice,
+        platformFee: totalFee,
+        shippingCost,
+        sellerPayout,
+      })
       emailReviewRequest({ to: order.buyer.email,  order, role: 'buyer'  }).catch(() => {})
       emailReviewRequest({ to: order.seller.email, order, role: 'seller' }).catch(() => {})
     } catch (err) {
