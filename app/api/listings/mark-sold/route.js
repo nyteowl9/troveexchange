@@ -56,13 +56,12 @@ export async function POST(request) {
       escrow_amount: order.escrow_amount,
       auth_tier: order.auth_tier,
       ship_deadline: order.ship_deadline,
-      seller_payout: sellerPayout,
     }
 
     // Fire emails — non-blocking, never fail the request
     try {
       if (order.seller?.email) {
-        await emailSellerSaleShipNow({ to: order.seller.email, order: emailOrder })
+        await emailSellerSaleShipNow({ to: order.seller.email, order: emailOrder, sellerPayout })
       }
     } catch (err) {
       console.error('[mark-sold] seller email failed:', err.message)
