@@ -93,11 +93,20 @@ export async function POST(request) {
     await supabaseAdmin.from('orders').update({ status: 'refunded' }).eq('id', order_id)
 
     try {
-      const { emailDisputeResolved } = await import('@/lib/emails')
+      const { emailDisputeResolved, emailBuyerAuthFailRefunded } = await import('@/lib/emails')
       const { data: buyer }  = await supabaseAdmin.from('users').select('email, full_name').eq('id', order.buyer_id).single()
       const { data: seller } = await supabaseAdmin.from('users').select('email, full_name').eq('id', order.seller_id).single()
-      if (buyer?.email)  await emailDisputeResolved(buyer.email,  buyer.full_name,  'buyer_wins', 'buyer')
-      if (seller?.email) await emailDisputeResolved(seller.email, seller.full_name, 'buyer_wins', 'seller')
+
+      if (isAuthFail) {
+        // Auth-fail full refund — buyer gets all USDC back, dedicated email
+        if (buyer?.email) await emailBuyerAuthFailRefunded({ to: buyer.email, order })
+        // Seller still gets a "dispute resolved" notice via existing channel
+        if (seller?.email) await emailDisputeResolved(seller.email, seller.full_name, 'buyer_wins', 'seller')
+      } else {
+        // Real dispute return — both parties get the dispute-resolved email
+        if (buyer?.email)  await emailDisputeResolved(buyer.email,  buyer.full_name,  'buyer_wins', 'buyer')
+        if (seller?.email) await emailDisputeResolved(seller.email, seller.full_name, 'buyer_wins', 'seller')
+      }
     } catch (err) {
       console.error('[orders/confirm-return] email failed:', err)
     }
