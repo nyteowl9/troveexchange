@@ -283,17 +283,21 @@ function SellerDashboard() {
     }).catch(() => {})
   }, [])
 
-  const calcFees = (p, selfShip = false) => {
+  // Listing-time payout estimate. Shipping is NOT deducted here because:
+  //   - non-free-shipping: buyer pays shipping at checkout (not from seller payout)
+  //   - free_shipping with seller's own label: seller pays postage out-of-pocket (not via payout)
+  //   - free_shipping with CH label: label cost IS deducted, but only chosen post-sale —
+  //     the seller sees the full breakdown in the CH-label confirmation modal then.
+  const calcFees = (p) => {
     const num = parseFloat(p) || 0
     const platform = (num * 0.035).toFixed(2)
-    const shipCost = selfShip ? 0 : 8
-    const net = (num - parseFloat(platform) - shipCost).toFixed(2)
-    return { platform, shipCost, net }
+    const net = Math.max(0, num - parseFloat(platform)).toFixed(2)
+    return { platform, net }
   }
 
   const isNoAuthZone = selfShipThreshold > 0 && parseFloat(price) > 0 && parseFloat(price) <= selfShipThreshold
   const priceIsSelfShipEligible = isNoAuthZone && freeShipping // legacy alias — bond/fee checks
-  const fees = calcFees(price, !freeShipping) // seller covers label when free_shipping; buyer pays when not
+  const fees = calcFees(price)
   const bondRate   = BOND_RATE[profile?.seller_tier] || BOND_RATE.new
   const bondAmount = isNoAuthZone ? null : (price ? (BOND_FLOOR + parseFloat(price) * bondRate).toFixed(2) : null)
 
@@ -1968,7 +1972,7 @@ function SellerDashboard() {
                     {[
                       { label: 'Your listing price',           val: `$${parseFloat(price).toLocaleString()}` },
                       { label: 'Platform fee (3.5%)',          val: `-$${fees.platform}` },
-                      { label: 'Shipping & insurance (est.)',  val: freeShipping ? 'You cover postage' : 'Buyer pays — Chase Hollow label' },
+                      { label: 'Shipping',                     val: freeShipping ? 'You cover postage (own label) or CH label (cost deducted at ship time)' : 'Buyer pays — Chase Hollow label' },
                       { label: 'You receive on settlement',    val: `~$${fees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
@@ -2195,13 +2199,13 @@ function SellerDashboard() {
                   </label>
                 )}
                 {editPrice && parseFloat(editPrice) > 0 && parseFloat(editPrice) <= 50000 && (() => {
-                    const editFees = calcFees(editPrice, !editFreeShipping)
+                    const editFees = calcFees(editPrice)
                     return (
                   <div style={{ background: 'var(--bg-3)', borderRadius: '8px', padding: '12px 14px' }}>
                     {[
                       { label: 'Your listing price',           val: `$${parseFloat(editPrice).toLocaleString()}` },
                       { label: 'Platform fee (3.5%)',          val: `-$${editFees.platform}` },
-                      { label: 'Shipping & insurance (est.)',  val: editFreeShipping ? 'You cover postage' : 'Buyer pays — Chase Hollow label' },
+                      { label: 'Shipping',                     val: editFreeShipping ? 'You cover postage (own label) or CH label (cost deducted at ship time)' : 'Buyer pays — Chase Hollow label' },
                       { label: 'You receive on settlement',    val: `~$${editFees.net}`, green: true, total: true },
                     ].map((row, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: row.total ? '8px 0 0' : '5px 0', borderTop: row.total ? '0.5px solid var(--border)' : 'none', marginTop: row.total ? '4px' : '0' }}>
