@@ -408,7 +408,23 @@ function Checkout() {
         { gasLimit: 400000n },
       )
       setSigningStatus('Transaction submitted — waiting for block confirmation...')
-      await fundTx.wait()
+
+      // Tolerate malformed receipts (MetaMask/Blockaid sometimes returns
+      // tx objects with nonce='undefined' that ethers can't deserialize).
+      // We verify by polling the receipt directly via the provider instead.
+      try {
+        await fundTx.wait()
+      } catch (waitErr) {
+        console.warn('[checkout] fundOrder wait() error (verifying via provider receipt):', waitErr?.message)
+        let receipt = null
+        for (let i = 0; i < 12; i++) {
+          receipt = await provider.getTransactionReceipt(fundTx.hash).catch(() => null)
+          if (receipt) break
+          await new Promise(r => setTimeout(r, 2000))
+        }
+        if (!receipt) throw new Error('Transaction submitted but confirmation timed out. Check Basescan and contact support if escrow was funded.')
+        if (receipt.status === 0) throw new Error(`Transaction reverted on chain (tx: ${fundTx.hash})`)
+      }
       setSigningStatus('Confirmed on Base ✓')
 
       const { data: { user: buyer } } = await supabase.auth.getUser()
