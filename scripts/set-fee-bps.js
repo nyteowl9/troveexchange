@@ -13,8 +13,9 @@
  *   npx hardhat run scripts/set-fee-bps.js --network baseSepolia
  */
 
-const { ethers } = require('hardhat')
-require('dotenv').config({ path: '.env.local' })   // loads NEXT_PUBLIC_ESCROW_ADDRESS
+const { ethers, network } = require('hardhat')
+const fs   = require('fs')
+const path = require('path')
 
 // ── Target values ─────────────────────────────────────────────────────────────
 const PLATFORM_FEE_BPS = 300   // 3%   → Chase Hollow (Safe)
@@ -22,10 +23,18 @@ const CREATOR_FEE_BPS  =  50   // 0.5% → creator (or Safe if no creator)
 // Total: 350 bps = 3.5%
 
 async function main() {
-  const contractAddress = process.env.NEXT_PUBLIC_ESCROW_ADDRESS
-  if (!contractAddress) throw new Error('NEXT_PUBLIC_ESCROW_ADDRESS not set in .env.local')
+  // Resolve contract address from the deployment artifact for the current network
+  // (avoids relying on .env.local which may still be testnet during mainnet runs)
+  const deploymentFile = path.join(__dirname, `../deployments/${network.name}.json`)
+  if (!fs.existsSync(deploymentFile)) {
+    throw new Error(`No deployment found at deployments/${network.name}.json — run deploy.js first`)
+  }
+  const deployment = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'))
+  const contractAddress = deployment.ChaseHollowEscrow
+  if (!contractAddress) throw new Error(`deployments/${network.name}.json has no ChaseHollowEscrow address`)
 
   const [signer] = await ethers.getSigners()
+  console.log(`Network:  ${network.name}`)
   console.log(`Signer:   ${signer.address}`)
   console.log(`Contract: ${contractAddress}`)
 
