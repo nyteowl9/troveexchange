@@ -719,16 +719,32 @@ function SellerDashboard() {
         const bondU = ethers.parseUnits(parseFloat(order.bond_amount).toFixed(6), 6)
         setBondStatus(prev => ({ ...prev, [order.id]: 'Step 1 of 2 — Approve USDC · confirm in wallet…' }))
         const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
-        const approveTx = await usdcContract.approve(ESCROW_ADDRESS, bondU, { gasLimit: 100000n })
-        setBondStatus(prev => ({ ...prev, [order.id]: 'Approval submitted — waiting for confirmation…' }))
-        await approveTx.wait()
 
-        // Verify allowance is readable — Sepolia RPC can lag a block behind
+        // Skip approve if existing allowance already covers + tolerate malformed tx response
+        const existingAllowance = await usdcContract.allowance(walletAddress, ESCROW_ADDRESS)
+        if (existingAllowance < bondU) {
+          try {
+            const approveTx = await usdcContract.approve(ESCROW_ADDRESS, bondU, { gasLimit: 100000n })
+            setBondStatus(prev => ({ ...prev, [order.id]: 'Approval submitted — waiting for confirmation…' }))
+            try { await approveTx.wait() } catch (waitErr) {
+              console.warn('[bond] approve wait() error (verifying via allowance):', waitErr?.message)
+            }
+          } catch (err) {
+            if (err?.value?.hash) {
+              console.warn('[bond] approve returned malformed tx response, verifying via allowance:', err.value.hash)
+              setBondStatus(prev => ({ ...prev, [order.id]: 'Approval submitted — verifying on-chain…' }))
+            } else {
+              throw err
+            }
+          }
+        }
+
+        // Verify allowance is readable
         let allowanceConfirmed = false
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 8; i++) {
           const allowance = await usdcContract.allowance(walletAddress, ESCROW_ADDRESS)
           if (allowance >= bondU) { allowanceConfirmed = true; break }
-          await new Promise(r => setTimeout(r, 1000))
+          await new Promise(r => setTimeout(r, 1500))
         }
         if (!allowanceConfirmed) throw new Error('USDC approval did not confirm. Please try again.')
         setBondStatus(prev => ({ ...prev, [order.id]: 'Step 2 of 2 — Post bond · confirm in wallet…' }))
@@ -737,15 +753,41 @@ function SellerDashboard() {
       }
 
       const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
-      const confirmTx = await escrowContract.confirmOrder(order.onchain_order_id, { gasLimit: 200000n })
-      setBondStatus(prev => ({ ...prev, [order.id]: 'Submitted — waiting for block confirmation…' }))
-      await confirmTx.wait()
+
+      // Same malformed-tx resilience as elsewhere
+      let confirmTxHash = null
+      try {
+        const confirmTx = await escrowContract.confirmOrder(order.onchain_order_id, { gasLimit: 200000n })
+        confirmTxHash = confirmTx.hash
+        setBondStatus(prev => ({ ...prev, [order.id]: 'Submitted — waiting for block confirmation…' }))
+        try { await confirmTx.wait() } catch (waitErr) {
+          console.warn('[bond] confirmOrder wait() error (verifying via provider receipt):', waitErr?.message)
+        }
+      } catch (err) {
+        if (err?.value?.hash) {
+          confirmTxHash = err.value.hash
+          console.warn('[bond] confirmOrder returned malformed tx response, using hash:', confirmTxHash)
+          setBondStatus(prev => ({ ...prev, [order.id]: 'Submitted — verifying on-chain…' }))
+        } else {
+          throw err
+        }
+      }
+
+      // Poll receipt to verify success
+      let confirmReceipt = null
+      for (let i = 0; i < 12; i++) {
+        confirmReceipt = await provider.getTransactionReceipt(confirmTxHash).catch(() => null)
+        if (confirmReceipt) break
+        await new Promise(r => setTimeout(r, 2000))
+      }
+      if (!confirmReceipt) throw new Error(`Bond tx submitted but confirmation timed out (tx: ${confirmTxHash})`)
+      if (confirmReceipt.status === 0) throw new Error(`Bond tx reverted on chain (tx: ${confirmTxHash})`)
 
       // Save bond_tx_hash via API (direct Supabase update blocked by RLS)
       const saveRes = await fetch('/api/orders/confirm-bond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: order.id, tx_hash: confirmTx.hash }),
+        body: JSON.stringify({ order_id: order.id, tx_hash: confirmTxHash }),
       })
       if (!saveRes.ok) {
         const err = await saveRes.json()
@@ -849,15 +891,24 @@ function SellerDashboard() {
         const signer   = await provider.getSigner()
         const usdc     = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
         const amount   = ethers.parseUnits(labelCost.toFixed(6), 6)
-        const tx       = await usdc.transfer(payToAddress, amount, { gasLimit: 100000n })
 
-        setChLabelConfirm(prev => prev && { ...prev, status: 'Payment submitted — waiting for confirmation…' })
+        // Malformed-tx resilience (same pattern as all other contract calls)
         try {
-          await tx.wait()
-        } catch (waitErr) {
-          console.warn('[ch-label] payment wait() error (proceeding anyway, backend verifies):', waitErr?.message)
+          const tx = await usdc.transfer(payToAddress, amount, { gasLimit: 100000n })
+          shortfallTxHash = tx.hash
+          setChLabelConfirm(prev => prev && { ...prev, status: 'Payment submitted — waiting for confirmation…' })
+          try { await tx.wait() } catch (waitErr) {
+            console.warn('[ch-label] payment wait() error (backend will verify):', waitErr?.message)
+          }
+        } catch (err) {
+          if (err?.value?.hash) {
+            shortfallTxHash = err.value.hash
+            console.warn('[ch-label] payment returned malformed tx response, using hash:', shortfallTxHash)
+            setChLabelConfirm(prev => prev && { ...prev, status: 'Payment submitted — verifying on-chain…' })
+          } else {
+            throw err
+          }
         }
-        shortfallTxHash = tx.hash
         setChLabelConfirm(prev => prev && { ...prev, status: 'Payment confirmed — generating label…' })
       }
 

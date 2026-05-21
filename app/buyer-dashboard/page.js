@@ -250,13 +250,45 @@ export default function BuyerDashboard() {
         const provider = new ethers.BrowserProvider(eip1193)
         const signer = await provider.getSigner()
         const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
-        const tx = await escrowContract.releaseEscrow(order.onchain_order_id, { gasLimit: 300000n })
-        setReleaseStatus('Submitted — waiting for block confirmation…')
-        const receipt = await tx.wait()
-        if (!receipt || receipt.status === 0) {
-          throw new Error(`On-chain release reverted (tx: ${tx.hash}). The order may not be in Delivered state on-chain — markDelivered may have failed.`)
+
+        // Same Privy/wallet malformed-tx resilience as checkout.
+        // ethers may throw while parsing the response (nonce='undefined')
+        // even though the tx was successfully broadcast — extract the
+        // hash from err.value and verify the receipt directly.
+        let releaseTxHash = null
+        try {
+          const tx = await escrowContract.releaseEscrow(order.onchain_order_id, { gasLimit: 300000n })
+          releaseTxHash = tx.hash
+          setReleaseStatus('Submitted — waiting for block confirmation…')
+          try {
+            await tx.wait()
+          } catch (waitErr) {
+            console.warn('[buyer-release] wait() error (verifying via provider receipt):', waitErr?.message)
+          }
+        } catch (err) {
+          if (err?.value?.hash) {
+            releaseTxHash = err.value.hash
+            console.warn('[buyer-release] release returned malformed tx response, using hash from error:', releaseTxHash)
+            setReleaseStatus('Submitted — verifying on-chain…')
+          } else {
+            throw err
+          }
         }
-        order.__releaseTxHash = tx.hash
+
+        // Always poll the receipt for status — covers all paths above
+        let receipt = null
+        for (let i = 0; i < 12; i++) {
+          receipt = await provider.getTransactionReceipt(releaseTxHash).catch(() => null)
+          if (receipt) break
+          await new Promise(r => setTimeout(r, 2000))
+        }
+        if (!receipt) {
+          throw new Error(`Release tx submitted but confirmation timed out (tx: ${releaseTxHash}).`)
+        }
+        if (receipt.status === 0) {
+          throw new Error(`On-chain release reverted (tx: ${releaseTxHash}). The order may not be in Delivered state on-chain — markDelivered may have failed.`)
+        }
+        order.__releaseTxHash = releaseTxHash
         setReleaseStatus(null)
       }
 
