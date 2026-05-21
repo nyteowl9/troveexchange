@@ -356,16 +356,30 @@ function Checkout() {
 
       if (needsApproval) {
         setSigningStatus('Step 1 of 2 — Approve USDC spend · confirm in wallet...')
-        const approveTx = await usdcContract.approve(ESCROW_ADDRESS, escrowAmountU, { gasLimit: 100000n })
-        setSigningStatus('Approval submitted — waiting for confirmation...')
 
-        // Tolerate malformed receipts (e.g. MetaMask/Blockaid sometimes returns
-        // tx objects with nonce="undefined" that ethers can't deserialize).
-        // We don't need the receipt — we'll verify by re-reading allowance.
+        // MetaMask/Blockaid sometimes returns a malformed tx response (nonce
+        // as the string "undefined") that ethers throws on when constructing
+        // the TransactionResponse — BEFORE we even reach .wait(). The tx
+        // hash is preserved in err.value though, so we extract it and fall
+        // back to polling the receipt directly.
+        let approveTxHash = null
         try {
-          await approveTx.wait()
-        } catch (waitErr) {
-          console.warn('[checkout] approve wait() error (ignoring, verifying via allowance instead):', waitErr?.message)
+          const approveTx = await usdcContract.approve(ESCROW_ADDRESS, escrowAmountU, { gasLimit: 100000n })
+          approveTxHash = approveTx.hash
+          setSigningStatus('Approval submitted — waiting for confirmation...')
+          try {
+            await approveTx.wait()
+          } catch (waitErr) {
+            console.warn('[checkout] approve wait() error (verifying via allowance):', waitErr?.message)
+          }
+        } catch (err) {
+          if (err?.code === 'BAD_DATA' && err?.value?.hash) {
+            approveTxHash = err.value.hash
+            console.warn('[checkout] approve returned malformed tx response, using hash from error:', approveTxHash)
+            setSigningStatus('Approval submitted — verifying on-chain...')
+          } else {
+            throw err
+          }
         }
 
         // Verify allowance is actually set on-chain — handles both RPC lag
@@ -393,38 +407,53 @@ function Checkout() {
 
       setSigningStatus('Step 2 of 2 — Lock USDC in escrow · confirm in wallet...')
       const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, signer)
-      const fundTx = await escrowContract.fundOrder(
-        onchainOrderId,
-        listing.seller.wallet_address,
-        creatorWallet,
-        escrowAmountU,
-        sellerBondU,
-        platformFeeU,
-        creatorFeeU,
-        authFeeU,
-        shippingFeeForContractU,
-        salesTaxU,
-        sellerPayoutU,
-        { gasLimit: 400000n },
-      )
-      setSigningStatus('Transaction submitted — waiting for block confirmation...')
 
-      // Tolerate malformed receipts (MetaMask/Blockaid sometimes returns
-      // tx objects with nonce='undefined' that ethers can't deserialize).
-      // We verify by polling the receipt directly via the provider instead.
+      // Same Blockaid/MetaMask malformed-tx resilience as the approve call.
+      // The call itself can throw BAD_DATA before we get a TransactionResponse;
+      // the hash is in err.value. Always end up with fundTxHash + verified receipt.
+      let fundTxHash = null
       try {
-        await fundTx.wait()
-      } catch (waitErr) {
-        console.warn('[checkout] fundOrder wait() error (verifying via provider receipt):', waitErr?.message)
-        let receipt = null
-        for (let i = 0; i < 12; i++) {
-          receipt = await provider.getTransactionReceipt(fundTx.hash).catch(() => null)
-          if (receipt) break
-          await new Promise(r => setTimeout(r, 2000))
+        const fundTx = await escrowContract.fundOrder(
+          onchainOrderId,
+          listing.seller.wallet_address,
+          creatorWallet,
+          escrowAmountU,
+          sellerBondU,
+          platformFeeU,
+          creatorFeeU,
+          authFeeU,
+          shippingFeeForContractU,
+          salesTaxU,
+          sellerPayoutU,
+          { gasLimit: 400000n },
+        )
+        fundTxHash = fundTx.hash
+        setSigningStatus('Transaction submitted — waiting for block confirmation...')
+        try {
+          await fundTx.wait()
+        } catch (waitErr) {
+          console.warn('[checkout] fundOrder wait() error (verifying via provider receipt):', waitErr?.message)
         }
-        if (!receipt) throw new Error('Transaction submitted but confirmation timed out. Check Basescan and contact support if escrow was funded.')
-        if (receipt.status === 0) throw new Error(`Transaction reverted on chain (tx: ${fundTx.hash})`)
+      } catch (err) {
+        if (err?.code === 'BAD_DATA' && err?.value?.hash) {
+          fundTxHash = err.value.hash
+          console.warn('[checkout] fundOrder returned malformed tx response, using hash from error:', fundTxHash)
+          setSigningStatus('Transaction submitted — verifying on-chain...')
+        } else {
+          throw err
+        }
       }
+
+      // Always verify the on-chain receipt — covers both ethers' silent wait error
+      // and the BAD_DATA path. Polls for up to 24s.
+      let fundReceipt = null
+      for (let i = 0; i < 12; i++) {
+        fundReceipt = await provider.getTransactionReceipt(fundTxHash).catch(() => null)
+        if (fundReceipt) break
+        await new Promise(r => setTimeout(r, 2000))
+      }
+      if (!fundReceipt) throw new Error(`Transaction submitted but confirmation timed out (tx: ${fundTxHash}). Check Basescan and contact support if escrow was funded.`)
+      if (fundReceipt.status === 0) throw new Error(`Transaction reverted on chain (tx: ${fundTxHash})`)
       setSigningStatus('Confirmed on Base ✓')
 
       const { data: { user: buyer } } = await supabase.auth.getUser()
@@ -444,7 +473,7 @@ function Checkout() {
           sales_tax:        salesTax,
           declared_value:   cardPrice,
           onchain_order_id: onchainOrderId,
-          escrow_tx_hash:   fundTx.hash,
+          escrow_tx_hash:   fundTxHash,
           status:           'awaiting_shipment',
           ship_deadline:    new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
         })
@@ -464,7 +493,7 @@ function Checkout() {
         body: JSON.stringify({ order_id: order.id, sale_amount: cardPrice }),
       }).catch(() => {})
 
-      setTxHash(fundTx.hash)
+      setTxHash(fundTxHash)
       setSupabaseOrderId(order.id)
       setSigning(false)
       goToStep(4)
