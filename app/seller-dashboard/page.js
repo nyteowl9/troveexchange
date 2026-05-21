@@ -1980,6 +1980,11 @@ function SellerDashboard() {
                         <span style={{ fontFamily: row.total ? 'Playfair Display, serif' : 'DM Mono, monospace', fontSize: row.total ? '20px' : '12px', color: row.green ? 'var(--accent-green)' : 'var(--text-primary)', fontWeight: 500 }}>{row.val}</span>
                       </div>
                     ))}
+                    {freeShipping && parseFloat(price) > 0 && parseFloat(price) < 15 && (
+                      <div style={{ marginTop: '10px', padding: '8px 10px', background: 'rgba(232,168,56,0.08)', border: '1px solid rgba(232,168,56,0.3)', borderRadius: '6px', fontSize: '11px', color: 'var(--accent-amber)', lineHeight: 1.5 }}>
+                        ⚠ Free shipping is only practical for listings ≥ $15. A shipping label typically costs $5–10. If a buyer picks Chase Hollow label, you'd owe more than the sale price.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

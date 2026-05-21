@@ -337,6 +337,16 @@ function Checkout() {
       // Always encode label cost — for free_shipping orders this is the label reserve deducted from sellerPayout
       const shippingFeeForContractU = authTier === 'physical' ? labelACostEstU + shippingFeeU : labelACostEstU
       const sellerPayoutU  = cardPriceU - platformFeeU - creatorFeeU - labelACostU
+
+      // Guard against listings priced below shipping cost (free_shipping edge case)
+      if (sellerPayoutU < 0n) {
+        const shortfallUsd = (Number(-sellerPayoutU) / 1_000_000).toFixed(2)
+        throw new Error(
+          `This listing's free shipping label cost ($${parseFloat(labelACostVal).toFixed(2)}) exceeds the sale price after platform fees. ` +
+          `Seller would receive a negative payout of -$${shortfallUsd}. ` +
+          `The seller needs to relist at a higher price or remove free shipping.`
+        )
+      }
       const escrowAmountU  = sellerPayoutU + platformFeeU + creatorFeeU + authFeeU + shippingFeeForContractU + salesTaxU
       const sellerBondUSD = parseFloat(cardPrice) <= selfShipMaxValue ? 0 : calcSellerBond(cardPrice, sellerTier)
       const sellerBondU   = u(sellerBondUSD)
