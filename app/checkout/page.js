@@ -341,20 +341,39 @@ function Checkout() {
       const sellerBondUSD = parseFloat(cardPrice) <= selfShipMaxValue ? 0 : calcSellerBond(cardPrice, sellerTier)
       const sellerBondU   = u(sellerBondUSD)
 
-      setSigningStatus('Step 1 of 2 — Approve USDC spend · confirm in wallet...')
       const usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
-      const approveTx = await usdcContract.approve(ESCROW_ADDRESS, escrowAmountU, { gasLimit: 100000n })
-      setSigningStatus('Approval submitted — waiting for confirmation...')
-      await approveTx.wait()
 
-      // Verify allowance is actually set — Sepolia RPC can lag a block behind
-      let allowanceConfirmed = false
-      for (let i = 0; i < 5; i++) {
-        const allowance = await usdcContract.allowance(walletAddress, ESCROW_ADDRESS)
-        if (allowance >= escrowAmountU) { allowanceConfirmed = true; break }
-        await new Promise(r => setTimeout(r, 1000))
+      // Skip approval if existing allowance is already sufficient.
+      // This avoids a redundant prompt when the user has refreshed after a previous approve.
+      const existingAllowance = await usdcContract.allowance(walletAddress, ESCROW_ADDRESS)
+      const needsApproval = existingAllowance < escrowAmountU
+
+      if (needsApproval) {
+        setSigningStatus('Step 1 of 2 — Approve USDC spend · confirm in wallet...')
+        const approveTx = await usdcContract.approve(ESCROW_ADDRESS, escrowAmountU, { gasLimit: 100000n })
+        setSigningStatus('Approval submitted — waiting for confirmation...')
+
+        // Tolerate malformed receipts (e.g. MetaMask/Blockaid sometimes returns
+        // tx objects with nonce="undefined" that ethers can't deserialize).
+        // We don't need the receipt — we'll verify by re-reading allowance.
+        try {
+          await approveTx.wait()
+        } catch (waitErr) {
+          console.warn('[checkout] approve wait() error (ignoring, verifying via allowance instead):', waitErr?.message)
+        }
+
+        // Verify allowance is actually set on-chain — handles both RPC lag
+        // AND the swallowed-error case above.
+        let allowanceConfirmed = false
+        for (let i = 0; i < 8; i++) {
+          const allowance = await usdcContract.allowance(walletAddress, ESCROW_ADDRESS)
+          if (allowance >= escrowAmountU) { allowanceConfirmed = true; break }
+          await new Promise(r => setTimeout(r, 1500))
+        }
+        if (!allowanceConfirmed) throw new Error('USDC approval did not confirm. Please try again or refresh.')
+      } else {
+        setSigningStatus('Existing approval detected — skipping to escrow funding...')
       }
-      if (!allowanceConfirmed) throw new Error('USDC approval did not confirm. Please try again.')
 
       // Resolve creator wallet from attribution cookie (server-side read, never blocks checkout)
       let creatorWallet = ethers.ZeroAddress
