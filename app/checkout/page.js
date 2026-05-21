@@ -245,17 +245,19 @@ function Checkout() {
   const platformFee      = parseFloat((cardPrice * 0.03).toFixed(2))
   const creatorFee       = parseFloat((cardPrice * 0.005).toFixed(2))
   // Estimated label costs from API — always use the fetched value, including for free_shipping orders.
-  // For free_shipping + non-physical, the label cost is encoded as shippingFee in the contract so the
-  // on-chain sellerPayout is correctly reduced whether the seller uses their own label or a CH label.
+  // Seller's settlement is always: price − 3.5%, regardless of free_shipping or label choice.
+  //   - free_shipping + own label: seller pays postage out-of-pocket (off-chain)
+  //   - free_shipping + CH label:  platform fronts the cost (decision made at label time
+  //                                in seller dashboard, with full breakdown shown to seller)
+  //   - non-free-shipping:         buyer pays shipping at checkout (above listing price)
   const labelACostEst  = labelACost ?? (authTier === 'physical' ? 12 : 8)
   const labelBCostEst  = authTier === 'physical' ? (shippingFee ?? 8) : 0
-  // free_shipping: seller absorbs Label A cost via payout deduction (all auth tiers)
-  const labelACostVal  = !!listing?.free_shipping ? labelACostEst : 0
   // What buyer pays for shipping (free_shipping = buyer always pays $0 for Label A)
   const buyerShipping  = !!listing?.free_shipping ? labelBCostEst : (labelACostEst + labelBCostEst)
-  const sellerPayout   = parseFloat((cardPrice - platformFee - creatorFee - labelACostVal).toFixed(2))
-  // Escrow shipping bucket = seller's label reserve + buyer's shipping contribution
-  const shippingFeeForEscrow = labelACostVal + buyerShipping
+  const sellerPayout   = parseFloat((cardPrice - platformFee - creatorFee).toFixed(2))
+  // Escrow shipping bucket = only what the BUYER pays for shipping.
+  // For free_shipping, this is 0 (or labelBCostEst for Tier 2).
+  const shippingFeeForEscrow = buyerShipping
   const escrowTotal    = parseFloat((sellerPayout + platformFee + creatorFee + authFee + shippingFeeForEscrow + salesTax).toFixed(2))
   const total          = escrowTotal.toFixed(2)
 
@@ -328,25 +330,19 @@ function Checkout() {
       const cardPriceU    = u(cardPrice)
       const platformFeeU  = cardPriceU * 300n / 10000n
       const creatorFeeU   = cardPriceU * 50n / 10000n
-      const labelACostU    = u(labelACostVal)    // payout deduction for all free_shipping orders
-      const labelACostEstU = u(labelACostEst)    // actual Label A cost for shipping bucket
       const authFeeU       = u(authFee)
-      const shippingFeeU   = u(labelBCostEst)    // Label B cost
+      const shippingFeeU   = u(labelBCostEst)            // Label B cost (Tier 2 only)
+      const labelACostEstU = u(labelACostEst)            // Label A cost (Tier 1/2, when buyer pays shipping)
       const salesTaxU      = u(salesTax)
-      // Shipping bucket = Label A (always, from either seller payout or buyer) + Label B (physical only)
-      // Always encode label cost — for free_shipping orders this is the label reserve deducted from sellerPayout
-      const shippingFeeForContractU = authTier === 'physical' ? labelACostEstU + shippingFeeU : labelACostEstU
-      const sellerPayoutU  = cardPriceU - platformFeeU - creatorFeeU - labelACostU
 
-      // Guard against listings priced below shipping cost (free_shipping edge case)
-      if (sellerPayoutU < 0n) {
-        const shortfallUsd = (Number(-sellerPayoutU) / 1_000_000).toFixed(2)
-        throw new Error(
-          `This listing's free shipping label cost ($${parseFloat(labelACostVal).toFixed(2)}) exceeds the sale price after platform fees. ` +
-          `Seller would receive a negative payout of -$${shortfallUsd}. ` +
-          `The seller needs to relist at a higher price or remove free shipping.`
-        )
-      }
+      // Contract's shippingFee field = only what the buyer pays for shipping.
+      // For free_shipping orders: 0 (buyer paid no shipping). CH label cost,
+      // if used, is fronted by the platform — handled in seller dashboard.
+      // For non-free-shipping: buyer paid label A (+ B if Tier 2) at checkout.
+      const shippingFeeForContractU = !!listing?.free_shipping
+        ? 0n
+        : (authTier === 'physical' ? labelACostEstU + shippingFeeU : labelACostEstU)
+      const sellerPayoutU  = cardPriceU - platformFeeU - creatorFeeU
       const escrowAmountU  = sellerPayoutU + platformFeeU + creatorFeeU + authFeeU + shippingFeeForContractU + salesTaxU
       const sellerBondUSD = parseFloat(cardPrice) <= selfShipMaxValue ? 0 : calcSellerBond(cardPrice, sellerTier)
       const sellerBondU   = u(sellerBondUSD)
