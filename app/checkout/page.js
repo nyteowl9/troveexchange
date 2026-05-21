@@ -373,7 +373,12 @@ function Checkout() {
             console.warn('[checkout] approve wait() error (verifying via allowance):', waitErr?.message)
           }
         } catch (err) {
-          if (err?.code === 'BAD_DATA' && err?.value?.hash) {
+          // Privy/wallet wrappers occasionally return a malformed tx response
+          // (nonce as the string "undefined") that ethers throws on while
+          // constructing the TransactionResponse. The tx hash is preserved in
+          // err.value — if present, the tx was broadcast and we can verify
+          // on-chain rather than rely on the response object.
+          if (err?.value?.hash) {
             approveTxHash = err.value.hash
             console.warn('[checkout] approve returned malformed tx response, using hash from error:', approveTxHash)
             setSigningStatus('Approval submitted — verifying on-chain...')
@@ -435,7 +440,9 @@ function Checkout() {
           console.warn('[checkout] fundOrder wait() error (verifying via provider receipt):', waitErr?.message)
         }
       } catch (err) {
-        if (err?.code === 'BAD_DATA' && err?.value?.hash) {
+        // Same Privy/wallet malformed-tx resilience as the approve step.
+        // If a hash is present in err.value, the tx WAS broadcast — use it.
+        if (err?.value?.hash) {
           fundTxHash = err.value.hash
           console.warn('[checkout] fundOrder returned malformed tx response, using hash from error:', fundTxHash)
           setSigningStatus('Transaction submitted — verifying on-chain...')
