@@ -1,15 +1,20 @@
 import { NextResponse } from 'next/server'
+import { ethers } from 'ethers'
 import { shippo } from '@/lib/shippo'
 import { createClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 // POST /api/shipping/seller-label
+// Body: { order_id, shortfall_tx_hash? }
 // Allows a seller to generate (or retrieve) Label A for their own order.
 // If label_a_url already exists, returns it immediately.
-// If not, generates via Shippo, saves, and returns.
+// For free_shipping orders where label cost exceeds the seller's settlement
+// from escrow, the seller must pre-pay the shortfall in USDC via on-chain
+// transfer to the platform's fee recipient. The tx hash is verified here
+// before the label is purchased.
 export async function POST(request) {
   try {
-    const { order_id } = await request.json()
+    const { order_id, shortfall_tx_hash } = await request.json()
     if (!order_id) return NextResponse.json({ error: 'order_id required' }, { status: 400 })
 
     const supabase = await createClient()
@@ -110,6 +115,83 @@ export async function POST(request) {
     const bestRate = shipment.rates.sort((a, b) => parseFloat(a.amount) - parseFloat(b.amount))[0]
     if (!bestRate) return NextResponse.json({ error: 'No shipping rates available' }, { status: 400 })
 
+    const labelCostPreview = parseFloat(parseFloat(bestRate.amount).toFixed(2))
+
+    // ── For free_shipping orders: seller must pay the full label cost upfront ──
+    // The seller's settlement (price − 3.5%) releases normally to them on delivery;
+    // the label is paid for separately by the seller via on-chain USDC transfer
+    // to the platform's fee recipient (Safe). This avoids the platform losing money
+    // on cheap free_shipping listings where the sale price doesn't cover the label.
+    if (order.listing?.free_shipping) {
+      if (!shortfall_tx_hash) {
+        return NextResponse.json({
+          error: 'Payment required',
+          requires_payment: true,
+          label_cost: labelCostPreview,
+          message: `This label costs $${labelCostPreview.toFixed(2)}. Please pay via the CH Label confirmation modal — the page will guide you through the USDC transfer.`,
+        }, { status: 402 })
+      }
+
+      // Reject if this tx hash has already been used for another order
+      const { data: prior } = await supabaseAdmin
+        .from('orders')
+        .select('id')
+        .eq('label_payment_tx_hash', shortfall_tx_hash)
+        .neq('id', order_id)
+        .limit(1)
+        .maybeSingle()
+      if (prior) {
+        return NextResponse.json({ error: 'Payment transaction already used on another order' }, { status: 400 })
+      }
+
+      // Verify on-chain that the seller's wallet sent the right amount of USDC to the fee recipient
+      const rpc          = process.env.ALCHEMY_RPC_URL
+      const usdcAddr     = process.env.NEXT_PUBLIC_USDC_ADDRESS
+      const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_ADDRESS
+      if (!rpc || !usdcAddr || !feeRecipient) {
+        return NextResponse.json({ error: 'Server misconfigured — missing RPC / USDC / fee recipient address' }, { status: 500 })
+      }
+
+      const provider = new ethers.JsonRpcProvider(rpc)
+      const receipt  = await provider.getTransactionReceipt(shortfall_tx_hash).catch(() => null)
+      if (!receipt) {
+        return NextResponse.json({ error: 'Payment transaction not found on chain. Wait a few seconds and retry.' }, { status: 400 })
+      }
+      if (receipt.status !== 1) {
+        return NextResponse.json({ error: 'Payment transaction reverted on chain' }, { status: 400 })
+      }
+
+      // Parse USDC Transfer event: keccak256("Transfer(address,address,uint256)")
+      const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+      const txFrom = receipt.from?.toLowerCase()
+
+      const transferLog = receipt.logs.find(log =>
+        log.address.toLowerCase() === usdcAddr.toLowerCase() &&
+        log.topics[0] === TRANSFER_TOPIC
+      )
+      if (!transferLog) {
+        return NextResponse.json({ error: 'Transaction is not a USDC transfer' }, { status: 400 })
+      }
+
+      // topics[1] = from (padded), topics[2] = to (padded), data = amount
+      const fromAddr = '0x' + transferLog.topics[1].slice(26).toLowerCase()
+      const toAddr   = '0x' + transferLog.topics[2].slice(26).toLowerCase()
+      const amount   = BigInt(transferLog.data)
+
+      if (fromAddr !== txFrom) {
+        return NextResponse.json({ error: 'Transfer from address does not match tx sender' }, { status: 400 })
+      }
+      if (toAddr !== feeRecipient.toLowerCase()) {
+        return NextResponse.json({ error: 'Payment must be sent to the platform fee recipient' }, { status: 400 })
+      }
+      const requiredAmount = BigInt(Math.round(labelCostPreview * 1_000_000))   // USDC has 6 decimals
+      if (amount < requiredAmount) {
+        return NextResponse.json({
+          error: `Payment amount insufficient — sent ${ethers.formatUnits(amount, 6)} USDC, need ${labelCostPreview.toFixed(2)} USDC`,
+        }, { status: 400 })
+      }
+    }
+
     const transaction = await shippo.transactions.create({
       rate: bestRate.objectId,
       labelFileType: 'PDF',
@@ -133,6 +215,7 @@ export async function POST(request) {
     }
     if (order.listing?.free_shipping) {
       dbUpdate.shipping_cost = labelCost
+      if (shortfall_tx_hash) dbUpdate.label_payment_tx_hash = shortfall_tx_hash
     }
 
     await supabaseAdmin

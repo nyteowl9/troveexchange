@@ -81,21 +81,31 @@ export async function POST(request) {
 
     const labelCost = parseFloat(parseFloat(bestRate.amount).toFixed(2))
 
-    // Calculate what the seller will net after this label cost
-    const listingPrice  = parseFloat(order.listing?.price || 0)
-    const platformFee   = parseFloat(order.platform_fee  || 0)
-    const creatorFee    = parseFloat(order.creator_fee   || 0)
-    const totalFees     = platformFee + creatorFee || listingPrice * 0.035
-    const sellerPayout  = Math.max(0, listingPrice - totalFees - labelCost)
+    // Calculate what the seller has available in escrow vs the label cost.
+    // If the sale doesn't cover the label, the seller must pay the shortfall
+    // in USDC up-front before the label is purchased.
+    const listingPrice = parseFloat(order.listing?.price || 0)
+    const platformFee  = parseFloat(order.platform_fee  || 0)
+    const creatorFee   = parseFloat(order.creator_fee   || 0)
+    const totalFees    = platformFee + creatorFee || listingPrice * 0.035
+
+    // Amount available in the escrow to deduct the label from
+    const availableSettlement = Math.max(0, listingPrice - totalFees)
+    const shortfall    = Math.max(0, labelCost - availableSettlement)
+    const sellerPayout = Math.max(0, availableSettlement - labelCost)
+    const payToAddress = process.env.NEXT_PUBLIC_FEE_RECIPIENT_ADDRESS || null
 
     return NextResponse.json({
-      listing_price:  parseFloat(listingPrice.toFixed(2)),
-      platform_fee:   parseFloat(totalFees.toFixed(2)),
-      label_cost:     labelCost,
-      seller_payout:  parseFloat(sellerPayout.toFixed(2)),
-      carrier:        bestRate.provider,
-      service:        bestRate.servicelevel?.name,
-      estimated_days: bestRate.estimated_days,
+      listing_price:       parseFloat(listingPrice.toFixed(2)),
+      platform_fee:        parseFloat(totalFees.toFixed(2)),
+      label_cost:          labelCost,
+      available_settlement: parseFloat(availableSettlement.toFixed(2)),
+      shortfall:           parseFloat(shortfall.toFixed(2)),
+      seller_payout:       parseFloat(sellerPayout.toFixed(2)),
+      pay_to_address:      payToAddress,
+      carrier:             bestRate.provider,
+      service:             bestRate.servicelevel?.name,
+      estimated_days:      bestRate.estimated_days,
     })
 
   } catch (err) {

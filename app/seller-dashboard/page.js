@@ -783,13 +783,17 @@ function SellerDashboard() {
         if (!res.ok) throw new Error(data.error || 'Could not get rate')
         setChLabelConfirm({
           order,
-          listingPrice:  data.listing_price,
-          platformFee:   data.platform_fee,
-          labelCost:     data.label_cost,
-          sellerPayout:  data.seller_payout,
-          carrier:       data.carrier,
-          service:       data.service,
-          estimatedDays: data.estimated_days,
+          listingPrice:        data.listing_price,
+          platformFee:         data.platform_fee,
+          labelCost:           data.label_cost,
+          availableSettlement: data.available_settlement,
+          shortfall:           data.shortfall,
+          sellerPayout:        data.seller_payout,
+          payToAddress:        data.pay_to_address,
+          isFreeShipping:      true,
+          carrier:             data.carrier,
+          service:             data.service,
+          estimatedDays:       data.estimated_days,
         })
       } catch (err) {
         setLabelError(prev => ({ ...prev, [order.id]: err.message }))
@@ -820,22 +824,56 @@ function SellerDashboard() {
 
   const handleChLabelConfirm = async () => {
     if (!chLabelConfirm) return
-    const { order } = chLabelConfirm
+    const { order, labelCost, isFreeShipping, payToAddress } = chLabelConfirm
     setLabelLoading(prev => ({ ...prev, [order.id]: true }))
     setLabelError(prev => ({ ...prev, [order.id]: null }))
-    setChLabelConfirm(null)
     try {
+      let shortfallTxHash = null
+
+      // For free_shipping orders, seller must pay the label cost up-front in USDC
+      if (isFreeShipping) {
+        if (!payToAddress) throw new Error('Platform fee recipient address not configured — contact support.')
+        if (!wallets?.length) throw new Error('Connect your wallet to pay for the label.')
+
+        const wallet = wallets.find(w => w.address?.toLowerCase() === walletAddress?.toLowerCase()) || wallets[0]
+        const eip1193 = await wallet.getEthereumProvider()
+        const targetChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453')
+        const chainHex = '0x' + targetChainId.toString(16)
+        const currentChain = await eip1193.request({ method: 'eth_chainId' })
+        if (currentChain !== chainHex) {
+          await eip1193.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainHex }] })
+        }
+
+        setChLabelConfirm(prev => prev && { ...prev, status: `Confirm $${labelCost.toFixed(2)} USDC payment in wallet…` })
+        const provider = new ethers.BrowserProvider(eip1193)
+        const signer   = await provider.getSigner()
+        const usdc     = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
+        const amount   = ethers.parseUnits(labelCost.toFixed(6), 6)
+        const tx       = await usdc.transfer(payToAddress, amount, { gasLimit: 100000n })
+
+        setChLabelConfirm(prev => prev && { ...prev, status: 'Payment submitted — waiting for confirmation…' })
+        try {
+          await tx.wait()
+        } catch (waitErr) {
+          console.warn('[ch-label] payment wait() error (proceeding anyway, backend verifies):', waitErr?.message)
+        }
+        shortfallTxHash = tx.hash
+        setChLabelConfirm(prev => prev && { ...prev, status: 'Payment confirmed — generating label…' })
+      }
+
+      setChLabelConfirm(null)
       const res = await fetch('/api/shipping/seller-label', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: order.id }),
+        body: JSON.stringify({ order_id: order.id, shortfall_tx_hash: shortfallTxHash }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Label generation failed')
       await fetchData()
       window.open(data.label_url, '_blank')
     } catch (err) {
-      setLabelError(prev => ({ ...prev, [order.id]: err.message }))
+      setLabelError(prev => ({ ...prev, [order.id]: err?.reason || err?.message || 'Label generation failed' }))
+      setChLabelConfirm(null)
     } finally {
       setLabelLoading(prev => ({ ...prev, [order.id]: false }))
     }
@@ -1246,50 +1284,69 @@ function SellerDashboard() {
       {/* SELF-SHIP MODAL */}
       {/* CH LABEL COST CONFIRMATION MODAL — free_shipping orders only */}
       {chLabelConfirm && (() => {
-        const { order, listingPrice, platformFee, labelCost, sellerPayout, carrier, service, estimatedDays } = chLabelConfirm
-        const row = (label, value, valueStyle = {}) => (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '0.5px solid var(--border)' }}>
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', fontWeight: 600, ...valueStyle }}>{value}</span>
-          </div>
-        )
+        const { order, listingPrice, platformFee, labelCost, availableSettlement, sellerPayout, carrier, service, estimatedDays, status } = chLabelConfirm
+        const settlement = typeof availableSettlement === 'number' ? availableSettlement : Math.max(0, listingPrice - platformFee)
+        const netForSale = settlement - labelCost
+        const isPaying = !!status
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '400px' }}>
-              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '4px' }}>Payout Breakdown</div>
+            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '420px' }}>
+              <div style={{ fontFamily: 'Playfair Display, serif', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '4px' }}>Pay for Chase Hollow Label</div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
                 {order.listing?.card_name} · ${parseFloat(order.listing?.price || 0).toFixed(2)}
               </div>
 
-              <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '4px 14px', marginBottom: '16px' }}>
-                {row('Sale price', `$${listingPrice.toFixed(2)}`, { color: 'var(--text-primary)' })}
-                {row('Platform fee (3.5%)', `−$${platformFee.toFixed(2)}`, { color: 'var(--text-secondary)' })}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '7px 0', borderBottom: '0.5px solid var(--border)' }}>
+              <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '4px 14px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '0.5px solid var(--border)' }}>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sale price</span>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>${listingPrice.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '0.5px solid var(--border)' }}>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Platform fee (3.5%)</span>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>−${platformFee.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Settlement on delivery</span>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '14px', fontWeight: 700, color: 'var(--accent-green)' }}>${settlement.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(232,168,56,0.08)', border: '1px solid rgba(232,168,56,0.3)', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <div>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Shipping label</div>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-amber)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>Pay now (USDC)</div>
                     {(carrier || service) && (
-                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
                         {[carrier, service].filter(Boolean).join(' · ')}{estimatedDays ? ` · ~${estimatedDays}d` : ''}
                       </div>
                     )}
                   </div>
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '13px', fontWeight: 600, color: 'var(--accent-red)', whiteSpace: 'nowrap', flexShrink: 0 }}>−${labelCost.toFixed(2)}</span>
+                  <span style={{ fontFamily: 'Playfair Display, serif', fontSize: '22px', fontWeight: 600, color: 'var(--accent-amber)' }}>${labelCost.toFixed(2)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0 6px' }}>
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Your payout</span>
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '16px', fontWeight: 700, color: 'var(--accent-green)' }}>${sellerPayout.toFixed(2)}</span>
+                <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5, paddingTop: '4px', borderTop: '0.5px solid rgba(232,168,56,0.2)' }}>
+                  Sent from your wallet to the Chase Hollow platform wallet. Your sale settlement of <strong style={{ color: 'var(--accent-green)' }}>${settlement.toFixed(2)}</strong> releases to your wallet on delivery — separately from this payment.
                 </div>
               </div>
 
-              <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
-                Chase Hollow purchases this label on your behalf. The cost is deducted from your settlement when funds are released. The label will open in a new tab.
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 4px 14px', borderTop: '0.5px solid var(--border)' }}>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Net for this sale</span>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '14px', fontWeight: 700, color: netForSale >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                  {netForSale >= 0 ? '+' : '−'}${Math.abs(netForSale).toFixed(2)}
+                </span>
               </div>
+
+              {status && (
+                <div style={{ background: 'rgba(60,125,200,0.08)', border: '1px solid rgba(60,125,200,0.3)', borderRadius: '8px', padding: '10px 12px', marginBottom: '14px', fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--accent-blue)' }}>
+                  {status}
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={handleChLabelConfirm}
-                  style={{ flex: 1, background: 'var(--teal)', border: 'none', color: '#fff', padding: '10px 0', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 700, borderRadius: '8px', cursor: 'pointer' }}>
-                  Get Label
+                  disabled={isPaying}
+                  style={{ flex: 1, background: 'var(--teal)', border: 'none', color: '#fff', padding: '12px 0', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', fontWeight: 700, borderRadius: '8px', cursor: isPaying ? 'wait' : 'pointer', opacity: isPaying ? 0.7 : 1 }}>
+                  {isPaying ? 'Processing…' : `Pay $${labelCost.toFixed(2)} & Get Label`}
                 </button>
                 <button
                   onClick={() => setChLabelConfirm(null)}
