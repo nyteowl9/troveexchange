@@ -13,8 +13,10 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl
 
   // ── Coming-soon redirect ──────────────────────────────────────
-  // Remove this block (and the /api/preview route) when going public.
-  if (process.env.NODE_ENV !== 'development') {
+  // Off by default — site is public. Set COMING_SOON=true in Vercel
+  // env to re-enable the gate (no code change needed). The /api/preview
+  // bypass cookie still works while the gate is on.
+  if (process.env.COMING_SOON === 'true' && process.env.NODE_ENV !== 'development') {
     const bypassSecret = process.env.PREVIEW_SECRET || 'ch-preview-2026'
     const hasBypass = request.cookies.get('ch-bypass')?.value === bypassSecret
     const isExempt  = hasBypass || pathname.startsWith('/coming-soon') || pathname.startsWith('/api/')
